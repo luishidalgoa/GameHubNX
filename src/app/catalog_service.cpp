@@ -599,6 +599,33 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
         return false;
     if (!parseJson(catalogBody, parsed, error))
         return false;
+    // A GameHub index announces its DLC and update sub-indexes rather than
+    // inlining them, so follow what it declares. This cannot live in parseJson
+    // — that runs on the cache too, with no network — so it belongs on the only
+    // path that already fetches. One level deep: the shop format nests no
+    // further, and not recursing bounds the work whatever the payload claims.
+    //
+    // A sub-index that fails is skipped, not fatal. Losing the patches is bad;
+    // losing the whole library because a sub-index 404'd would be worse.
+    if (gamehub::isTrustedUrl(sourceUrl)) {
+        std::vector<CatalogEntry> rootOnly;
+        std::vector<std::string> subIndexes;
+        std::string subError;
+        if (gamehub::parseCatalog(catalogBody, rootOnly, subIndexes, subError)) {
+            for (const std::string& sub : subIndexes) {
+                std::string body;
+                if (!httpGet(sub, body, subError, sourceUrl))
+                    continue;
+                std::vector<CatalogEntry> extra;
+                std::vector<std::string> deeper; // deliberately not followed
+                if (!gamehub::parseCatalog(body, extra, deeper, subError))
+                    continue;
+                parsed.insert(parsed.end(),
+                              std::make_move_iterator(extra.begin()),
+                              std::make_move_iterator(extra.end()));
+            }
+        }
+    }
     if (!writeAtomic(cachePath_, catalogBody, error))
         return false;
     return true;
