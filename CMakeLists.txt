@@ -160,6 +160,8 @@ set(APP_SERVICE_SOURCES
     src/app/catalog_batch_installer.cpp
     src/app/catalog_refresh.cpp
     src/app/catalog_service.cpp
+    src/app/gamehub_catalog.cpp
+    src/app/gamehub_provider.cpp
     src/app/catalog_presentation.cpp
     src/app/snapshot_zstd.cpp
     src/app/download_manager.cpp

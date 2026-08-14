@@ -273,6 +273,7 @@ $(BUILD_DIR)/tests/test_web_server: tests/test_web_server.cpp \
 		$(BUILD_DIR)/src/app/web_server.o $(BUILD_DIR)/src/app/companion_settings.o \
 		$(BUILD_DIR)/src/app/web_add_queue.o $(BUILD_DIR)/src/app/http_server.o \
 		src/app/app_settings.cpp \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
 		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \
 		$(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
@@ -291,6 +292,7 @@ $(BUILD_DIR)/tests/test_web_server: tests/test_web_server.cpp \
 
 $(BUILD_DIR)/tests/test_catalog: tests/test_catalog.cpp \
 		$(BUILD_DIR)/src/app/catalog_service.o $(BUILD_DIR)/src/app/catalog_refresh.o \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o \
 		$(BUILD_DIR)/src/app/catalog_presentation.o \
 		$(BUILD_DIR)/src/app/snapshot_zstd.o \
 		$(BUILD_DIR)/src/app/mod_index_service.o \
@@ -323,7 +325,8 @@ test: $(TEST_BINS)
 
 
 $(BUILD_DIR)/tests/test_app_settings: tests/test_app_settings.cpp src/app/app_settings.cpp \
-		$(BUILD_DIR)/src/app/companion_settings.o $(BUILD_DIR)/src/core/util.o
+		$(BUILD_DIR)/src/app/companion_settings.o $(BUILD_DIR)/src/core/util.o \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
 
@@ -576,6 +579,7 @@ $(BUILD_DIR)/tools/webserver: tools/web_server_main.cpp \
 		$(BUILD_DIR)/src/app/web_add_queue.o $(BUILD_DIR)/src/app/http_server.o \
 		src/app/app_settings.cpp \
 		$(BUILD_DIR)/src/app/catalog_service.o $(BUILD_DIR)/src/app/catalog_refresh.o \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o \
 		$(BUILD_DIR)/src/app/snapshot_zstd.o \
 		$(BUILD_DIR)/src/app/mod_index_service.o $(BUILD_DIR)/src/app/game_metadata_service.o \
 		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \

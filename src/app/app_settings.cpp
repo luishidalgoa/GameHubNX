@@ -1,4 +1,5 @@
 #include "app_settings.hpp"
+#include "gamehub_catalog.hpp"
 
 #include "download_manager.hpp"  // clampMaxActiveDownloads
 
@@ -309,8 +310,12 @@ bool isValidCatalogSourceUrl(const std::string& value) {
 std::string effectiveCatalogSourceUrl(const std::string& custom) {
     if (!custom.empty())
         return custom;
-    return "https://raw.githubusercontent.com/Langegen/switch-games/"
-           "refs/heads/main/switch_games.json";
+    // This fork exists to serve one specific self-hosted library, so that is
+    // what the catalogue shows out of the box: no host setting, nothing to
+    // configure, nothing to get wrong. Only the *default* moves — the upstream
+    // torrent catalogue keeps its own identity in kDefaultCatalogSourceUrl and
+    // stays reachable by setting it as a custom source.
+    return gamehub::kCatalogUrl;
 }
 
 bool isValidProxyUrl(const std::string& value) {

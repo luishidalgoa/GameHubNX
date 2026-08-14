@@ -1,4 +1,5 @@
 #include "catalog_service.hpp"
+#include "gamehub_catalog.hpp"
 #include "curl_https.hpp"
 #include "magnet_resolver.hpp"
 #include "snapshot_zstd.hpp"
@@ -384,6 +385,15 @@ bool CatalogService::parseJson(const std::string& json,
                                std::string& error) {
     entries.clear();
     nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
+    // The GameHub section serves a Tinfoil-style index, which is a JSON object;
+    // the torrent catalogue is an array. The two are told apart by shape alone,
+    // with no guessing, so every caller of this function — refresh, cache reload
+    // and anything added later — gets the right parser without knowing there is
+    // a choice to make.
+    if (!root.is_discarded() && root.is_object() && root.contains("files")) {
+        std::vector<std::string> subIndexes; // followed by the refresh path only
+        return gamehub::parseCatalog(json, entries, subIndexes, error);
+    }
     if (root.is_discarded() || !root.is_array()) {
         error = "Catalog JSON is not a valid array.";
         return false;
@@ -551,6 +561,11 @@ bool CatalogService::load(std::string& error) {
 
 bool CatalogService::isTrustedSource(const std::string& url,
                                      const std::string& sourceUrl) {
+    // The GameHub section is trusted by origin: it is the user's own server,
+    // so same scheme+host+port is the whole test. Checked before the built-in
+    // list because it is now the default source.
+    if (gamehub::isTrustedUrl(sourceUrl))
+        return gamehub::isTrustedUrl(url);
     if (sourceUrl == kDefaultCatalogSourceUrl) {
         // Host (with path prefix) allowed to serve catalog bytes. Only the
         // Langegen switch-games repo on GitHub's raw host; every network fetch

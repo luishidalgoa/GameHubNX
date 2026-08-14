@@ -1,4 +1,5 @@
 #include "app/app_settings.hpp"
+#include "app/gamehub_catalog.hpp"
 #include "app/companion_settings.hpp"
 #include "app/download_manager.hpp"  // clampMaxActiveDownloads
 
@@ -434,9 +435,13 @@ void testCatalogSourceUrlValidation() {
     assert(!isValidCatalogSourceUrl(
         "https://user:pass@cdn.example.com/repo/catalog.json"));
     assert(!isValidCatalogSourceUrl(std::string(513, 'a')));
-    assert(effectiveCatalogSourceUrl("") ==
-           "https://raw.githubusercontent.com/Langegen/switch-games/"
-           "refs/heads/main/switch_games.json");
+    // FORK DIVERGENCE. Upstream defaults to the Langegen torrent catalogue;
+    // this fork exists to serve one self-hosted GameHub library and shows it
+    // out of the box, with nothing to configure. Only the *default* moves:
+    // kDefaultCatalogSourceUrl still names the upstream catalogue, which stays
+    // reachable by setting it as a custom source. Expect this line to conflict
+    // on merge — keeping the fork's value is the correct resolution.
+    assert(effectiveCatalogSourceUrl("") == pipensx::gamehub::kCatalogUrl);
     assert(effectiveCatalogSourceUrl("https://cdn.example.com/x.json") ==
            "https://cdn.example.com/x.json");
 }
