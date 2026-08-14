@@ -104,6 +104,10 @@ std::string asString(const nlohmann::json& v) {
 
 } // namespace
 
+std::string fileNameFromUrl(const std::string& url) {
+    return urlDecode(fileNameOf(url));
+}
+
 bool isTrustedUrl(const std::string& url) {
     const std::string want = originOf(kCatalogUrl);
     return !want.empty() && originOf(url) == want;

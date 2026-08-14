@@ -45,6 +45,10 @@ extern const char* const kSourceLabel;
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                   std::vector<std::string>& subIndexes, std::string& error);
 
+// Last path segment of a URL, percent-decoded: the file name as the user sees
+// it. Shared with the provider, which needs it for the transfer's display name.
+std::string fileNameFromUrl(const std::string& url);
+
 // True when `url` may serve bytes for the GameHub section: same scheme, host
 // and port as the configured endpoint. The catalogue is trusted precisely
 // because it is the user's own server, so anything off-host is not it.
