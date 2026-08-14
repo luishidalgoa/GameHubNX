@@ -49,6 +49,11 @@ struct CatalogEntry {
        from the catalog's base64 "info_dict" and SHA-1-verified against the
        magnet hash at parse time. Empty when the catalog carries none. */
     std::vector<uint8_t> infoDict;
+    /* Direct HTTP(S) URL for entries that are not torrents at all — the
+       GameHub section serves a self-hosted library over plain HTTP. Non-empty
+       here means "fetch this URL", and the torrent engine is bypassed.
+       Empty for every torrent-backed entry, which is the default. */
+    std::string directUrl;
     uint64_t topicId = 0;
     uint64_t size = 0;
     int64_t publishedAt = 0;

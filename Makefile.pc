@@ -112,6 +112,10 @@ $(BUILD_DIR)/tests/test_piece: $(TEST_SRCS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+$(BUILD_DIR)/src/app/gamehub_catalog.o: src/app/gamehub_catalog.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 $(BUILD_DIR)/src/app/torbox_client.o: src/app/torbox_client.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -492,6 +496,11 @@ $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 		$(BUILD_DIR)/src/core/util.o
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
+
+$(BUILD_DIR)/tests/test_gamehub_catalog: tests/test_gamehub_catalog.cpp \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) -pthread
 
 $(BUILD_DIR)/tests/test_task_files: tests/test_task_files.cpp \
 		$(BUILD_DIR)/src/app/task_files.o $(BUILD_DIR)/src/core/bencode.o \
