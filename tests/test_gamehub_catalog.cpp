@@ -183,6 +183,77 @@ void test_trust_check() {
     assert(!gamehub::isTrustedUrl(""));
 }
 
+
+
+// Un indice con la extension gh_: es lo que sirve nuestra tienda.
+const char* const kRichIndex = R"JSON({
+  "files": [ { "url": "https://gamehub.hdglabs.com/api/shop/download/7/Zelda%20%5B0100000000010000%5D.nsp", "size": 1024 } ],
+  "titledb": {
+    "0100000000010000": {
+      "id": "0100000000010000",
+      "name": "The Legend of Zelda (EUR)",
+      "description": "Una aventura.",
+      "publisher": "Nintendo",
+      "gh_title": "The Legend of Zelda",
+      "gh_region": "EUR",
+      "gh_languages": "es,en,fr",
+      "gh_developer": "Nintendo EPD",
+      "gh_year": 2017,
+      "gh_group": "zelda-botw",
+      "gh_trailer": "https://www.youtube.com/watch?v=abc123",
+      "gh_screenshots": [
+        "https://gamehub.hdglabs.com/shots/1.jpg",
+        "https://evil.example.com/2.jpg"
+      ]
+    }
+  },
+  "success": "ok"
+})JSON";
+
+void test_rich_metadata_is_read() {
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(kRichIndex, out, subs, err));
+    assert(out.size() == 1);
+    const CatalogEntry& e = out[0];
+
+    // gh_title gana a `name`: este viene con la region pegada porque Tinfoil
+    // solo tiene ese campo, y la ficha quiere maquetarlos por separado.
+    assert(e.title == "The Legend of Zelda");
+    assert(e.region == "EUR");
+    assert(e.languages == "es,en,fr");
+    assert(e.developer == "Nintendo EPD");
+    assert(e.publisher == "Nintendo");
+    assert(e.year == "2017");
+    assert(e.groupKey == "zelda-botw");
+    assert(e.trailerUrl == "https://www.youtube.com/watch?v=abc123");
+
+    // Solo la captura del propio servidor sobrevive: la otra se descarga y se
+    // pinta, asi que un host ajeno no entra.
+    assert(e.screenshots.size() == 1);
+    assert(e.screenshots[0].find("gamehub.hdglabs.com") != std::string::npos);
+}
+
+void test_index_without_gh_keys_still_works() {
+    // El indice de otra tienda, sin la extension: menos datos, nunca un fallo.
+    const char* plain = R"JSON({
+      "files": [ { "url": "https://gamehub.hdglabs.com/api/shop/download/1/Game%20%5B0100000000020000%5D.nsp", "size": 10 } ],
+      "titledb": { "0100000000020000": { "id": "0100000000020000", "name": "Game" } },
+      "success": "ok"
+    })JSON";
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(plain, out, subs, err));
+    assert(out.size() == 1);
+    assert(out[0].title == "Game");
+    assert(out[0].region.empty());
+    assert(out[0].screenshots.empty());
+    assert(out[0].trailerUrl.empty());
+}
+
+
 } // namespace
 
 int main() {
@@ -196,6 +267,8 @@ int main() {
     test_bad_rows_are_skipped_not_fatal();
     test_rejects_unusable_payloads();
     test_trust_check();
+    test_rich_metadata_is_read();
+    test_index_without_gh_keys_still_works();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

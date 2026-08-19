@@ -195,6 +195,43 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                         if (s > 0) e.size = static_cast<uint64_t>(s);
                     }
                 }
+
+                // ── Claves gh_: la extension propia de nuestra tienda ────────
+                // El titledb de Tinfoil no tiene sitio para region, idiomas,
+                // desarrollador ni capturas, asi que GameHub las publica aparte.
+                // Cuando faltan (indice de otra tienda) la ficha simplemente
+                // muestra menos, nunca falla.
+                if (const auto* v = get("gh_title")) {
+                    const std::string t = asString(*v);
+                    // gh_title viene sin la region pegada; `name` la lleva
+                    // dentro porque Tinfoil solo dispone de ese campo.
+                    if (!t.empty()) e.title = t;
+                }
+                if (const auto* v = get("gh_region"))    e.region     = asString(*v);
+                if (const auto* v = get("gh_languages")) e.languages  = asString(*v);
+                if (const auto* v = get("gh_developer")) e.developer  = asString(*v);
+                if (const auto* v = get("gh_group"))     e.groupKey   = asString(*v);
+                if (const auto* v = get("gh_year")) {
+                    const std::string y = asString(*v);
+                    if (!y.empty()) e.year = y;   // mas fiable que el releaseDate sintetico
+                }
+                if (const auto* v = get("gh_trailer")) {
+                    // No se comprueba isTrustedUrl: el trailer apunta a YouTube
+                    // a proposito y no se descarga, solo se muestra como codigo
+                    // QR para abrirlo en el movil.
+                    e.trailerUrl = asString(*v);
+                }
+                if (const auto* v = get("gh_screenshots")) {
+                    if (v->is_array()) {
+                        for (const auto& sc : *v) {
+                            const std::string u = asString(sc);
+                            // Las capturas SI se descargan y se pintan, asi que
+                            // solo se aceptan las del propio servidor.
+                            if (!u.empty() && isTrustedUrl(u)) e.screenshots.push_back(u);
+                        }
+                    }
+                }
+
                 e.metadataOk = true;
             }
         }

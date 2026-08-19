@@ -823,6 +823,28 @@ private:
                 continue;
             visible.push_back(entry);
         }
+
+        // Ediciones del mismo juego: la tienda GameHub marca con groupKey las
+        // entradas que son el mismo titulo en distinta region o edicion. Sin
+        // esto la rejilla ensena la europea y la americana como dos fichas
+        // distintas, que es ruido y no catalogo.
+        //
+        // Se conserva la PRIMERA de cada grupo, no la "mejor": el orden ya lo
+        // ha decidido la propia tienda y el criterio de que edicion prefiere
+        // cada uno no es nuestro. Las entradas sin groupKey -- todo catalogo
+        // que no sea el nuestro -- pasan intactas.
+        if (!visible.empty()) {
+            std::unordered_set<std::string> seenGroups;
+            std::vector<CatalogEntry> grouped;
+            grouped.reserve(visible.size());
+            for (auto& entry : visible) {
+                if (!entry.groupKey.empty() &&
+                    !seenGroups.insert(entry.groupKey).second)
+                    continue;
+                grouped.push_back(std::move(entry));
+            }
+            visible = std::move(grouped);
+        }
         if (sort_ == SortMode::Alphabetical) {
             std::stable_sort(visible.begin(), visible.end(),
                 [](const CatalogEntry& left, const CatalogEntry& right) {

@@ -187,7 +187,10 @@
     "already_in_downloads": "Already in downloads.",
     "status_fetching": "Fetching {}%",
     "install_contract": "Install = NSP/NSZ only · extras skipped",
-    "smart_install_contract": "Smart Install: base/update/DLC · options for manual control"
+    "smart_install_contract": "Smart Install: base/update/DLC · options for manual control",
+    "fact_region": "Region",
+    "fact_languages": "Languages",
+    "trailer_qr": "Scan to watch the trailer"
   },
   "torrent": {
     "title": "Choose torrent files",

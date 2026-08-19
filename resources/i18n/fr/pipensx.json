@@ -187,7 +187,10 @@
     "already_in_downloads": "Déjà dans les téléchargements.",
     "status_fetching": "Récupération {}%",
     "install_contract": "Installer = NSP/NSZ uniquement · extras ignorés",
-    "smart_install_contract": "Installation intelligente : base/update/DLC · options pour contrôle manuel"
+    "smart_install_contract": "Installation intelligente : base/update/DLC · options pour contrôle manuel",
+    "fact_region": "Région",
+    "fact_languages": "Langues",
+    "trailer_qr": "Scannez pour voir la bande-annonce"
   },
   "torrent": {
     "title": "Choisir les fichiers du torrent",

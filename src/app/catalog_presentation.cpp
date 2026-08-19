@@ -109,6 +109,9 @@ CatalogPresentation resolveCatalogPresentation(
     else
         result.description = entry.description;
     result.developer = entry.developer;
+    result.region     = entry.region;
+    result.languages  = entry.languages;
+    result.trailerUrl = entry.trailerUrl;
     result.publisher = metadata && !metadata->publisher.empty()
         ? metadata->publisher : entry.publisher;
     // No metadata snapshot has ever carried releaseDate, so this is entry.year

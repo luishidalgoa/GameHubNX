@@ -20,6 +20,11 @@ struct CatalogPresentation {
     std::string publisher;
     std::string releaseDate;
     std::string genre;
+    /* De la tienda GameHub. Vacios para cualquier otro catalogo, y la ficha
+       omite la fila cuando lo estan. */
+    std::string region;
+    std::string languages;
+    std::string trailerUrl;
     std::string performance;
     std::string multiplayer;
     std::vector<std::string> screenshots;

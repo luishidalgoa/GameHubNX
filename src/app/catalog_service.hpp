@@ -53,6 +53,15 @@ struct CatalogEntry {
        GameHub section serves a self-hosted library over plain HTTP. Non-empty
        here means "fetch this URL", and the torrent engine is bypassed.
        Empty for every torrent-backed entry, which is the default. */
+    /* Metadatos que solo trae la tienda GameHub (claves gh_ de su titledb).
+       region/languages son datos estructurados de la biblioteca del usuario, a
+       diferencia de interfaceLang/voiceLang, que son notas libres del releaser
+       ruso y la ficha solo muestra en su locale. groupKey une las ediciones de
+       un mismo juego para que no aparezcan como fichas sueltas. */
+    std::string region;
+    std::string languages;
+    std::string trailerUrl;
+    std::string groupKey;
     std::string directUrl;
     uint64_t topicId = 0;
     uint64_t size = 0;

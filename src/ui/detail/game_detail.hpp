@@ -409,6 +409,11 @@ private:
         addFactRow(table, tr("pipensx/detail/fact_release"),
                    presentation_.releaseDate);
         addFactRow(table, tr("pipensx/detail/fact_genre"), presentation_.genre);
+        // Region e idiomas solo llegan de la tienda GameHub; addFactRow ya se
+        // salta las filas vacias, asi que para cualquier otro catalogo la tabla
+        // sale igual que antes.
+        addFactRow(table, tr("pipensx/detail/fact_region"), presentation_.region);
+        addFactRow(table, tr("pipensx/detail/fact_languages"), presentation_.languages);
         addFactRow(table, tr("pipensx/detail/fact_players"), playersFact_);
         addFactRow(table, tr("pipensx/detail/fact_multiplayer"),
                    presentation_.multiplayer);

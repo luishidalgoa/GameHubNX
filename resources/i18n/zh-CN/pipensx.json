@@ -187,7 +187,10 @@
     "already_in_downloads": "已在下载列表中。",
     "status_fetching": "获取中 {}%",
     "install_contract": "安装 = 仅 NSP/NSZ · 额外文件已跳过",
-    "smart_install_contract": "智能安装：本体/更新/DLC · 选项用于手动控制"
+    "smart_install_contract": "智能安装：本体/更新/DLC · 选项用于手动控制",
+    "fact_region": "地区",
+    "fact_languages": "语言",
+    "trailer_qr": "扫码观看预告片"
   },
   "torrent": {
     "title": "选择种子文件",
