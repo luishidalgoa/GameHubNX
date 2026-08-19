@@ -54,8 +54,8 @@ if (PLATFORM_SWITCH)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif ()
 
-set(APP_TITLE "pipensx")
-set(APP_AUTHOR "pipensx")
+set(APP_TITLE "GameHubNX")
+set(APP_AUTHOR "GameHubNX")
 set(APP_ICON ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.jpg)
 set(ROMFS_DIR ${CMAKE_BINARY_DIR}/romfs)
 
@@ -527,17 +527,20 @@ if (PIPENSX_METADATA_INDEX)
 endif ()
 gen_dksh(${ROMFS_DIR}/shaders)
 
-add_custom_target(pipensx.nro ALL
+# El objetivo de enlace sigue llamandose `pipensx` (renombrarlo tocaria decenas
+# de target_* sin que se note nada), pero el .nro que sale y el titulo que ve el
+# usuario en el menu homebrew son ya los del fork.
+add_custom_target(gamehubnx.nro ALL
     DEPENDS ${PIPENSX_NRO_DEPENDS}
     COMMAND ${NX_NACPTOOL_EXE}
         --create "${APP_TITLE}" "${APP_AUTHOR}" "${PROJECT_VERSION}"
-        pipensx.nacp
+        gamehubnx.nacp
     COMMAND ${NX_ELF2NRO_EXE}
-        pipensx.elf pipensx.nro
+        pipensx.elf gamehubnx.nro
         --icon=${APP_ICON}
-        --nacp=pipensx.nacp
+        --nacp=gamehubnx.nacp
         --romfsdir=${ROMFS_DIR}
-    BYPRODUCTS pipensx.nacp pipensx.nro
+    BYPRODUCTS gamehubnx.nacp gamehubnx.nro
     VERBATIM
 )
 

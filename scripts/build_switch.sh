@@ -39,6 +39,6 @@ done
     "-DPIPENSX_VERSION=${PIPENSX_VERSION}" \
     "-DPIPENSX_METADATA_INDEX=${PIPENSX_METADATA_INDEX}" \
     -DCMAKE_BUILD_TYPE=Release
-"${CMAKE_BIN}" --build "${BUILD_DIR}" --target pipensx.nro --parallel
+"${CMAKE_BIN}" --build "${BUILD_DIR}" --target gamehubnx.nro --parallel
 
-echo "Built: ${BUILD_DIR}/pipensx.nro"
+echo "Built: ${BUILD_DIR}/gamehubnx.nro"

@@ -1,6 +1,6 @@
 name: switch-release
 
-# Manual button: builds build-switch/pipensx.nro inside the official
+# Manual button: builds build-switch/gamehubnx.nro inside the official
 # devkitPro container, then publishes it as a GitHub release for
 # review before it goes public.
 
@@ -95,32 +95,32 @@ jobs:
           fetch "https://github.com/i3sey/pipensx-metadata/releases/latest/download/game_metadata_index.json" \
             resources/catalog/game_metadata_index.json
 
-      - name: Build pipensx.nro
+      - name: Build gamehubnx.nro
         env:
           PIPENSX_VERSION: ${{ inputs.version }}
         run: |
           PIPENSX_VERSION="${PIPENSX_VERSION#v}" make switch
-          sha256sum build-switch/pipensx.nro > build-switch/pipensx.nro.sha256
+          sha256sum build-switch/gamehubnx.nro > build-switch/gamehubnx.nro.sha256
 
       - name: Pack the SD-card archive
         # Unzips straight onto the card root: hbmenu lists switch/<name>/<name>.nro,
-        # and the app creates sdmc:/switch/pipensx itself on first launch, so the
+        # and the app creates sdmc:/switch/gamehubnx itself on first launch, so the
         # NRO is the only file that belongs in here. The name is deliberately
         # fixed across releases — the version is the release's job, and a stable
         # asset name is what a "latest download" link can point at.
         run: |
           set -u
-          mkdir -p sdcard/switch/pipensx
-          cp build-switch/pipensx.nro sdcard/switch/pipensx/pipensx.nro
+          mkdir -p sdcard/switch/gamehubnx
+          cp build-switch/gamehubnx.nro sdcard/switch/gamehubnx/gamehubnx.nro
           cd sdcard
           zip -r -q ../build-switch/SDOut.zip switch
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: pipensx-nro
+          name: gamehubnx-nro
           path: |
-            build-switch/pipensx.nro
-            build-switch/pipensx.nro.sha256
+            build-switch/gamehubnx.nro
+            build-switch/gamehubnx.nro.sha256
             build-switch/SDOut.zip
           if-no-files-found: error
 
@@ -133,7 +133,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: pipensx-nro
+          name: gamehubnx-nro
           path: dist
 
       - name: Publicar la release
@@ -141,8 +141,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ inputs.version }}" \
-            dist/pipensx.nro \
-            dist/pipensx.nro.sha256 \
+            dist/gamehubnx.nro \
+            dist/gamehubnx.nro.sha256 \
             dist/SDOut.zip \
             --repo "${{ github.repository }}" \
             --title "${{ inputs.version }}" \

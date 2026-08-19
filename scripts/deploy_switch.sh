@@ -3,12 +3,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MTP_DIR="${MTP_DIR:-}"
-NRO_SRC="${NRO_SRC:-${ROOT}/build-switch/pipensx.nro}"
+NRO_SRC="${NRO_SRC:-${ROOT}/build-switch/gamehubnx.nro}"
 DEPLOY_CLEAN="${DEPLOY_CLEAN:-0}"
 
 if [[ -z "$MTP_DIR" ]]; then
     echo "Set MTP_DIR to the target directory, for example:" >&2
-    echo "  make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/pipensx'" >&2
+    echo "  make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/gamehubnx'" >&2
     exit 2
 fi
 if [[ "$DEPLOY_CLEAN" != "0" && "$DEPLOY_CLEAN" != "1" ]]; then
@@ -67,11 +67,11 @@ if [[ "$DEPLOY_CLEAN" == "1" ]]; then
     echo "==> Cleaning $MTP_DIR (keeping: ${KEEP_RELPATHS[*]})"
     gio_rm_recursive "$MTP_DIR" "" || true
 else
-    echo "==> Replacing only pipensx.nro (set DEPLOY_CLEAN=1 for a clean deploy)"
-    gio remove "$MTP_DIR/pipensx.nro" 2>/dev/null || true
+    echo "==> Replacing only gamehubnx.nro (set DEPLOY_CLEAN=1 for a clean deploy)"
+    gio remove "$MTP_DIR/gamehubnx.nro" 2>/dev/null || true
 fi
 
-echo "==> Copying pipensx.nro"
-gio copy "$NRO_SRC" "$MTP_DIR/pipensx.nro"
+echo "==> Copying gamehubnx.nro"
+gio copy "$NRO_SRC" "$MTP_DIR/gamehubnx.nro"
 
 echo "==> Done"

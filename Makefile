@@ -3,17 +3,17 @@
 CMAKE_BIN ?= cmake
 PIPENSX_METADATA_INDEX ?= $(CURDIR)/resources/catalog/game_metadata_index.json
 MTP_DIR ?=
-NRO_SRC ?= $(CURDIR)/build-switch/pipensx.nro
+NRO_SRC ?= $(CURDIR)/build-switch/gamehubnx.nro
 PIPENSX_DAEMON_HEAP_MB ?= 32
 DEPLOY_CLEAN ?= 0
 
 .PHONY: help pc test switch probe daemon golden clean audit deploy
 
 help:
-	@echo "pipensx build targets:"
+	@echo "GameHubNX build targets:"
 	@echo "  make pc       Build the portable command-line client"
 	@echo "  make test     Build and run the PC test suite"
-	@echo "  make switch   Build build-switch/pipensx.nro"
+	@echo "  make switch   Build build-switch/gamehubnx.nro"
 	@echo "  make probe    Build the sysmodule probe (src/probe/README.md)"
 	@echo "  make daemon   Build the pipensx daemon sysmodule (src/daemon/)"
 	@echo "  make golden   Run deterministic UI screenshot tests"
