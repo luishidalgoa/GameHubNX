@@ -39,6 +39,34 @@ The client is written to `./pipensx` and accepts:
 
 ## Nintendo Switch
 
+> ### No compiles la NRO en el servidor de casa
+>
+> La Pi tiene 8 GB de RAM con ~4,2 GB ya ocupados por los servicios del homelab
+> y **solo 512 MB de swap, habitualmente al 87 %**. Una compilacion paralela de
+> C++ agota los ~3,7 GB libres y el sistema empieza a paginar en un hueco de
+> 67 MB: no muere, se *arrastra*. El OOM killer no llega a dispararse, asi que
+> no hay nada en los registros y el servidor queda inaccesible hasta reiniciarlo
+> a mano — que es imposible en remoto.
+>
+> **Compila la NRO en CI.** El workflow `switch-release` la construye en el
+> contenedor oficial de devkitPro y publica el `.nro` como artefacto y borrador
+> de release. Es un boton manual en la pestana Actions.
+>
+> Si aun asi necesitas compilarla en local, hazlo **con un limite de memoria
+> duro**, para que muera el contenedor y no el servidor:
+>
+> ```sh
+> docker run --rm -v "$PWD":/w -w /w \
+>   --memory=2g --memory-swap=2g --cpus=2 \
+>   devkitpro/devkita64 make switch -j1
+> ```
+>
+> `--memory-swap` igual a `--memory` desactiva el swap del contenedor: sin eso,
+> el limite de RAM solo empuja el problema al swap del host, que es exactamente
+> lo que cuelga la maquina.
+
+
+
 Requirements:
 
 - devkitPro with devkitA64 and libnx
