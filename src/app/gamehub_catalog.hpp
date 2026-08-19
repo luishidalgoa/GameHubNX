@@ -26,6 +26,15 @@ extern const char* const kCatalogUrl;
 // Section label shown in the UI and used as the catalogue's source label.
 extern const char* const kSourceLabel;
 
+/// How this app identifies itself to GameHub, as `name/version`.
+///
+/// Sent in the `X-GameHub-Client` header. GameHub records it against every
+/// download, which is how its traffic panel can tell an actual Switch pulling a
+/// file apart from a browser or a Tinfoil-family client — and, because the
+/// version rides along, which consoles are still on an old build.
+extern const char* const kClientId;
+
+
 // Parses a Tinfoil-style shop index into catalogue entries.
 //
 // Shape consumed (everything else in the payload is ignored):

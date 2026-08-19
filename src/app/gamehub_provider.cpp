@@ -5,9 +5,22 @@
 
 #include <curl/curl.h>
 
+#include <string>
+
 namespace pipensx {
 
 namespace {
+
+// El identificador de cliente es un dato (vive en gamehub_catalog, sin curl);
+// aplicarlo a un handle es transporte y vive aqui, donde curl ya esta incluido.
+// Mantenerlos separados deja que las pruebas compilen el catalogo sin necesitar
+// las cabeceras de libcurl.
+curl_slist* applyClientIdentity(CURL* curl) {
+    curl_slist* headers = curl_slist_append(
+        nullptr, (std::string("X-GameHub-Client: ") + gamehub::kClientId).c_str());
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, gamehub::kClientId);
+    return headers;
+}
 
 // A HEAD against the shop's download route. GameHub answers it with the real
 // Content-Length and advertises byte ranges, so the transfer layer can fetch in
@@ -24,6 +37,11 @@ bool headContentLength(const std::string& url, uint64_t& bytes,
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
+    // Identificarse ante GameHub: asi la descarga queda registrada como de la
+    // app de Switch y no como un cliente generico.
+    struct curl_slist* headers = applyClientIdentity(curl);
+    if (headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
     curlPinHttpsOnly(curl);
     curlPinScheme(curl, url);
     curlApplyTrustedSsl(curl);
@@ -31,6 +49,7 @@ bool headContentLength(const std::string& url, uint64_t& bytes,
     const CURLcode rc = curl_easy_perform(curl);
     if (rc != CURLE_OK) {
         error = std::string("gamehub: HEAD failed: ") + curl_easy_strerror(rc);
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         return false;
     }
@@ -39,12 +58,14 @@ bool headContentLength(const std::string& url, uint64_t& bytes,
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
     if (status < 200 || status >= 300) {
         error = "gamehub: HEAD returned HTTP " + std::to_string(status);
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         return false;
     }
 
     curl_off_t len = -1;
     curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &len);
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     if (len <= 0) {

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 // sha1.h is plain C and carries no extern "C" guard of its own, so the
 // declarations must be wrapped here or C++ name mangling loses them at link.
@@ -17,6 +18,9 @@ namespace pipensx {
 namespace gamehub {
 
 const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
+const char* const kClientId    = "GameHubNX/1.0.0";
+
+
 const char* const kSourceLabel = "GameHub";
 
 namespace {
