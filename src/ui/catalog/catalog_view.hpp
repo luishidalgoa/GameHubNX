@@ -172,6 +172,9 @@ private:
     std::vector<uint8_t> selectable_;
     std::vector<uint8_t> hasMods_;
     std::vector<uint8_t> favorite_;
+    /* Motivo del ultimo refresco fallido, para mostrarlo en el estado vacio.
+       Vacio cuando el ultimo refresco fue bien. */
+    std::string lastCatalogError_;
     std::vector<CatalogShelf> shelves_;
     int heroIndex_ = -1;
     std::string heroImage_;
@@ -1107,7 +1110,13 @@ private:
             if (query_.empty()) {
                 ensureEmptyState()->setContent(
                     tr("pipensx/catalog/empty_title"),
-                    tr("pipensx/catalog/empty_body"),
+                    // Con el motivo detras cuando lo hay: "no se pudo
+                    // contactar con la tienda" es accionable; una pantalla
+                    // vacia no lo es.
+                    lastCatalogError_.empty()
+                        ? tr("pipensx/catalog/empty_body")
+                        : tr("pipensx/catalog/empty_body") + "\n\n" +
+                              lastCatalogError_,
                     tr("pipensx/catalog/empty_action"),
                     [this] { refreshCatalog(); });
             } else {
@@ -1802,6 +1811,13 @@ private:
                 if (fetchCatalog && !catalogOk) {
                     diagnostic_error("catalog", "refresh", "error=%s",
                                      catalogError.c_str());
+                    // Se guarda para poder ENSENARLO. Este fork no lleva
+                    // catalogo empotrado, asi que un refresco fallido deja la
+                    // pantalla vacia; sin el motivo a la vista, el usuario no
+                    // tiene forma de saber si es la red, el servidor o la app.
+                    lastCatalogError_ = catalogError;
+                } else if (fetchCatalog) {
+                    lastCatalogError_.clear();
                 }
                 if (fetchMetadata && !metadataOk) {
                     diagnostic_error("metadata", "refresh", "error=%s",
