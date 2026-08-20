@@ -166,13 +166,11 @@ public:
             return new SettingsView(settings, manager, catalog, metadata,
                                     installed, updater, mods, webServer);
         });
-        tabs->addNavTab(tr("pipensx/nav/help"), NavIconType::Help,
-                        [manager, catalog, metadata, installed] {
-            return new HelpView(manager, catalog, metadata, installed);
-        });
-        tabs->addNavTab(tr("pipensx/nav/about"), NavIconType::About, [] {
-            return new AboutView();
-        });
+        // Ayuda y Acerca-de no se registran: la primera explica torrents,
+        // proveedores de debrid y magnets -- nada de lo que hace esta app -- y
+        // la segunda es la ficha del proyecto base. Las vistas siguen
+        // compiladas y sin tocar para que los merges con upstream no choquen;
+        // lo unico que cambia es que no aparecen en la navegacion.
         tabs->attachStorageFooter(manager, webServer);
         frame_ = new brls::AppletFrame(tabs);
         frame_->setTitle(tr("pipensx/app/title"));
@@ -545,29 +543,27 @@ int main(int argc, char** argv) {
             });
         }
 
-        // First-run: the method choice gates the app, so it comes first on a
-        // fresh install — nothing (not even the catalog disclaimer) is shown
-        // before it, and B is locked on it until a method is picked. Once the
-        // choice is saved, the disclaimer follows (non-cancelable: it guards
-        // the provider link step), then — for the server modes — the link
-        // screen.
-        if (!settings.get().firstRunCompleted) {
-            startupStage("first-run method choice");
-            pipensx::ui::showFirstRunChoice(
-                &settings, &manager,
-                [&settings, &manager](
-                    pipensx::DebridProviderKind provider, bool torrenting) {
-                    pipensx::ui::showCatalogDisclaimer(
-                        &settings, [&settings, &manager, provider,
-                                    torrenting] {
-                            if (!torrenting)
-                                pipensx::ui::DebridLinkView::push(
-                                    &settings, &manager, provider);
-                        });
-                });
-        } else {
-            startupStage("catalog disclaimer");
-            pipensx::ui::showCatalogDisclaimer(&settings, [] {});
+        // GameHubNX entra DIRECTO a la tienda. El primer arranque de la app
+        // base encadena tres pantallas antes del catalogo -- eleccion de
+        // metodo (torrent o proveedor de debrid), aviso legal sobre catalogos
+        // de terceros, y vinculacion de la cuenta del proveedor -- y ninguna
+        // significa nada aqui: no hay metodo que elegir porque siempre es la
+        // tienda propia por HTTPS, el catalogo no es de un tercero sino del
+        // servidor del usuario, y no hay cuenta que vincular.
+        //
+        // Se marcan como resueltas en vez de borrar el codigo: las pantallas
+        // siguen ahi para cuando upstream las cambie, y esto es una sola
+        // decision en un sitio en vez de un injerto repartido.
+        if (!settings.get().firstRunCompleted ||
+            !settings.get().catalogDisclaimerAcknowledged) {
+            startupStage("first-run skipped (GameHub store)");
+            pipensx::AppSettingsData next = settings.get();
+            next.firstRunCompleted = true;
+            next.catalogDisclaimerAcknowledged = true;
+            next.torrentingEnabled = false;
+            std::string error;
+            if (!settings.update(next, error))
+                brls::Logger::warning("first-run defaults: %s", error.c_str());
         }
 
         startupStage("first main loop");
