@@ -71,6 +71,12 @@ private:
 
     void setValue(brls::Label* label, const std::string& text,
                   NVGcolor color) {
+        // Las filas de DHT, pares y los tres proveedores de debrid ya no se
+        // registran en este fork, asi que su puntero es nulo y refresh() las
+        // sigue actualizando. Se comprueba aqui, en el unico sitio por el que
+        // pasan todas, en vez de en las quince llamadas.
+        if (!label)
+            return;
         setTextIfChanged(label, text);
         label->setTextColor(color);
     }
@@ -149,11 +155,14 @@ private:
         content->setPadding(24, 34, 24, 34);
 
         internet_ = addRow(content, tr("pipensx/diag/internet"), true);
-        dht_ = addRow(content, tr("pipensx/diag/dht"), false);
-        peers_ = addRow(content, tr("pipensx/diag/peers"), false);
-        torbox_ = addRow(content, tr("pipensx/diag/torbox"), false);
-        torrserver_ = addRow(content, tr("pipensx/diag/torrserver"), false);
-        realdebrid_ = addRow(content, tr("pipensx/diag/realdebrid"), false);
+        // DHT, pares, TorBox, TorrServer y Real-Debrid no se registran: son el
+        // diagnostico de una descarga por torrent y de tres servicios de
+        // terceros que este fork no usa. Aqui lo unico que importa es si hay
+        // internet y si la tienda responde.
+        //
+        // Los punteros quedan a nullptr y refresh() los comprueba antes de
+        // tocarlos, asi que el codigo de upstream que los actualiza sigue
+        // compilando sin parchearlo.
         proxy_ = addRow(content, tr("pipensx/diag/proxy"), false);
         catalog_ = addRow(content, tr("pipensx/diag/catalog"), false);
         refresh();

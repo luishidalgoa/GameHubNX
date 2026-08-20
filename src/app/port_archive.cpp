@@ -1,3 +1,4 @@
+#include "app_paths.h"
 #include "port_archive.hpp"
 
 #include "nx_file_types.hpp"
@@ -100,7 +101,7 @@ std::string switchRelativeDestination(const std::string& memberPath) {
             const size_t first = relative.find('/');
             const std::string top =
                 first == std::string::npos ? relative : relative.substr(0, first);
-            if (lowerAscii(top) == "pipensx")
+            if (lowerAscii(top) == GHNX_APP_DIR_NAME)
                 return {};
             return relative;
         }
@@ -136,7 +137,7 @@ bool writeBytes(const std::string& path, const uint8_t* data, size_t size,
         error = "Unable to create destination directories.";
         return false;
     }
-    const std::string temporary = path + ".pipensx-part";
+    const std::string temporary = path + GHNX_PART_SUFFIX;
     std::FILE* out = std::fopen(temporary.c_str(), "wb");
     if (!out) {
         error = "Unable to create extracted file.";
@@ -361,7 +362,7 @@ struct FolderByteSink {
             error = "Unable to create destination directories.";
             return false;
         }
-        const std::string temporary = range.absolute + ".pipensx-part";
+        const std::string temporary = range.absolute + GHNX_PART_SUFFIX;
         out = std::fopen(temporary.c_str(), "wb");
         if (!out) {
             error = "Unable to create extracted file.";
@@ -375,7 +376,7 @@ struct FolderByteSink {
         if (active == static_cast<size_t>(-1) || !out)
             return true;
         const std::string temporary =
-            ranges[active].absolute + ".pipensx-part";
+            ranges[active].absolute + GHNX_PART_SUFFIX;
         if (std::fflush(out) != 0) {
             std::fclose(out);
             out = nullptr;

@@ -538,9 +538,25 @@ bool CatalogService::loadFile(const std::string& path,
     return true;
 }
 
+bool CatalogService::cacheMatchesSource() const {
+    std::ifstream in(sourceStampPath_, std::ios::binary);
+    if (!in)
+        return false;   // sin sello: no se sabe quien la escribio, no se usa
+    std::string stamped((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+    while (!stamped.empty() &&
+           (stamped.back() == '\n' || stamped.back() == '\r' ||
+            stamped.back() == ' '))
+        stamped.pop_back();
+    return stamped == gamehub::kCatalogUrl;
+}
+
 bool CatalogService::load(std::string& error) {
     std::string cacheError;
-    if (loadFile(cachePath_, "cached catalog", cacheError))
+    // Solo se acepta la cache si la escribio la fuente que se va a usar ahora.
+    // Una cache sin sello viene de una version anterior a este cambio, o de
+    // otra app que compartia carpeta: tampoco se acepta.
+    if (cacheMatchesSource() && loadFile(cachePath_, "cached catalog", cacheError))
         return true;
     if (!bundledPath_.empty()) {
         if (loadFile(bundledPath_, "bundled catalog", error))
@@ -626,8 +642,22 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
             }
         }
     }
+    // La cache guarda el indice RAIZ, no el combinado: los sub-indices (DLC y
+    // actualizaciones) se vuelven a pedir en cada refresco. Es deliberado --
+    // reserializar el conjunto obligaria a un formato propio-- pero significa
+    // que un arranque en frio ensena la tienda incompleta hasta que termine el
+    // refresco. Aceptable porque el refresco arranca solo al abrir.
     if (!writeAtomic(cachePath_, catalogBody, error))
         return false;
+
+    // Sello de procedencia. Sin esto, una cache escrita por otra fuente --la de
+    // una instalacion anterior, o la del proyecto del que viene este fork-- se
+    // cargaba tal cual al arrancar y el usuario veia un catalogo ajeno sin
+    // entender por que. Con el sello, load() la descarta si no coincide.
+    std::string stampError;
+    if (!writeAtomic(sourceStampPath_, sourceUrl, stampError))
+        log_msg("[catalog] no pude escribir el sello de fuente: %s\n",
+                stampError.c_str());
     return true;
 }
 

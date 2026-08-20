@@ -1,3 +1,4 @@
+#include "app/app_paths.h"
 #include "app/app_settings.hpp"
 #include "app/catalog_service.hpp"
 #include "app/companion_settings.hpp"
@@ -89,8 +90,17 @@ bool runOnUiThread(const std::function<void()>& fn) {
     return cv.wait_for(lock, kCompanionSettingsTimeout, [&] { return done; });
 }
 
-constexpr const char* BundledCatalogPath =
-    "romfs:/catalog/switch_games.json.zst";
+// Sin catalogo empotrado, A PROPOSITO.
+//
+// El proyecto del que viene este fork empaqueta en la ROM un volcado del
+// catalogo de torrents de Langegen/RuTracker, y CatalogService lo pinta cuando
+// aun no hay nada descargado. Aqui eso significaba abrir la app y ver el
+// catalogo de otro producto en lugar de la tienda propia -- que es exactamente
+// lo que reporto el usuario.
+//
+// Vacio quiere decir: hasta que la tienda responda, no se ensena un catalogo;
+// se ensena que se esta cargando. Es preferible a mostrar contenido ajeno.
+constexpr const char* BundledCatalogPath = "";
 
 // AppSettingsData::language -> the borealis locale to load. LOCALE_AUTO makes
 // SwitchPlatform read the console's system language, so a Russian console gets
@@ -250,8 +260,8 @@ int main(int argc, char** argv) {
 
     switch_crashlog_install();
     switch_crashlog_stage("creating application directories");
-    mkdir("sdmc:/switch", 0755);
-    mkdir("sdmc:/switch/pipensx", 0755);
+    mkdir(GHNX_SWITCH_ROOT, 0755);
+    mkdir(GHNX_APP_ROOT, 0755);
     log_init(LogPath);
 
     (void)argc;
@@ -356,9 +366,9 @@ int main(int argc, char** argv) {
 
         startupStage("CatalogService construction");
         log_msg("[startup] image relay: relays-first + disk cache (rev4)\n");
-        unlink("sdmc:/switch/pipensx/rutracker.cfg");
-        unlink("sdmc:/switch/pipensx/rutracker_cookies.txt");
-        CatalogService catalog("sdmc:/switch/pipensx", BundledCatalogPath);
+        unlink(GHNX_PATH("rutracker.cfg"));
+        unlink(GHNX_PATH("rutracker_cookies.txt"));
+        CatalogService catalog(GHNX_APP_ROOT, BundledCatalogPath);
 
         // The metadata index parse (an ~8 MB JSON) runs on a worker thread in
         // parallel with the catalog parse below; the service is not touched by
@@ -366,7 +376,7 @@ int main(int argc, char** argv) {
         // which all access is UI-thread as before. Startup pays
         // max(catalog, metadata) instead of their sum.
         startupStage("GameMetadataService construction");
-        GameMetadataService metadata("sdmc:/switch/pipensx");
+        GameMetadataService metadata(GHNX_APP_ROOT);
         std::string metadataError;
         bool metadataOk = true;
         ThreadJoiner metadataLoader{
@@ -380,13 +390,13 @@ int main(int argc, char** argv) {
                     catalogError.c_str());
 
         startupStage("ModIndexService construction");
-        ModIndexService mods("sdmc:/switch/pipensx");
+        ModIndexService mods(GHNX_APP_ROOT);
         std::string modsError;
         if (!mods.load(modsError))
             log_msg("[mods] initial load skipped: %s\n", modsError.c_str());
 
         startupStage("FavoritesService construction");
-        FavoritesService favorites("sdmc:/switch/pipensx");
+        FavoritesService favorites(GHNX_APP_ROOT);
         std::string favoritesError;
         if (!favorites.load(favoritesError))
             log_msg("[favorites] initial load skipped: %s\n",
@@ -399,7 +409,7 @@ int main(int argc, char** argv) {
         // brls::async, so run the initial scan on its own thread and let the
         // UI come up immediately; the list fills in when the scan lands.
         startupStage("InstalledTitleService refresh (async)");
-        InstalledTitleService installed("sdmc:/switch/pipensx");
+        InstalledTitleService installed(GHNX_APP_ROOT);
         ThreadJoiner installedScanner{std::thread([&installed] {
             std::string installedError;
             if (!installed.refresh(installedError))
@@ -409,10 +419,10 @@ int main(int argc, char** argv) {
 
         startupStage("DownloadManager construction");
         SwitchPerformanceController performance;
-        dht_engine_set_cache_path("sdmc:/switch/pipensx/dht.cache");
-        DownloadManager manager("sdmc:/switch/pipensx");
-        SwitchDeployService deploy(manager, "sdmc:/switch/pipensx",
-                                   "sdmc:/switch");
+        dht_engine_set_cache_path(GHNX_PATH("dht.cache"));
+        DownloadManager manager(GHNX_APP_ROOT);
+        SwitchDeployService deploy(manager, GHNX_APP_ROOT,
+                                   GHNX_SWITCH_ROOT);
         manager.setInstallTarget(
             installTargetFor(settings.get().installLocation));
         manager.setMaxActiveDownloads(settings.get().maxActiveDownloads);
@@ -488,7 +498,7 @@ int main(int argc, char** argv) {
 
         startupStage("GameUpdateService load");
         GameUpdateService gameUpdates(&metadata,
-                                      "sdmc:/switch/pipensx/game-updates.json");
+                                      GHNX_PATH("game-updates.json"));
         std::string gameUpdatesError;
         if (!gameUpdates.load(gameUpdatesError))
             diagnostic_error("game_updates", "load", "error=%s",
@@ -554,16 +564,29 @@ int main(int argc, char** argv) {
         // Se marcan como resueltas en vez de borrar el codigo: las pantallas
         // siguen ahi para cuando upstream las cambie, y esto es una sola
         // decision en un sitio en vez de un injerto repartido.
-        if (!settings.get().firstRunCompleted ||
-            !settings.get().catalogDisclaimerAcknowledged) {
-            startupStage("first-run skipped (GameHub store)");
+        // Invariantes del fork, forzadas en CADA arranque y no solo cuando los
+        // flags estan a false. La version anterior se saltaba este bloque si
+        // firstRunCompleted ya venia a true -- que es justo el caso de quien
+        // instala esto sobre una instalacion previa: conservaba torrenting
+        // activado y los ajustes heredados.
+        {
             pipensx::AppSettingsData next = settings.get();
-            next.firstRunCompleted = true;
-            next.catalogDisclaimerAcknowledged = true;
-            next.torrentingEnabled = false;
-            std::string error;
-            if (!settings.update(next, error))
-                brls::Logger::warning("first-run defaults: %s", error.c_str());
+            const bool cambia = !next.firstRunCompleted ||
+                                !next.catalogDisclaimerAcknowledged ||
+                                next.torrentingEnabled ||
+                                !next.catalogSourceUrl.empty();
+            if (cambia) {
+                startupStage("aplicando invariantes de GameHubNX");
+                next.firstRunCompleted = true;
+                next.catalogDisclaimerAcknowledged = true;
+                next.torrentingEnabled = false;
+                // Una fuente heredada de otra instalacion haria que la tienda
+                // apuntase a otro catalogo; se limpia para que mande el defecto.
+                next.catalogSourceUrl.clear();
+                std::string error;
+                if (!settings.update(next, error))
+                    brls::Logger::warning("invariantes: %s", error.c_str());
+            }
         }
 
         startupStage("first main loop");

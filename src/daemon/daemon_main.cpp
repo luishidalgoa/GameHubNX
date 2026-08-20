@@ -14,6 +14,7 @@
  * Check:   curl -s http://<switch-ip>:8080/api/info
  */
 
+#include "../app/app_paths.h"
 #include <switch.h>
 
 #include "app/http_server.hpp"
@@ -88,7 +89,7 @@ extern "C" {
 #define DAEMON_HEAP_MIN  (2u * 1024 * 1024)
 
 #define DAEMON_PORT     8080
-#define DAEMON_LOG_PATH "sdmc:/switch/pipensx/daemon.log"
+#define DAEMON_LOG_PATH GHNX_PATH("daemon.log")
 
 extern "C" {
 

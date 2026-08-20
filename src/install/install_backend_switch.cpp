@@ -1,3 +1,4 @@
+#include "../app/app_paths.h"
 #include "install_backend.hpp"
 
 #ifdef __SWITCH__
@@ -25,7 +26,7 @@ extern "C" {
 namespace pipensx::install {
 namespace {
 
-constexpr const char* TempRoot = "sdmc:/switch/pipensx/install-temp";
+constexpr const char* TempRoot = GHNX_PATH("install-temp");
 
 // PERF_PLAN 7.4: install target is selectable so NAND (eMMC) can be measured
 // against the ~16 MB/s SD write ceiling. NcmContentStorage APIs act on the

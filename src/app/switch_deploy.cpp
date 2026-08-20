@@ -1,3 +1,4 @@
+#include "app_paths.h"
 #include "switch_deploy.hpp"
 
 #include "install_space.hpp"
@@ -554,7 +555,7 @@ SwitchDeployInspection inspectSwitchDeploy(TaskFileInventory inventory,
         const std::vector<std::string> destinationParts =
             splitPath(destinationRelative);
         if (destinationParts.empty() ||
-            asciiEqual(destinationParts.front(), "pipensx")) {
+            asciiEqual(destinationParts.front(), GHNX_APP_DIR_NAME)) {
             setProblem(result, SwitchDeployProblem::UnsafePath,
                        "Writing inside the pipensx application directory is forbidden.");
             return result;
@@ -1060,7 +1061,7 @@ void SwitchDeployService::cleanupInterruptedJob() {
         version == static_cast<uint64_t>(kJobVersion) &&
         readString(root, "temp", temporary) &&
         managedChild(targetRoot_, temporary) &&
-        temporary.find(".pipensx-part-") != std::string::npos) {
+        temporary.find(GHNX_PART_SUFFIX "-") != std::string::npos) {
         std::remove(temporary.c_str());
     }
     std::remove(jobPath(appRoot_).c_str());

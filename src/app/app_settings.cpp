@@ -308,8 +308,17 @@ bool isValidCatalogSourceUrl(const std::string& value) {
 }
 
 std::string effectiveCatalogSourceUrl(const std::string& custom) {
-    if (!custom.empty())
-        return custom;
+    // El catalogo es SIEMPRE la tienda propia. Antes esto respetaba una fuente
+    // guardada en settings.json, y bastaba con que una instalacion anterior
+    // hubiese dejado ahi la URL de upstream para que la app siguiera mostrando
+    // su catalogo de torrents pese al cambio de defecto -- justamente lo que
+    // reporto el usuario.
+    //
+    // Este fork existe para servir una biblioteca concreta: que la fuente sea
+    // configurable no aporta nada y es la via por la que la app deja de ser la
+    // suya. El parametro se conserva para no tocar las llamadas.
+    (void)custom;
+
     // This fork exists to serve one specific self-hosted library, so that is
     // what the catalogue shows out of the box: no host setting, nothing to
     // configure, nothing to get wrong. Only the *default* moves — the upstream

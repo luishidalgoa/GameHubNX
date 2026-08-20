@@ -71,8 +71,12 @@ TEST_BINS_EARLY := $(filter-out $(BUILD_DIR)/tests/test_manager,$(TEST_BINS))
 
 # Shared by test_manager and test_queue_controls (and anything else that
 # links the full DownloadManager graph).
+# GameHub: DownloadManager::makeProvider devuelve siempre GameHubProvider, asi
+# que todo binario que enlace download_manager.o necesita tambien estos.
 MANAGER_TEST_OBJS = \
-		$(BUILD_DIR)/src/app/download_manager.o \
+		$(BUILD_DIR)/src/app/gamehub_provider.o \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o \
+		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o \
 		$(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
@@ -275,7 +279,7 @@ $(BUILD_DIR)/tests/test_web_server: tests/test_web_server.cpp \
 		src/app/app_settings.cpp \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
 		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \
-		$(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
+		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
 		$(BUILD_DIR)/src/app/request_gate.o \
@@ -376,7 +380,7 @@ $(BUILD_DIR)/tests/test_favorites: tests/test_favorites.cpp \
 
 $(BUILD_DIR)/tests/test_batch_install: tests/test_batch_install.cpp \
 		src/app/catalog_batch_installer.cpp src/app/install_space.cpp \
-		$(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
+		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
 		$(BUILD_DIR)/src/app/request_gate.o $(BUILD_DIR)/src/app/debrid_transfer.o \
@@ -525,7 +529,7 @@ $(BUILD_DIR)/tests/test_task_files: tests/test_task_files.cpp \
 $(BUILD_DIR)/tests/test_switch_deploy: tests/test_switch_deploy.cpp \
 		$(BUILD_DIR)/src/app/switch_deploy.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/port_archive.o $(LZMA_OBJS) \
-		$(BUILD_DIR)/src/app/download_manager.o src/app/install_space.cpp \
+		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o src/app/install_space.cpp \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
 		$(BUILD_DIR)/src/app/request_gate.o $(BUILD_DIR)/src/app/install_pacer.o \
@@ -583,7 +587,7 @@ $(BUILD_DIR)/tools/webserver: tools/web_server_main.cpp \
 		$(BUILD_DIR)/src/app/snapshot_zstd.o \
 		$(BUILD_DIR)/src/app/mod_index_service.o $(BUILD_DIR)/src/app/game_metadata_service.o \
 		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \
-		$(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
+		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
 		$(BUILD_DIR)/src/app/request_gate.o \

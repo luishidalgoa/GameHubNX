@@ -1,3 +1,5 @@
+#include "app/app_paths.h"
+
 #include "app/update_transaction.h"
 
 #include <switch.h>
@@ -6,11 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *Target = "sdmc:/switch/pipensx/pipensx.nro";
-static const char *Staged = "sdmc:/switch/pipensx/pipensx.nro.update";
-static const char *Marker = "sdmc:/switch/pipensx/pipensx.nro.update.sha256";
-static const char *Backup = "sdmc:/switch/pipensx/pipensx.nro.previous";
-static const char *LogPath = "sdmc:/switch/pipensx/pipensx-update.log";
+static const char *Target = GHNX_PATH(GHNX_NRO_NAME);
+static const char *Staged = GHNX_PATH(GHNX_NRO_NAME ".update");
+static const char *Marker = GHNX_PATH(GHNX_NRO_NAME ".update.sha256");
+static const char *Backup = GHNX_PATH(GHNX_NRO_NAME ".previous");
+static const char *LogPath = GHNX_PATH("gamehubnx-update.log");
 
 static void update_log(const char *format, ...) {
     FILE *file = fopen(LogPath, "ab");

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "app_paths.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -38,9 +40,9 @@ public:
     using ProgressCallback = std::function<void(uint64_t, uint64_t)>;
 
     explicit UpdateService(
-        std::string targetPath = "sdmc:/switch/pipensx/pipensx.nro",
+        std::string targetPath = GHNX_PATH(GHNX_NRO_NAME),
         MetadataFetcher metadataFetcher = {}, AssetFetcher assetFetcher = {},
-        std::string helperSourcePath = "romfs:/pipensx-updater.nro");
+        std::string helperSourcePath = "romfs:/gamehubnx-updater.nro");
     ~UpdateService();
 
     UpdateService(const UpdateService&) = delete;

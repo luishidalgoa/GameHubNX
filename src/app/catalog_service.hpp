@@ -92,6 +92,10 @@ public:
 
     bool load(std::string& error);
 
+    /* true si el sello de la cache coincide con la fuente efectiva actual.
+       Una cache sin sello (version anterior, u otra app) se rechaza. */
+    bool cacheMatchesSource() const;
+
     // Pool-thread safe: fetch the latest catalogue from the trusted source,
     // parse it, and persist the on-disk cache. Fills `parsed` on success and
     // never touches entries_, so it may run on a worker thread. The caller
@@ -152,6 +156,9 @@ private:
     std::string rootPath_;
     std::string catalogRoot_;
     std::string cachePath_;
+    /* Fichero hermano de la cache con la URL que la genero. Sin el, una cache
+       escrita por otra fuente se cargaba como propia. */
+    std::string sourceStampPath_;
     std::string bundledPath_;
     // Never null — starts as an empty vector. Reassigned only on the UI
     // thread (see adopt()).

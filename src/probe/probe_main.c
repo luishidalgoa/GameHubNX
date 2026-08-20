@@ -22,6 +22,7 @@
  * Results are read over TCP (curl http://<switch>:8099/) and mirrored to
  * sdmc:/switch/pipensx/probe-report.txt.
  */
+#include "../app/app_paths.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -45,8 +46,8 @@
 #define PROBE_HEAP_SIZE     0x400000
 #define PROBE_STACK_SIZE    0x4000
 #define PROBE_REPORT_BUFFER (192 * 1024)
-#define PROBE_CONFIG_PATH   "sdmc:/switch/pipensx/probe.ini"
-#define PROBE_REPORT_PATH   "sdmc:/switch/pipensx/probe-report.txt"
+#define PROBE_CONFIG_PATH   GHNX_PATH("probe.ini")
+#define PROBE_REPORT_PATH   GHNX_PATH("probe-report.txt")
 
 /*
  * psc module id. Not one of the system's own (see PscPmModuleId in psc.h) —
@@ -600,7 +601,7 @@ static void flush_thread_main(void *arg)
  * would answer neither. ponytail: if this comes back positive, the real work is
  * making the installer resumable, not making this test smarter.
  */
-#define PROBE_SD_SCRATCH  "sdmc:/switch/pipensx/probe-scratch.bin"
+#define PROBE_SD_SCRATCH  GHNX_PATH("probe-scratch.bin")
 #define PROBE_SD_BLOCK    (64 * 1024)
 #define PROBE_SD_MAX      (256 * 1024 * 1024)
 

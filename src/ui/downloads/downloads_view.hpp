@@ -81,11 +81,10 @@ public:
                 timer_.setPeriod(750);
             }
         });
-        registerAction(tr("pipensx/downloads/import"), brls::BUTTON_X,
-                       [this](brls::View*) {
-            openFilePicker();
-            return true;
-        });
+        // Sin "Importar torrent": aqui no se anaden descargas desde un fichero
+        // .torrent suelto, se anaden desde la tienda. El selector de ficheros y
+        // openFilePicker() siguen compilados para no divergir de upstream, pero
+        // ya no hay forma de llegar a ellos desde la navegacion.
         registerAction(tr("pipensx/downloads/pause_all"), brls::BUTTON_Y,
                        [this](brls::View*) {
             pauseResumeAll();
@@ -307,8 +306,10 @@ private:
         emptyState_->setContent(
             tr("pipensx/downloads/empty_title"),
             tr("pipensx/downloads/empty_body"),
-            tr("pipensx/downloads/import_action"),
-            [this] { openFilePicker(); });
+            // Sin accion: la lista vacia solo informa. Antes ofrecia importar un
+            // .torrent, que es justo lo que este fork no hace.
+            "",
+            [] {});
         addView(emptyState_);
         return emptyState_;
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../app/app_paths.h"
 #include <switch.h>
 #include <sys/statvfs.h>
 
@@ -48,11 +49,11 @@ inline std::string storageMeterHeader(
 
 inline std::atomic<uint32_t> gCatalogTempSerial{0};
 inline constexpr const char* TelemetryFlagPath =
-    "sdmc:/switch/pipensx/throughput_telemetry.enabled";
+    GHNX_PATH("throughput_telemetry.enabled");
 inline constexpr const char* SettingsPath =
-    "sdmc:/switch/pipensx/settings.json";
+    GHNX_PATH("settings.json");
 inline constexpr const char* LogPath =
-    "sdmc:/switch/pipensx/pipensx.log";
+    GHNX_PATH("gamehubnx.log");
 
 // Point borealis at the log handle log_init() already owns. Opening the path
 // a second time looks like it works on PC and writes nothing on the Switch,

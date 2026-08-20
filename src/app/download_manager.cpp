@@ -1,3 +1,4 @@
+#include "gamehub_provider.hpp"
 #include "download_manager.hpp"
 #include "task_files.hpp"
 #include "request_gate.hpp"
@@ -754,11 +755,18 @@ std::string DownloadManager::apiKeyFor(DebridProviderKind provider) const {
 
 std::unique_ptr<DebridProvider> DownloadManager::makeProvider(
     DebridProviderKind provider, const std::string& key) {
-    if (provider == DebridProviderKind::TorrServer)
-        return std::make_unique<TorrserverProvider>(key);
-    if (provider == DebridProviderKind::RealDebrid)
-        return std::make_unique<RealdebridProvider>(key);
-    return std::make_unique<TorboxProvider>(key);
+    // Siempre GameHub. Antes esto devolvia TorBox, TorrServer o Real-Debrid
+    // segun un ajuste, de modo que pulsar Instalar en la tienda propia acababa
+    // pidiendo vincular una cuenta de un servicio de terceros que aqui no pinta
+    // nada -- y sin cuenta, la descarga no arrancaba.
+    //
+    // GameHubProvider no necesita clave ni cuenta: el fichero ya esta en un
+    // servidor del usuario y su "handle" es la propia URL. Los tres proveedores
+    // de debrid siguen compilados para no divergir de upstream mas de lo
+    // necesario, pero ya no se instancian.
+    (void)provider;
+    (void)key;
+    return std::make_unique<GameHubProvider>();
 }
 
 // Best-effort: a transfer we drop locally should not sit on the account

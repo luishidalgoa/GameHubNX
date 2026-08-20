@@ -1,3 +1,4 @@
+#include "app_paths.h"
 #include "update_service.hpp"
 #include "update_transaction.h"
 #include "curl_https.hpp"
@@ -33,9 +34,9 @@ namespace {
 #endif
 
 constexpr const char* kLatestReleaseUrl =
-    "https://api.github.com/repos/i3sey/pipensx/releases/latest";
+    "https://api.github.com/repos/luishidalgoa/GameHubNX/releases/latest";
 constexpr const char* kReleaseAssetPrefix =
-    "https://github.com/i3sey/pipensx/releases/download/";
+    "https://github.com/luishidalgoa/GameHubNX/releases/download/";
 constexpr size_t kMetadataLimit = 512 * 1024;
 constexpr size_t kChecksumLimit = 1024;
 constexpr size_t kNroLimit = 64 * 1024 * 1024;
@@ -109,7 +110,7 @@ bool configureCurl(CURL* curl, const std::string& url, TransferKind kind,
         return false;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/" PIPENSX_VERSION);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "GameHubNX/" PIPENSX_VERSION);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
@@ -372,7 +373,7 @@ UpdateService::UpdateService(std::string targetPath,
       helperPath_([this] {
           const size_t slash = targetPath_.find_last_of('/');
           return targetPath_.substr(0, slash == std::string::npos ? 0 : slash + 1) +
-                 "pipensx-updater.nro";
+                 "gamehubnx-updater.nro";
       }()),
       helperSourcePath_(std::move(helperSourcePath)),
       metadataFetcher_(std::move(metadataFetcher)),
@@ -442,13 +443,13 @@ bool UpdateService::parseRelease(const std::string& json, ReleaseInfo& release,
         const std::string url = asset.value("browser_download_url", "");
         if (!trustedAssetUrl(url))
             continue;
-        if (name == "pipensx.nro")
+        if (name == GHNX_NRO_NAME)
             release.nroUrl = url;
-        else if (name == "pipensx.nro.sha256")
+        else if (name == std::string(GHNX_NRO_NAME) + ".sha256")
             release.checksumUrl = url;
     }
     if (release.nroUrl.empty() || release.checksumUrl.empty()) {
-        error = "GitHub release must include pipensx.nro and pipensx.nro.sha256.";
+        error = "GitHub release must include " GHNX_NRO_NAME " and " GHNX_NRO_NAME ".sha256.";
         return false;
     }
     return true;

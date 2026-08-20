@@ -1,3 +1,4 @@
+#include "../app/app_paths.h"
 #include "switch_crashlog.h"
 
 #include <fcntl.h>
@@ -6,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define CRASH_LOG_PATH "sdmc:/switch/pipensx/pipensx.log"
+#define CRASH_LOG_PATH GHNX_PATH("gamehubnx.log")
 
 static const char *g_stage = "before main";
 
