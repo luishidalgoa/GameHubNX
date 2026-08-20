@@ -105,7 +105,9 @@
     "updated_artwork": "Métadonnées de jaquettes mises à jour : {} correspondances.",
     "updated_catalog_artwork_failed": "Catalogue mis à jour ; échec des jaquettes : {}",
     "updated_artwork_catalog_failed": "Jaquettes mises à jour ; échec du catalogue : {}",
-    "updated_both_failed": "{} Jaquettes : {}"
+    "updated_both_failed": "{} Jaquettes : {}",
+    "loaded_but_empty_title": "Aucun jeu affiché",
+    "loaded_but_empty_body": "La boutique a chargé mais rien ne correspond au filtre actuel. Essayez « Tous » ou la recherche."
   },
   "health": {
     "stale": "Obsolète",

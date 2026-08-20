@@ -96,7 +96,15 @@ bool makeDirectories(const std::string& path) {
     if (path.empty() || path.size() >= sizeof(buffer))
         return false;
     std::snprintf(buffer, sizeof(buffer), "%s", path.c_str());
-    for (char* cursor = buffer + 1; *cursor; ++cursor) {
+    // Saltar el prefijo de montaje "device:/" (p.ej. "sdmc:/"): en libnx un
+    // mkdir sobre la raiz del montaje pelada falla con un errno que NO es
+    // EEXIST, y el bucle abortaba antes de crear ningun subdirectorio real.
+    // game_metadata_service.cpp:79-86 ya lo hacia bien; esta copia no.
+    char* start = buffer + 1;
+    char* colon = std::strchr(buffer, ':');
+    if (colon && colon[1] == '/')
+        start = colon + 2;
+    for (char* cursor = start; *cursor; ++cursor) {
         if (*cursor != '/')
             continue;
         *cursor = '\0';
@@ -376,8 +384,13 @@ CatalogService::CatalogService(std::string rootPath, std::string bundledPath)
     : rootPath_(std::move(rootPath)),
       catalogRoot_(rootPath_ + "/catalog"),
       cachePath_(catalogRoot_ + "/catalog.json"),
-      bundledPath_(std::move(bundledPath)) {
-    makeDirectories(catalogRoot_);
+      sourceStampPath_(catalogRoot_ + "/catalog.source"),
+        bundledPath_(std::move(bundledPath)) {
+    if (!makeDirectories(catalogRoot_)) {
+        // Era mudo: si esto falla, writeAtomic no puede escribir la cache y
+        // fetchLatest devuelve false con un error generico.
+        log_msg("[catalog] no pude crear %s\n", catalogRoot_.c_str());
+    }
 }
 
 bool CatalogService::parseJson(const std::string& json,

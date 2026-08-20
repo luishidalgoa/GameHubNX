@@ -797,7 +797,16 @@ private:
                 continue;
             const GameMetadata* meta =
                 metadata_ ? metadata_->findByInfoHash(entry.infoHash) : nullptr;
-            if (matchedGamesOnly && !catalogEntryHasMatchedTitle(meta))
+            // catalogEntryIsGame, no catalogEntryHasMatchedTitle: la segunda exige que
+            // la entrada CRUCE con el indice de metadatos, y ese cruce va por
+            // info-hash. Las entradas de la tienda propia no tienen torrent, asi que
+            // llevan uno sintetico -- sha1(url) -- que jamas puede estar en ese
+            // indice. Resultado: el filtro "Juegos", activo de fabrica, descartaba el
+            // 100% del catalogo y dejaba la rejilla vacia aunque la descarga hubiese
+            // ido perfecta. catalogEntryIsGame acepta ademas entry.titleId, que el
+            // parser de la tienda si rellena; la funcion ya existia, solo que en
+            // produccion no la llamaba nadie.
+            if (matchedGamesOnly && !catalogEntryIsGame(entry, meta))
                 continue;
             // Unlike the Games filter above, this one also narrows a search:
             // "which racing game can we play together" is exactly the question
@@ -1105,15 +1114,23 @@ private:
         const bool empty = count == 0;
         if (empty) {
             if (query_.empty()) {
+                // El cuerpo depende de si el ULTIMO refresco fallo o no. Antes
+                // era incondicional y decia "no se pudo contactar con el
+                // servidor" siempre que la rejilla quedaba vacia, incluso
+                // cuando la descarga habia ido perfecta -- lo que mando dos
+                // horas de diagnostico a perseguir red y certificados mientras
+                // el catalogo se bajaba entero cada vez. Un mensaje que da por
+                // supuesta la causa es peor que uno vago.
+                const bool fallo = !lastCatalogError_.empty();
                 ensureEmptyState()->setContent(
-                    tr("pipensx/catalog/empty_title"),
+                    fallo ? tr("pipensx/catalog/empty_title")
+                          : tr("pipensx/catalog/loaded_but_empty_title"),
                     // Con el motivo detras cuando lo hay: "no se pudo
                     // contactar con la tienda" es accionable; una pantalla
                     // vacia no lo es.
-                    lastCatalogError_.empty()
-                        ? tr("pipensx/catalog/empty_body")
-                        : tr("pipensx/catalog/empty_body") + "\n\n" +
-                              lastCatalogError_,
+                    fallo ? tr("pipensx/catalog/empty_body") + "\n\n" +
+                                lastCatalogError_
+                          : tr("pipensx/catalog/loaded_but_empty_body"),
                     tr("pipensx/catalog/empty_action"),
                     [this] { refreshCatalog(); });
             } else {

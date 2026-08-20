@@ -105,7 +105,9 @@
     "updated_artwork": "Metadados de artes atualizados: {} correspondências.",
     "updated_catalog_artwork_failed": "Catálogo atualizado; falha ao atualizar artes: {}",
     "updated_artwork_catalog_failed": "Artes atualizadas; falha ao atualizar catálogo: {}",
-    "updated_both_failed": "{} Artes: {}"
+    "updated_both_failed": "{} Artes: {}",
+    "loaded_but_empty_title": "Nenhum jogo exibido",
+    "loaded_but_empty_body": "A loja carregou, mas nada corresponde ao filtro atual. Tente o chip \"Todos\" ou pesquise."
   },
   "health": {
     "stale": "Desatualizado",

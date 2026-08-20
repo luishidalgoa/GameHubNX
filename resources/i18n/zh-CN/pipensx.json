@@ -105,7 +105,9 @@
     "updated_artwork": "封面元数据已更新：{} 个匹配。",
     "updated_catalog_artwork_failed": "目录已更新；封面刷新失败：{}",
     "updated_artwork_catalog_failed": "封面已更新；目录刷新失败：{}",
-    "updated_both_failed": "{} 封面：{}"
+    "updated_both_failed": "{} 封面：{}",
+    "loaded_but_empty_title": "未显示任何游戏",
+    "loaded_but_empty_body": "商店已加载，但没有内容符合当前筛选。试试“全部”或使用搜索。"
   },
   "health": {
     "stale": "已过时",

@@ -105,7 +105,9 @@
     "updated_artwork": "Metadatos de carátulas actualizados: {} coincidencias.",
     "updated_catalog_artwork_failed": "Catálogo actualizado; error al actualizar carátulas: {}",
     "updated_artwork_catalog_failed": "Carátulas actualizadas; error al actualizar catálogo: {}",
-    "updated_both_failed": "{} Carátulas: {}"
+    "updated_both_failed": "{} Carátulas: {}",
+    "loaded_but_empty_title": "No se muestra ningún juego",
+    "loaded_but_empty_body": "La tienda cargó, pero nada encaja con el filtro actual. Prueba el chip «Todos» o busca."
   },
   "health": {
     "stale": "Desactualizado",

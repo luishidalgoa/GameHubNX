@@ -105,7 +105,9 @@
     "updated_artwork": "Обложки обновлены. Совпадений: {}",
     "updated_catalog_artwork_failed": "Каталог обновлён, обложки — нет: {}",
     "updated_artwork_catalog_failed": "Обложки обновлены, каталог — нет: {}",
-    "updated_both_failed": "{} Обложки: {}"
+    "updated_both_failed": "{} Обложки: {}",
+    "loaded_but_empty_title": "Игры не показаны",
+    "loaded_but_empty_body": "Магазин загрузился, но под текущий фильтр ничего не подходит. Попробуйте «Все» или поиск."
   },
   "health": {
     "stale": "Устарел",

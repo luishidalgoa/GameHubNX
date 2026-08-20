@@ -105,7 +105,9 @@
     "updated_artwork": "Artwork metadata updated: {} matches.",
     "updated_catalog_artwork_failed": "Catalog updated; artwork refresh failed: {}",
     "updated_artwork_catalog_failed": "Artwork updated; catalog refresh failed: {}",
-    "updated_both_failed": "{} Artwork: {}"
+    "updated_both_failed": "{} Artwork: {}",
+    "loaded_but_empty_title": "No games shown",
+    "loaded_but_empty_body": "The store loaded but nothing matches the current filter. Try the \"All\" chip, or search."
   },
   "health": {
     "stale": "Stale",
