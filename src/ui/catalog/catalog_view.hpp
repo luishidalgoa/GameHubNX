@@ -172,9 +172,6 @@ private:
     std::vector<uint8_t> selectable_;
     std::vector<uint8_t> hasMods_;
     std::vector<uint8_t> favorite_;
-    /* Motivo del ultimo refresco fallido, para mostrarlo en el estado vacio.
-       Vacio cuando el ultimo refresco fue bien. */
-    std::string lastCatalogError_;
     std::vector<CatalogShelf> shelves_;
     int heroIndex_ = -1;
     std::string heroImage_;
@@ -1909,6 +1906,9 @@ private:
     int returnFocusShelf_ = -1;
     std::unordered_map<std::string, std::string> catalogFailures_;
     std::unordered_set<std::string> selectedHashes_;
+    /* Motivo del ultimo refresco fallido, para mostrarlo en el estado vacio.
+       Vacio cuando el ultimo refresco fue bien. */
+    std::string lastCatalogError_;
     std::string query_;
     std::string countText_;
     SortMode sort_ = SortMode::Latest;
