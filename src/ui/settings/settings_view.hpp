@@ -207,47 +207,15 @@ public:
             });
         content->addView(showCompleted_);
 
-        addSection(content, tr("pipensx/settings/section_debrid"));
-        torrenting_ = new brls::BooleanCell();
-        torrenting_->init(tr("pipensx/settings/torrenting"),
-            settings_->get().torrentingEnabled,
-            [this](bool enabled) { setTorrenting(enabled); });
-        content->addView(torrenting_);
-
-        debridProvider_ = new brls::SelectorCell();
-        debridProvider_->init(tr("pipensx/settings/debrid_provider"),
-            {"TorBox", "TorrServer", "Real-Debrid"},
-            settings_->get().debridProvider == DebridProviderKind::TorBox
-                ? 0
-                : settings_->get().debridProvider == DebridProviderKind::RealDebrid
-                ? 2 : 1,
-            [this](int selected) {
-                AppSettingsData values = settings_->get();
-                const DebridProviderKind previous = values.debridProvider;
-                values.debridProvider = selected == 1
-                    ? DebridProviderKind::TorrServer
-                    : selected == 2
-                    ? DebridProviderKind::RealDebrid
-                    : DebridProviderKind::TorBox;
-                if (!persist(values, "debrid_provider"))
-                    debridProvider_->setSelection(
-                        previous == DebridProviderKind::TorrServer ? 1
-                        : previous == DebridProviderKind::RealDebrid ? 2 : 0,
-                        true);
-                refreshDebridLinkDetail();
-            });
-        content->addView(debridProvider_);
-
-        debridLink_ = actionCell(tr("pipensx/settings/debrid_link"), "",
-            [this] {
-                DebridLinkView::push(settings_, manager_,
-                                     settings_->get().debridProvider);
-            });
-        // Named so the golden runner can focus it: the debrid section sits
-        // far below the fold, and scrolling to it by counting d-pad presses
-        // would break every time a row above it is added.
-        debridLink_->setId("settings-debrid-link");
-        content->addView(debridLink_);
+        // Seccion de debrid retirada. Contenia el interruptor de torrent, el
+        // selector de proveedor (TorBox / TorrServer / Real-Debrid) y la
+        // vinculacion de la cuenta. Nada de eso aplica: aqui se descarga de la
+        // tienda propia por HTTPS y no hay cuenta de terceros que enlazar.
+        //
+        // Los widgets siguen declarados pero ya no se crean, de modo que su
+        // puntero es nulo: los sitios que los tocaban llevan ahora una
+        // comprobacion. Asi el codigo de upstream que los referencia sigue
+        // compilando sin parchearlo entero.
         refreshDebridLinkDetail();
 
         addSection(content, tr("pipensx/settings/section_web"));
@@ -651,6 +619,10 @@ private:
     // confirmation; turning it off needs none. The toggle is snapped back to
     // false first so the cell never shows "on" while the dialog is up.
     void setTorrenting(bool enabled) {
+        // Sin la celda registrada esto ya no lo invoca nadie, pero no conviene
+        // que la seguridad dependa de que siga siendo asi.
+        if (!torrenting_)
+            return;
         const bool previous = settings_->get().torrentingEnabled;
         if (enabled && !previous) {
             torrenting_->setOn(false, false);
@@ -741,11 +713,16 @@ private:
         checkForUpdates_->setOn(values.checkForUpdatesOnLaunch, false);
         webToggle_->setOn(values.webServerEnabled, false);
         updateWebCells();
-        torrenting_->setOn(values.torrentingEnabled, false);
-        debridProvider_->setSelection(
-            values.debridProvider == DebridProviderKind::TorrServer ? 1
-            : values.debridProvider == DebridProviderKind::RealDebrid ? 2 : 0,
-            true);
+        // Estos dos ya no se crean (seccion de debrid retirada), asi que el
+        // puntero es nulo y hay que comprobarlo: esta funcion SI se ejecuta al
+        // recargar los ajustes.
+        if (torrenting_)
+            torrenting_->setOn(values.torrentingEnabled, false);
+        if (debridProvider_)
+            debridProvider_->setSelection(
+                values.debridProvider == DebridProviderKind::TorrServer ? 1
+                : values.debridProvider == DebridProviderKind::RealDebrid ? 2 : 0,
+                true);
         manager_->setTorrentingEnabled(values.torrentingEnabled);
         manager_->setTorboxApiKey(values.torboxApiKey);
         manager_->setTorrserverUrl(values.torrserverUrl);
