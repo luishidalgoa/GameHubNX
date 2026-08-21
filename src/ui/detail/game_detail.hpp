@@ -94,8 +94,10 @@ public:
                         FailureCallback onFailure, ChangeCallback onChange,
                         CloseCallback onClose = nullptr,
                         FavoritesService* favorites = nullptr,
-                        SwitchDeployService* deploy = nullptr)
-        : entry_(std::move(entry)), lastFailure_(std::move(lastFailure)),
+                        SwitchDeployService* deploy = nullptr,
+                        std::vector<CatalogEntry> addOns = {})
+        : addOns_(std::move(addOns)), entry_(std::move(entry)),
+          lastFailure_(std::move(lastFailure)),
           manager_(manager), metadata_(metadata), installed_(installed),
           settings_(settings), mods_(mods), favorites_(favorites),
           deploy_(deploy),
@@ -435,11 +437,24 @@ private:
     }
 
     std::string dlcFact() const {
-        if (!installed_ || titleId_.empty() ||
-            !installed_->contains(titleId_))
-            return {};
-        return tr("pipensx/detail/dlc_installed",
-                  installed_->dlcCountForBase(titleId_));
+        // Dos datos distintos que antes se confundian en uno: lo que hay en la
+        // tienda y lo que ya esta puesto en la consola. Antes solo se contaba
+        // lo instalado, asi que un juego con veinte DLC disponibles no lo
+        // decia por ningun lado -- y esos veinte aparecian sueltos en la
+        // rejilla, que era la queja.
+        const size_t disponibles = addOns_.size();
+        const bool puesto = installed_ && !titleId_.empty() &&
+                            installed_->contains(titleId_);
+        const int instalados =
+            puesto ? installed_->dlcCountForBase(titleId_) : 0;
+
+        if (disponibles == 0)
+            return puesto ? tr("pipensx/detail/dlc_installed", instalados)
+                          : std::string();
+        if (!puesto)
+            return tr("pipensx/detail/dlc_available", (int)disponibles);
+        return tr("pipensx/detail/dlc_available_installed",
+                  (int)disponibles, instalados);
     }
 
     // ModCD carries mods for this title id (in-memory lookup — the table is
@@ -1130,6 +1145,10 @@ private:
                                        installedDlcIds());
     }
 
+    /* Actualizaciones y DLC de este juego que hay en la tienda. Los calcula
+       la vista de catalogo, que es quien tiene el catalogo entero; aqui
+       llegan ya filtrados. Vacio para entradas que no son de la tienda. */
+    std::vector<CatalogEntry> addOns_;
     CatalogEntry entry_;
     CatalogPresentation presentation_;
     std::string lastFailure_;

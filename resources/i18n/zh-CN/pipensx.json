@@ -192,7 +192,9 @@
     "smart_install_contract": "智能安装：本体/更新/DLC · 选项用于手动控制",
     "fact_region": "地区",
     "fact_languages": "语言",
-    "trailer_qr": "扫码观看预告片"
+    "trailer_qr": "扫码观看预告片",
+    "dlc_available": "商店中有 {0} 个",
+    "dlc_available_installed": "商店中有 {0} 个 · 已安装 {1} 个"
   },
   "torrent": {
     "title": "选择种子文件",

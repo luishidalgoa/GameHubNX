@@ -192,7 +192,9 @@
     "smart_install_contract": "Installation intelligente : base/update/DLC · options pour contrôle manuel",
     "fact_region": "Région",
     "fact_languages": "Langues",
-    "trailer_qr": "Scannez pour voir la bande-annonce"
+    "trailer_qr": "Scannez pour voir la bande-annonce",
+    "dlc_available": "{0} dans la boutique",
+    "dlc_available_installed": "{0} dans la boutique · {1} installés"
   },
   "torrent": {
     "title": "Choisir les fichiers du torrent",

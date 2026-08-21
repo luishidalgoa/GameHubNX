@@ -20,6 +20,42 @@ namespace gamehub {
 const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
 const char* const kClientId    = "GameHubNX/1.0.0";
 
+std::string baseTitleIdOf(const std::string& titleId) {
+    if (titleId.size() != 16)
+        return {};
+    uint64_t value = 0;
+    for (char c : titleId) {
+        int digit;
+        if (c >= '0' && c <= '9')      digit = c - '0';
+        else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+        else return {};
+        value = (value << 4) | static_cast<uint64_t>(digit);
+    }
+    value &= ~static_cast<uint64_t>(0x1FFF);
+    char out[17];
+    std::snprintf(out, sizeof(out), "%016llX",
+                  static_cast<unsigned long long>(value));
+    // Los ids se comparan en minusculas en el resto del catalogo.
+    for (char& c : out)
+        if (c >= 'A' && c <= 'F') c = static_cast<char>(c - 'A' + 'a');
+    return std::string(out, 16);
+}
+
+bool isBaseTitleId(const std::string& titleId) {
+    // Comparar los tres ultimos CARACTERES no vale: un DLC es ...1000 y
+    // tambien acaba en "000". El discriminante son los trece BITS bajos, asi
+    // que se compara el id con su propia forma base.
+    const std::string base = baseTitleIdOf(titleId);
+    if (base.empty())
+        return true;              // no clasificable: se muestra
+    std::string lowered = titleId;
+    for (char& c : lowered)
+        if (c >= 'A' && c <= 'F') c = static_cast<char>(c - 'A' + 'a');
+    return lowered == base;
+}
+
+
 
 const char* const kSourceLabel = "GameHub";
 
@@ -220,6 +256,13 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                     // a proposito y no se descarga, solo se muestra como codigo
                     // QR para abrirlo en el movil.
                     e.trailerUrl = asString(*v);
+                }
+                // gh_cover antes que iconUrl: la primera viene en JPEG y la
+                // segunda en WebP, que stb_image no sabe decodificar.
+                if (const auto* v = get("gh_cover")) {
+                    const std::string u = asString(*v);
+                    if (!u.empty() && isTrustedUrl(u))
+                        e.posterUrl = u;
                 }
                 if (const auto* v = get("gh_screenshots")) {
                     if (v->is_array()) {

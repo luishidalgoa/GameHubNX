@@ -11,6 +11,7 @@
 
 #include <borealis.hpp>
 
+#include "../../app/gamehub_catalog.hpp"
 #include "app/app_settings.hpp"
 #include "app/catalog_presentation.hpp"
 #include "app/catalog_refresh.hpp"
@@ -543,11 +544,30 @@ public:
             if (alive->load())
                 onDetailClosed();
         };
+        // Complementos de ESTE juego: actualizaciones y DLC comparten el id
+        // base con el (los trece bits bajos son el discriminante). Se calculan
+        // aqui, donde esta el catalogo entero, y se le pasan ya filtrados: la
+        // ficha no necesita conocer el catalogo para mostrarlos.
+        std::vector<CatalogEntry> addOns;
+        if (catalog_) {
+            const std::string base = gamehub::baseTitleIdOf(entry.titleId);
+            if (!base.empty()) {
+                for (const CatalogEntry& other : catalog_->entries()) {
+                    if (other.directUrl.empty())
+                        continue;                       // no es de la tienda
+                    if (gamehub::isBaseTitleId(other.titleId))
+                        continue;                       // es un juego, no un extra
+                    if (gamehub::baseTitleIdOf(other.titleId) != base)
+                        continue;                       // de otro juego
+                    addOns.push_back(other);
+                }
+            }
+        }
         brls::Application::pushActivity(new GameDetailActivity(
             std::move(entry), std::move(lastFailure), manager_, metadata_,
             installed_, settings_, mods_,
             std::move(onFailure), std::move(onChange), std::move(onClose),
-            favorites_, deploy_));
+            favorites_, deploy_, std::move(addOns)));
     }
 
 private:
@@ -807,6 +827,18 @@ private:
             // parser de la tienda si rellena; la funcion ya existia, solo que en
             // produccion no la llamaba nadie.
             if (matchedGamesOnly && !catalogEntryIsGame(entry, meta))
+
+            // Los DLC y las actualizaciones no ocupan sitio en la rejilla: llegan de
+            // los sub-indices de la tienda y son PIEZAS de un juego, no juegos. Antes
+            // se mezclaban con los demas y un titulo con muchos DLC llenaba la
+            // pantalla de entradas casi identicas. Al buscar si aparecen, para poder
+            // llegar a uno concreto.
+            //
+            // Pendiente: ensenarlos DENTRO de la ficha del juego. La app hoy solo
+            // sabe contar los que YA estan instalados en la consola.
+            if (!searching && !entry.directUrl.empty() &&
+                !gamehub::isBaseTitleId(entry.titleId))
+                continue;
                 continue;
             // Unlike the Games filter above, this one also narrows a search:
             // "which racing game can we play together" is exactly the question
@@ -925,11 +957,12 @@ private:
             selectable.push_back(canSelect ? 1 : 0);
             // In-memory lookup only: the ModCD table is fetched with the
             // catalogue, never from a card path.
-            hasMods.push_back(
-                mods_ && !presentation.titleId.empty() &&
-                        mods_->has(presentation.titleId)
-                    ? 1
-                    : 0);
+            // La insignia "Mod" salia del catalogo ModCD de kawaii-flesh, un
+            // indice de terceros que no tiene nada que ver con la biblioteca
+            // del usuario: marcaba juegos suyos por datos ajenos y confundia
+            // mas que informaba. El servicio sigue compilado; simplemente no
+            // se consulta para pintar la rejilla.
+            hasMods.push_back(0);
             favorite.push_back(favorites_ && favorites_->contains(hash) ? 1
                                                                        : 0);
             metas.push_back(meta);

@@ -34,6 +34,22 @@ extern const char* const kSourceLabel;
 /// version rides along, which consoles are still on an old build.
 extern const char* const kClientId;
 
+/// Un Title ID de Switch dice que es la entrada por sus ultimos digitos:
+/// `...000` juego base, `...800` actualizacion, cualquier otro DLC. Vacio o
+/// mal formado se trata como base, para no esconder una entrada por no saber
+/// clasificarla.
+bool isBaseTitleId(const std::string& titleId);
+
+/// El Title ID del juego base al que pertenece esta entrada.
+///
+/// En Switch los complementos derivan del id del juego: la actualizacion es
+/// `...800` y los DLC van de `...1000` en adelante. Los trece bits bajos son el
+/// discriminante, asi que ponerlos a cero devuelve el id base tanto si se parte
+/// del juego como de una actualizacion o un DLC.
+///
+/// Cadena vacia si el id no es un Title ID de 16 digitos hexadecimales.
+std::string baseTitleIdOf(const std::string& titleId);
+
 
 // Parses a Tinfoil-style shop index into catalogue entries.
 //

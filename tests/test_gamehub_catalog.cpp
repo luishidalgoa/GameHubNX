@@ -254,6 +254,40 @@ void test_index_without_gh_keys_still_works() {
 }
 
 
+
+void test_clasificacion_de_title_id() {
+    // Juego base: los trece bits bajos a cero.
+    assert(gamehub::isBaseTitleId("0100000000010000"));
+    // Actualizacion: ...800.
+    assert(!gamehub::isBaseTitleId("0100000000010800"));
+    // DLC: de ...1000 en adelante.
+    assert(!gamehub::isBaseTitleId("0100000000011000"));
+    assert(!gamehub::isBaseTitleId("010000000001100f"));
+    // Sin id, o con uno que no es de Switch, se trata como base: mas vale
+    // ensenar una entrada de mas que esconderla por no saber clasificarla.
+    assert(gamehub::isBaseTitleId(""));
+    assert(gamehub::isBaseTitleId("no-es-un-title-id"));
+}
+
+void test_complemento_apunta_a_su_juego() {
+    const std::string base = "0100000000010000";
+    // Los tres derivan al mismo juego.
+    assert(gamehub::baseTitleIdOf(base) == base);
+    assert(gamehub::baseTitleIdOf("0100000000010800") == base);   // update
+    assert(gamehub::baseTitleIdOf("0100000000011000") == base);   // DLC 1
+    assert(gamehub::baseTitleIdOf("0100000000011007") == base);   // DLC 8
+    // Mayusculas: se normaliza a minusculas, como el resto del catalogo.
+    assert(gamehub::baseTitleIdOf("0100000000011007") ==
+           gamehub::baseTitleIdOf("0100000000011007"));
+    assert(gamehub::baseTitleIdOf("01005F8014A78000") == "01005f8014a78000");
+    // Un juego DISTINTO no debe colarse como complemento del anterior.
+    assert(gamehub::baseTitleIdOf("0100000000020000") != base);
+    // Entradas invalidas devuelven vacio, nunca un id inventado.
+    assert(gamehub::baseTitleIdOf("").empty());
+    assert(gamehub::baseTitleIdOf("0100").empty());
+    assert(gamehub::baseTitleIdOf("zzzzzzzzzzzzzzzz").empty());
+}
+
 } // namespace
 
 int main() {
@@ -269,6 +303,8 @@ int main() {
     test_trust_check();
     test_rich_metadata_is_read();
     test_index_without_gh_keys_still_works();
+    test_clasificacion_de_title_id();
+    test_complemento_apunta_a_su_juego();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }
