@@ -66,6 +66,9 @@ struct GridCardInfo {
     bool subIsBadge = false;
     std::string iconUrl;
     bool iconPreserveAspect = false;
+    /* Proporcion ancho/alto de la portada, segun la plataforma del juego.
+       0 = desconocida, y entonces manda iconPreserveAspect como antes. */
+    float coverAspect = 0.0f;
     bool selectionMode = false;
     bool selected = false;
     bool selectable = false;
@@ -224,6 +227,7 @@ public:
         cover_->setBorderColor(highlight ? theme::accent()
                                          : brls::TRANSPARENT);
         iconPreserveAspect_ = info.iconPreserveAspect;
+        coverAspect_ = info.coverAspect;
         applyZoom(false);
         image_->setScalingType(info.iconPreserveAspect
             ? brls::ImageScalingType::FIT
@@ -265,9 +269,13 @@ private:
     // clips, so the art scales in place without shifting the layout.
     void applyZoom(bool focused) {
         const float zoom = focused ? grid::kFocusZoom : 1.0f;
-        const float baseWidth = iconPreserveAspect_
-            ? grid::kGameCoverWidth
-            : grid::kCardWidth;
+        // Con proporcion conocida se calcula el ancho a partir de ella; asi
+        // cada plataforma conserva su formato (Switch 2:3, 3DS apaisado, SNES
+        // casi panoramico) en vez de compartir uno fijo. Se limita al ancho de
+        // la tarjeta: una portada apaisada la llena, no se sale.
+        const float baseWidth = coverAspect_ > 0.0f
+            ? std::min(grid::kCoverHeight * coverAspect_, grid::kCardWidth)
+            : (iconPreserveAspect_ ? grid::kGameCoverWidth : grid::kCardWidth);
         image_->setDimensions(baseWidth * zoom, grid::kCoverHeight * zoom);
         image_->setPositionTop(-(zoom - 1.0f) * grid::kCoverHeight / 2.0f);
         image_->setPositionLeft((grid::kCardWidth - baseWidth * zoom) / 2.0f);
@@ -291,6 +299,7 @@ private:
     std::string infoHash_;
     int shelfRow_ = -1;
     bool iconPreserveAspect_ = false;
+    float coverAspect_ = 0.0f;
     Activate onActivate_;
     Focused onFocus_;
 };

@@ -201,14 +201,27 @@ private:
             // The plate doubles as the placeholder tile until the art arrives
             // (and stays visible as the letterbox behind a 16:9 banner), the
             // same way the catalog card's cover box works.
+            // Alto segun la PLATAFORMA: la columna es fija, asi que lo que se
+            // ajusta es el alto para que la portada mantenga su formato. Con
+            // 320 de ancho, una de Switch (2:3) pide 480 -- se limita a 420
+            // para que no empuje la ficha fuera de pantalla. Sin dato de
+            // plataforma se conserva el alto de siempre.
+            const float aspecto = (entry_.coverW > 0 && entry_.coverH > 0)
+                ? static_cast<float>(entry_.coverW) /
+                      static_cast<float>(entry_.coverH)
+                : 0.0f;
+            const float altoPortada = aspecto > 0.0f
+                ? std::min(kLeftColumnWidth / aspecto, 420.0f)
+                : kCoverHeight;
+
             auto* plate = new brls::Box();
             plate->setWidth(kLeftColumnWidth);
-            plate->setHeight(kCoverHeight);
+            plate->setHeight(altoPortada);
             plate->setCornerRadius(theme::kRadiusLarge);
             plate->setBackgroundColor(theme::surface());
             auto* cover = new AsyncRgbaImage();
             cover->setWidth(kLeftColumnWidth);
-            cover->setHeight(kCoverHeight);
+            cover->setHeight(altoPortada);
             cover->setPositionType(brls::PositionType::ABSOLUTE);
             cover->setPositionTop(0);
             cover->setPositionLeft(0);

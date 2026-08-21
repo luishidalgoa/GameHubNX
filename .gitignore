@@ -44,3 +44,4 @@ bug-reports
 
 # Runtime artifact of tests/test_manager
 /dht.cache
+core

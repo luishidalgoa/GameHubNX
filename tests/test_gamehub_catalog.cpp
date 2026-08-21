@@ -200,10 +200,14 @@ const char* const kRichIndex = R"JSON({
       "gh_developer": "Nintendo EPD",
       "gh_year": 2017,
       "gh_group": "zelda-botw",
+      "gh_platform": "switch",
+      "gh_cover_w": 200,
+      "gh_cover_h": 300,
       "gh_trailer": "https://www.youtube.com/watch?v=abc123",
       "gh_screenshots": [
         "https://gamehub.hdglabs.com/shots/1.jpg",
-        "https://evil.example.com/2.jpg"
+        "https://evil.example.com/2.jpg",
+        "http://sin-cifrar.example.com/3.jpg"
       ]
     }
   },
@@ -227,12 +231,19 @@ void test_rich_metadata_is_read() {
     assert(e.publisher == "Nintendo");
     assert(e.year == "2017");
     assert(e.groupKey == "zelda-botw");
+    // Formato de portada por plataforma: llega en crudo para que anadir
+    // plataformas nuevas no obligue a tocar la app.
+    assert(e.platform == "switch");
+    assert(e.coverW == 200 && e.coverH == 300);
     assert(e.trailerUrl == "https://www.youtube.com/watch?v=abc123");
 
-    // Solo la captura del propio servidor sobrevive: la otra se descarga y se
-    // pinta, asi que un host ajeno no entra.
-    assert(e.screenshots.size() == 1);
+    // Las capturas SI admiten host externo: el emparejador de metadatos de
+    // GameHub guarda las de LaunchBox por su URL original, y exigir el host de
+    // la tienda dejaba el carrusel siempre vacio. Lo que se sigue exigiendo es
+    // HTTPS.
+    assert(e.screenshots.size() == 2);
     assert(e.screenshots[0].find("gamehub.hdglabs.com") != std::string::npos);
+    assert(e.screenshots[1].find("evil.example.com") != std::string::npos);
 }
 
 void test_index_without_gh_keys_still_works() {
@@ -290,6 +301,58 @@ void test_complemento_apunta_a_su_juego() {
 
 } // namespace
 
+// Un fichero cuyo NOMBRE no lleva Title ID. El titledb se indexa por ese ID, asi
+// que estas entradas no tienen ficha ahi y la app acababa enseñando el nombre del
+// fichero pelado, sin portada. Pasaba con 4 de los 61 ficheros de la biblioteca
+// --Dragon Quest VII Reimagined, Pokemon Legends Arceus, GTA Vice City y
+// Assassin's Creed III-- porque sus nombres estan limpios.
+//
+// El servidor emite ahora los gh_ TAMBIEN en cada fichero, que se emparejan por
+// URL y no dependen del nombre.
+void test_metadatos_en_el_fichero_sin_title_id() {
+    const char* idx = R"({"success":"ok","files":[{
+        "url":"https://gamehub.hdglabs.com/f/DRAGON%20QUEST%20VII%20Reimagined.nsp",
+        "size":123,
+        "gh_title":"Dragon Quest VII Reimagined",
+        "gh_cover":"https://gamehub.hdglabs.com/cover.jpg?fmt=jpg",
+        "gh_platform":"switch","gh_cover_w":200,"gh_cover_h":300,
+        "gh_year":"2026"
+    }],"directories":[]})";
+
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(idx, out, subs, err));
+    assert(out.size() == 1);
+    const CatalogEntry& e = out[0];
+
+    assert(e.titleId.empty());              // el nombre no lo lleva: esa es la premisa
+    assert(e.title == "Dragon Quest VII Reimagined");
+    assert(!e.posterUrl.empty());
+    assert(e.platform == "switch");
+    assert(e.coverW == 200 && e.coverH == 300);
+    assert(e.year == "2026");
+    assert(e.metadataOk);
+
+    // Y sin Title ID no se puede clasificar, asi que se muestra en vez de
+    // colarse por el filtro que esconde DLC y actualizaciones.
+    assert(gamehub::isBaseTitleId(e.titleId));
+}
+
+// Un fichero pelado --solo url y size-- no debe marcarse como si tuviera ficha.
+void test_fichero_sin_gh_no_finge_metadatos() {
+    const char* idx = R"({"success":"ok","files":[
+        {"url":"https://gamehub.hdglabs.com/f/juego.nsp","size":9}
+    ],"directories":[]})";
+
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(idx, out, subs, err));
+    assert(out.size() == 1);
+    assert(!out[0].metadataOk);
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -305,6 +368,8 @@ int main() {
     test_index_without_gh_keys_still_works();
     test_clasificacion_de_title_id();
     test_complemento_apunta_a_su_juego();
+    test_metadatos_en_el_fichero_sin_title_id();
+    test_fichero_sin_gh_no_finge_metadatos();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

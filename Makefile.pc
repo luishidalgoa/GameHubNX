@@ -8,14 +8,22 @@ BUILD_DIR ?= build-pc
 CC      = gcc
 CXX     = g++
 TARGET  = $(BUILD_DIR)/pipensx
-CFLAGS  = -O2 -Wall -Wextra -std=c11 \
+# -MMD -MP: el compilador escribe junto a cada .o un .d con las cabeceras que
+# incluye, y al final se cargan. Sin esto, tocar una cabecera NO recompilaba
+# quien la usa: el 2026-08-21 anadir campos a CatalogEntry dejo objetos con la
+# estructura vieja y el resultado fue un SIGSEGV en su destructor -- un fallo
+# que parecia del codigo y era del andamiaje. -MP anade objetivos vacios para
+# que borrar una cabecera no rompa el build.
+DEPFLAGS = -MMD -MP
+
+CFLAGS  = -O2 -Wall -Wextra -std=c11 $(DEPFLAGS) \
            -D_GNU_SOURCE -pthread \
            -Ivendor/libutp \
            $(shell pkg-config --cflags libcurl)
 # _GLIBCXX_ASSERTIONS turns an out-of-range vector/string index into an abort
 # instead of a silent read of whatever is next in the heap. The test suite is
 # the only place we get that for free — keep it on here.
-CXXFLAGS = -O2 -Wall -Wextra -std=c++17 -D_GLIBCXX_ASSERTIONS \
+CXXFLAGS = -O2 -Wall -Wextra -std=c++17 -D_GLIBCXX_ASSERTIONS $(DEPFLAGS) \
             -D_GNU_SOURCE -pthread \
             -Ivendor/borealis/library/include \
             -Ivendor/libutp \
@@ -631,3 +639,7 @@ clean:
 	find src tests vendor/libutp vendor/dht -name '*.o' -delete 2>/dev/null || true
 
 .PHONY: all test clean fuzz-bencode fuzz-metainfo fuzz-smoke
+
+# Dependencias de cabecera generadas por -MMD. El guion evita el error la
+# primera vez, cuando aun no existe ningun .d.
+-include $(shell find $(BUILD_DIR) -name '*.d' 2>/dev/null)

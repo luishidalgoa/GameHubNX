@@ -1,3 +1,4 @@
+#include "../src/app/app_paths.h"
 #include "../src/app/install_space.hpp"
 #include "../src/app/nx_file_types.hpp"
 #include "../src/app/port_archive.hpp"
@@ -247,8 +248,11 @@ int main() {
 
     const std::string recoveryRoot = root + "/recovery";
     const std::string recoveryTarget = recoveryRoot + "/sd/switch";
+    // El sufijo lo define app_paths.h: al renombrar la app cambio de
+    // ".pipensx-part" a ".gamehubnx-part", y la limpieza busca el nuevo. Se
+    // toma de la macro para que no vuelvan a desincronizarse.
     const std::string staleTemp =
-        recoveryTarget + "/MyPort/file.pipensx-part-deadbeef";
+        recoveryTarget + "/MyPort/file" GHNX_PART_SUFFIX "-deadbeef";
     writeFile(staleTemp, "partial");
     std::string job = "d4:task" + bstr("deadbeef") +
                       "4:temp" + bstr(staleTemp) + "7:versioni1ee";

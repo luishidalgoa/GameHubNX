@@ -62,6 +62,13 @@ struct CatalogEntry {
     std::string languages;
     std::string trailerUrl;
     std::string groupKey;
+    /* Formato de la portada segun la PLATAFORMA del juego, en pixeles. Cada
+       una tiene el suyo -- Switch 2:3, 3DS apaisado, SNES casi panoramico -- y
+       usar uno fijo las deforma. Cero cuando la tienda no lo manda: entonces se
+       cae al formato por defecto. */
+    int coverW = 0;
+    int coverH = 0;
+    std::string platform;
     std::string directUrl;
     uint64_t topicId = 0;
     uint64_t size = 0;

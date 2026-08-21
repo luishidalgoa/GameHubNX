@@ -195,89 +195,128 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         e.titleId = titleIdOf(name);
 
         // Rich metadata when the index carries it for this Title ID.
+        // Los metadatos llegan por dos vias y se aplican en este orden: primero
+        // el titledb y despues los campos del propio fichero, que mandan por ser
+        // mas concretos (la region, por ejemplo, se deduce por fichero).
+        //
+        // El titledb se indexa por Title ID, que sale del NOMBRE del fichero. Un
+        // juego cuyo nombre no lo lleve se quedaba sin titulo limpio, sin portada
+        // y sin ficha: la app acababa enseñando el nombre del fichero pelado.
+        // Leerlos tambien del fichero quita esa dependencia.
+        const auto applyMeta = [&e](const nlohmann::json& src) {
+            const auto get = [&src](const char* k) -> const nlohmann::json* {
+                const auto it = src.find(k);
+                return it == src.end() ? nullptr : &(*it);
+            };
+            if (const auto* v = get("name")) {
+                const std::string s = asString(*v);
+                if (!s.empty()) e.title = s;
+            }
+            if (const auto* v = get("description")) e.description = asString(*v);
+            if (const auto* v = get("publisher"))   e.publisher   = asString(*v);
+            if (const auto* v = get("iconUrl")) {
+                const std::string s = asString(*v);
+                // Only trust cover URLs from the same server; the index is
+                // ours, but a field is still a field.
+                if (!s.empty() && isTrustedUrl(s)) e.posterUrl = s;
+            }
+            // releaseDate is YYYYMMDD as an int — only the year is real,
+            // the day is a placeholder the shop fills in.
+            if (const auto* v = get("releaseDate")) {
+                const std::string s = asString(*v);
+                if (s.size() >= 4) e.year = s.substr(0, 4);
+            }
+            // category is a list; the facts table shows a single genre.
+            if (const auto* v = get("category")) {
+                if (v->is_array() && !v->empty()) e.genre = asString(v->front());
+                else e.genre = asString(*v);
+            }
+            if (const auto* v = get("size")) {
+                if (e.size == 0 && v->is_number()) {
+                    const int64_t s = v->get<int64_t>();
+                    if (s > 0) e.size = static_cast<uint64_t>(s);
+                }
+            }
+
+            // ── Claves gh_: la extension propia de nuestra tienda ────────
+            // El titledb de Tinfoil no tiene sitio para region, idiomas,
+            // desarrollador ni capturas, asi que GameHub las publica aparte.
+            // Cuando faltan (indice de otra tienda) la ficha simplemente
+            // muestra menos, nunca falla.
+            if (const auto* v = get("gh_title")) {
+                const std::string t = asString(*v);
+                // gh_title viene sin la region pegada; `name` la lleva
+                // dentro porque Tinfoil solo dispone de ese campo.
+                if (!t.empty()) e.title = t;
+            }
+            if (const auto* v = get("gh_region"))    e.region     = asString(*v);
+            if (const auto* v = get("gh_languages")) e.languages  = asString(*v);
+            if (const auto* v = get("gh_developer")) e.developer  = asString(*v);
+            if (const auto* v = get("gh_group"))     e.groupKey   = asString(*v);
+            if (const auto* v = get("gh_year")) {
+                const std::string y = asString(*v);
+                if (!y.empty()) e.year = y;   // mas fiable que el releaseDate sintetico
+            }
+            if (const auto* v = get("gh_trailer")) {
+                // No se comprueba isTrustedUrl: el trailer apunta a YouTube
+                // a proposito y no se descarga, solo se muestra como codigo
+                // QR para abrirlo en el movil.
+                e.trailerUrl = asString(*v);
+            }
+            // gh_cover antes que iconUrl: la primera viene en JPEG y la
+            // segunda en WebP, que stb_image no sabe decodificar.
+            if (const auto* v = get("gh_platform")) e.platform = asString(*v);
+            if (const auto* v = get("gh_cover_w")) {
+                if (v->is_number_integer()) e.coverW = v->get<int>();
+            }
+            if (const auto* v = get("gh_cover_h")) {
+                if (v->is_number_integer()) e.coverH = v->get<int>();
+            }
+            if (const auto* v = get("gh_cover")) {
+                const std::string u = asString(*v);
+                if (!u.empty() && isTrustedUrl(u))
+                    e.posterUrl = u;
+            }
+            if (const auto* v = get("gh_screenshots")) {
+                if (v->is_array()) {
+                    for (const auto& sc : *v) {
+                        const std::string u = asString(sc);
+                        if (u.empty())
+                            continue;
+                        // Se aceptan tambien hosts externos, no solo el
+                        // propio. El emparejador de metadatos de GameHub
+                        // guarda las capturas de LaunchBox por su URL
+                        // original, asi que exigir el host de la tienda
+                        // descartaba el 100% de ellas y el carrusel salia
+                        // siempre vacio.
+                        //
+                        // El origen sigue siendo de fiar: la lista la sirve
+                        // el servidor del usuario, y quien decide que URLs
+                        // entran es su propia base de datos. Se exige HTTPS
+                        // para no degradar a texto claro.
+                        if (u.rfind("https://", 0) != 0)
+                            continue;
+                        e.screenshots.push_back(u);
+                    }
+                }
+            }
+
+            e.metadataOk = true;
+        };
+
         if (titledb && !e.titleId.empty()) {
             const auto m = titledb->find(e.titleId);
-            if (m != titledb->end() && m->is_object()) {
-                const auto get = [&m](const char* k) -> const nlohmann::json* {
-                    const auto it = m->find(k);
-                    return it == m->end() ? nullptr : &(*it);
-                };
-                if (const auto* v = get("name")) {
-                    const std::string s = asString(*v);
-                    if (!s.empty()) e.title = s;
-                }
-                if (const auto* v = get("description")) e.description = asString(*v);
-                if (const auto* v = get("publisher"))   e.publisher   = asString(*v);
-                if (const auto* v = get("iconUrl")) {
-                    const std::string s = asString(*v);
-                    // Only trust cover URLs from the same server; the index is
-                    // ours, but a field is still a field.
-                    if (!s.empty() && isTrustedUrl(s)) e.posterUrl = s;
-                }
-                // releaseDate is YYYYMMDD as an int — only the year is real,
-                // the day is a placeholder the shop fills in.
-                if (const auto* v = get("releaseDate")) {
-                    const std::string s = asString(*v);
-                    if (s.size() >= 4) e.year = s.substr(0, 4);
-                }
-                // category is a list; the facts table shows a single genre.
-                if (const auto* v = get("category")) {
-                    if (v->is_array() && !v->empty()) e.genre = asString(v->front());
-                    else e.genre = asString(*v);
-                }
-                if (const auto* v = get("size")) {
-                    if (e.size == 0 && v->is_number()) {
-                        const int64_t s = v->get<int64_t>();
-                        if (s > 0) e.size = static_cast<uint64_t>(s);
-                    }
-                }
-
-                // ── Claves gh_: la extension propia de nuestra tienda ────────
-                // El titledb de Tinfoil no tiene sitio para region, idiomas,
-                // desarrollador ni capturas, asi que GameHub las publica aparte.
-                // Cuando faltan (indice de otra tienda) la ficha simplemente
-                // muestra menos, nunca falla.
-                if (const auto* v = get("gh_title")) {
-                    const std::string t = asString(*v);
-                    // gh_title viene sin la region pegada; `name` la lleva
-                    // dentro porque Tinfoil solo dispone de ese campo.
-                    if (!t.empty()) e.title = t;
-                }
-                if (const auto* v = get("gh_region"))    e.region     = asString(*v);
-                if (const auto* v = get("gh_languages")) e.languages  = asString(*v);
-                if (const auto* v = get("gh_developer")) e.developer  = asString(*v);
-                if (const auto* v = get("gh_group"))     e.groupKey   = asString(*v);
-                if (const auto* v = get("gh_year")) {
-                    const std::string y = asString(*v);
-                    if (!y.empty()) e.year = y;   // mas fiable que el releaseDate sintetico
-                }
-                if (const auto* v = get("gh_trailer")) {
-                    // No se comprueba isTrustedUrl: el trailer apunta a YouTube
-                    // a proposito y no se descarga, solo se muestra como codigo
-                    // QR para abrirlo en el movil.
-                    e.trailerUrl = asString(*v);
-                }
-                // gh_cover antes que iconUrl: la primera viene en JPEG y la
-                // segunda en WebP, que stb_image no sabe decodificar.
-                if (const auto* v = get("gh_cover")) {
-                    const std::string u = asString(*v);
-                    if (!u.empty() && isTrustedUrl(u))
-                        e.posterUrl = u;
-                }
-                if (const auto* v = get("gh_screenshots")) {
-                    if (v->is_array()) {
-                        for (const auto& sc : *v) {
-                            const std::string u = asString(sc);
-                            // Las capturas SI se descargan y se pintan, asi que
-                            // solo se aceptan las del propio servidor.
-                            if (!u.empty() && isTrustedUrl(u)) e.screenshots.push_back(u);
-                        }
-                    }
-                }
-
-                e.metadataOk = true;
-            }
+            if (m != titledb->end() && m->is_object()) applyMeta(*m);
         }
+
+        // Solo si el fichero trae algo: aplicarlo a ciegas marcaria metadataOk
+        // en entradas que no tienen mas que url y size.
+        const auto carriesMeta = [](const nlohmann::json& src) {
+            for (const auto& kv : src.items())
+                if (kv.key().rfind("gh_", 0) == 0) return true;
+            return false;
+        };
+        if (carriesMeta(f)) applyMeta(f);
 
         // A file served by our own server has no swarm whose health could be in
         // doubt: it is either there or the fetch fails outright.

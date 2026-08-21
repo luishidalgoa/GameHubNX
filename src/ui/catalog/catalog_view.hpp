@@ -143,6 +143,12 @@ private:
         info.iconUrl = row < iconUrls_.size() ? iconUrls_[row] : std::string();
         info.iconPreserveAspect = row < iconPreserveAspect_.size() &&
                                   iconPreserveAspect_[row] != 0;
+        // La proporcion viaja en la propia entrada, no en un vector paralelo:
+        // ya esta aqui y evita plumbarla por ocho sitios.
+        if (entries_[row].coverW > 0 && entries_[row].coverH > 0) {
+            info.coverAspect = static_cast<float>(entries_[row].coverW) /
+                               static_cast<float>(entries_[row].coverH);
+        }
         info.selectionMode = selectionMode_;
         info.selected = row < selected_.size() && selected_[row] != 0;
         info.selectable = row < selectable_.size() && selectable_[row] != 0;

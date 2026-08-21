@@ -378,6 +378,17 @@ inline void removeDebridTransferAsync(DebridProviderKind provider,
 
 inline bool ensureDebridLinked(AppSettings* settings,
                                DownloadManager* manager) {
+    // En este fork no hay cuenta que vincular: se descarga de la tienda propia
+    // por HTTPS y GameHubProvider no usa clave. La comprobacion original exigia
+    // una clave de proveedor de debrid, y al no haberla saltaba el dialogo
+    // "la fuente aun no esta configurada" en CADA instalacion, mandando al
+    // usuario a la pantalla de TorBox.
+    //
+    // Se conserva la funcion --la llaman la ficha, el catalogo y el selector de
+    // ficheros-- para no tocar tres sitios ni divergir mas de upstream.
+    (void)manager;
+    if (settings)
+        return true;
     if (!settings || !activeDebridKey(settings->get()).empty())
         return true;
     const DebridProviderKind provider = settings->get().debridProvider;
