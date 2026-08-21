@@ -97,13 +97,13 @@ jobs:
       - name: Install Switch portlibs
         run: scripts/install_switch_portlibs.sh
 
-      - name: Build pipensx.nro
+      - name: Build gamehubnx.nro
         run: make switch
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: pipensx-nro-ci
-          path: build-switch/pipensx.nro
+          name: gamehubnx-nro-ci
+          path: build-switch/gamehubnx.nro
           if-no-files-found: error
           retention-days: 7
 

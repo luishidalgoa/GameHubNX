@@ -441,9 +441,16 @@ void testCatalogSourceUrlValidation() {
     // kDefaultCatalogSourceUrl still names the upstream catalogue, which stays
     // reachable by setting it as a custom source. Expect this line to conflict
     // on merge — keeping the fork's value is the correct resolution.
+    // DIVERGENCIA DEL FORK. Aqui la fuente NO es configurable: siempre es la
+    // tienda propia, tambien cuando los ajustes traen una URL guardada. Antes se
+    // respetaba la personalizada, y bastaba con que una instalacion anterior
+    // hubiese dejado ahi la de upstream para que la app siguiera mostrando su
+    // catalogo de torrents pese al cambio de defecto -- fue exactamente lo que
+    // le paso al usuario. Al fusionar con upstream, la resolucion correcta es
+    // conservar estas dos lineas.
     assert(effectiveCatalogSourceUrl("") == pipensx::gamehub::kCatalogUrl);
     assert(effectiveCatalogSourceUrl("https://cdn.example.com/x.json") ==
-           "https://cdn.example.com/x.json");
+           pipensx::gamehub::kCatalogUrl);
 }
 
 void testProxySettingReachesEnvironment() {
