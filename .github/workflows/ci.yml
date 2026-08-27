@@ -97,8 +97,13 @@ jobs:
       - name: Install Switch portlibs
         run: scripts/install_switch_portlibs.sh
 
+      # PIPENSX_DEV_BUILD: este artefacto no es una release, y no debe
+      # ofrecerse a sustituirse por una. Sin esto se identifica como 1.0.0 --el
+      # valor por defecto de CMake-- y cualquier release publicada le parece
+      # mas nueva, asi que probar un build antes de publicarlo acaba con la app
+      # proponiendo volver atras.
       - name: Build gamehubnx.nro
-        run: make switch
+        run: make switch PIPENSX_DEV_BUILD=ON
 
       # El .elf va con el .nro a proposito. Un crash report de Atmosphere trae
       # la pila como "pipensx + 0x2154d8", y sin el binario con simbolos del
