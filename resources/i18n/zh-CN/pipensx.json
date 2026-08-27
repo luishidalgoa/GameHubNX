@@ -231,11 +231,19 @@
     "preset_download_all": "全部下载"
   },
   "addons": {
-    "title": "DLC 与更新",
-    "hint": "选择一项查看并安装。",
+    "title": "安装内容",
+    "hint": "勾选需要的项目，一次安装。",
     "kind_dlc": "DLC",
     "kind_update": "更新",
-    "installed": "已安装"
+    "kind_game": "游戏",
+    "installed": "已安装",
+    "section_game": "游戏",
+    "section_updates": "更新",
+    "section_dlc": "DLC",
+    "select_all": "全选",
+    "select_none": "清除",
+    "install_n": "安装 {}",
+    "selected": "已选 {}  ·  {}"
   },
   "downloads": {
     "import": "导入种子",

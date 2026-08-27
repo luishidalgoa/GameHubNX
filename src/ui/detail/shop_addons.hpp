@@ -1,45 +1,94 @@
 #pragma once
 
-// Lista de DLC y actualizaciones de un juego de la tienda.
+// "Qué instalar": el juego, sus actualizaciones y sus DLC, en una sola lista.
 //
-// La ficha ya sabia CUANTOS complementos hay --lo decia en una fila de la tabla
-// de datos-- pero no habia forma de verlos ni de instalarlos: addOns_ se
-// consumia solo como .size(). Esta pantalla los ensena y deja elegir uno.
+// Antes eran dos pantallas que no se hablaban: una lista de complementos que
+// solo dejaba abrir uno, y el selector de ficheros heredado del camino de
+// torrent, que enseñaba un unico fichero. Para poner al dia un juego habia que
+// entrar y salir una vez por cada DLC.
 //
-// Lo que hace al elegir no es instalar: es abrir la ficha de ese complemento.
-// Un DLC de la tienda es una CatalogEntry como cualquier otra --su URL, su
-// tamano, su Title ID-- asi que GameDetailActivity ya sabe describirlo e
-// instalarlo. Reusarla evita duplicar el camino de instalacion, que es
-// justamente donde vivian los cuatro cortes que hubo que arreglar.
+// Aqui van los tres en secciones separadas, con marca de lo que ya esta puesto
+// en la consola, y con seleccion multiple: se marca lo que se quiera --uno,
+// varios o todo-- y se instala de una tacada. La instalacion no se reimplementa:
+// se le pasa la seleccion a BatchInstallActivity, que ya sabe hacerlo con
+// GameHubProvider desde que la tienda entro por esa ruta.
 
+#include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <borealis.hpp>
 
+#include "app/app_settings.hpp"
 #include "app/catalog_service.hpp"
+#include "app/download_manager.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/installed_title_service.hpp"
+#include "ui/catalog/batch_install.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
 namespace pipensx::ui {
 
+/// Que clase de contenido es una fila. Decide en que seccion cae y con que
+/// palabra se describe.
+enum class ShopItemKind { Game, Update, Dlc };
+
+struct ShopItem {
+    CatalogEntry entry;
+    ShopItemKind kind = ShopItemKind::Dlc;
+    /// Cierto cuando la consola ya lo tiene. En un DLC y en un juego es una
+    /// pregunta directa al sistema; en una actualizacion solo se sabe si se
+    /// pueden comparar las dos versiones (ver installedUpdate()).
+    bool installed = false;
+    bool selected = false;
+};
+
 class ShopAddOnsActivity;
 
-class ShopAddOnCell : public brls::RecyclerCell {
+// ── Version de una actualizacion ─────────────────────────────────────────────
+// Los ficheros de actualizacion de esta tienda llevan la version entre
+// corchetes: "Juego [0100...800][v2162688].nsp". Se compara con la que reporta
+// ncm para el titulo instalado. Cuando falta cualquiera de las dos NO se marca
+// nada: decir "instalada" sin poder compararlo seria peor que no decir nada.
+inline uint64_t shopVersionFromName(const std::string& name) {
+    for (size_t i = 0; i + 2 < name.size(); ++i) {
+        if (name[i] != '[' || (name[i + 1] != 'v' && name[i + 1] != 'V'))
+            continue;
+        size_t j = i + 2;
+        uint64_t value = 0;
+        bool any = false;
+        while (j < name.size() && name[j] >= '0' && name[j] <= '9') {
+            value = value * 10 + static_cast<uint64_t>(name[j] - '0');
+            any = true;
+            ++j;
+        }
+        if (any && j < name.size() && name[j] == ']')
+            return value;
+    }
+    return 0;
+}
+
+class ShopItemCell : public brls::RecyclerCell {
 public:
-    ShopAddOnCell() {
+    ShopItemCell() {
         setFocusable(true);
         setAxis(brls::Axis::ROW);
         setAlignItems(brls::AlignItems::CENTER);
         setPadding(10, 20, 10, 20);
         setHeight(76);
 
-        auto* left = new brls::Box(brls::Axis::COLUMN);
-        left->setGrow(1);
+        mark_ = new brls::Label();
+        mark_->setFontSize(theme::kFontBody);
+        mark_->setWidth(34);
+        addView(mark_);
+
+        auto* text = new brls::Box(brls::Axis::COLUMN);
+        text->setGrow(1);
         title_ = new brls::Label();
         title_->setSingleLine(true);
         title_->setAutoAnimate(false);
@@ -50,27 +99,41 @@ public:
         meta_->setFontSize(theme::kFontSmall);
         meta_->setTextColor(theme::textSecondary());
         meta_->setMarginTop(4);
-        left->addView(title_);
-        left->addView(meta_);
-        addView(left);
+        text->addView(title_);
+        text->addView(meta_);
+        addView(text);
 
         badge_ = new brls::Label();
         badge_->setFontSize(theme::kFontSmall);
         badge_->setMarginLeft(16);
+        badge_->setTextColor(theme::success());
         addView(badge_);
     }
 
-    void setEntry(const CatalogEntry& entry, bool installed) {
-        setTextIfChanged(title_, entry.title);
-        const bool update = !gamehub::isDlcTitleId(entry.titleId);
-        std::string meta = update ? tr("pipensx/addons/kind_update")
-                                  : tr("pipensx/addons/kind_dlc");
-        if (entry.size)
-            meta += "   " + formatBytes(entry.size);
+    void setItem(const ShopItem& item) {
+        // Lo ya instalado no se puede marcar: seleccionarlo solo serviria para
+        // volver a bajar lo que ya esta.
+        setTextIfChanged(mark_, item.installed ? std::string()
+                                               : (item.selected ? "[x]" : "[ ]"));
+        mark_->setTextColor(item.selected ? theme::accent()
+                                          : theme::textSecondary());
+        setTextIfChanged(title_, item.entry.title);
+        std::string meta = kindLabel(item.kind);
+        if (item.entry.size)
+            meta += "   " + formatBytes(item.entry.size);
         setTextIfChanged(meta_, meta);
-        setTextIfChanged(badge_, installed ? tr("pipensx/addons/installed")
-                                           : std::string());
-        badge_->setTextColor(theme::success());
+        setTextIfChanged(badge_, item.installed
+                                     ? tr("pipensx/addons/installed")
+                                     : std::string());
+    }
+
+    static std::string kindLabel(ShopItemKind kind) {
+        switch (kind) {
+        case ShopItemKind::Game:   return tr("pipensx/addons/kind_game");
+        case ShopItemKind::Update: return tr("pipensx/addons/kind_update");
+        case ShopItemKind::Dlc:    return tr("pipensx/addons/kind_dlc");
+        }
+        return {};
     }
 
     void onFocusGained() override {
@@ -84,6 +147,7 @@ public:
     }
 
 private:
+    brls::Label* mark_;
     brls::Label* title_;
     brls::Label* meta_;
     brls::Label* badge_;
@@ -91,37 +155,89 @@ private:
 
 class ShopAddOnsDataSource : public brls::RecyclerDataSource {
 public:
-    ShopAddOnsDataSource(ShopAddOnsActivity* owner,
-                         std::vector<CatalogEntry> entries,
-                         InstalledTitleService* installed)
-        : owner_(owner), entries_(std::move(entries)), installed_(installed) {}
+    struct Section {
+        std::string title;
+        std::vector<size_t> rows;   // indices en items_
+    };
 
-    int numberOfSections(brls::RecyclerFrame*) override { return 1; }
+    explicit ShopAddOnsDataSource(ShopAddOnsActivity* owner) : owner_(owner) {}
 
-    int numberOfRows(brls::RecyclerFrame*, int) override {
-        return static_cast<int>(entries_.size());
+    void setItems(std::vector<ShopItem> items) {
+        items_ = std::move(items);
+        rebuild();
+    }
+
+    void rebuild() {
+        sections_.clear();
+        const struct { ShopItemKind kind; const char* key; } grupos[] = {
+            {ShopItemKind::Game,   "pipensx/addons/section_game"},
+            {ShopItemKind::Update, "pipensx/addons/section_updates"},
+            {ShopItemKind::Dlc,    "pipensx/addons/section_dlc"},
+        };
+        for (const auto& g : grupos) {
+            Section section;
+            section.title = tr(g.key);
+            for (size_t i = 0; i < items_.size(); ++i)
+                if (items_[i].kind == g.kind)
+                    section.rows.push_back(i);
+            if (!section.rows.empty())
+                sections_.push_back(std::move(section));
+        }
+        // Nunca cero secciones: un data source vacio hace que selectRowAt de
+        // borealis indexe un vector sin elementos. Ver downloads_view.hpp.
+        if (sections_.empty())
+            sections_.push_back({tr("pipensx/addons/section_dlc"), {}});
+    }
+
+    std::vector<ShopItem>& items() { return items_; }
+    const std::vector<ShopItem>& items() const { return items_; }
+
+    /// Indice en items_ de una fila pintada, o SIZE_MAX si no hay.
+    size_t itemIndexAt(brls::IndexPath index) const {
+        if (index.section < 0 ||
+            static_cast<size_t>(index.section) >= sections_.size())
+            return SIZE_MAX;
+        const Section& section = sections_[static_cast<size_t>(index.section)];
+        if (index.row < 0 ||
+            static_cast<size_t>(index.row) >= section.rows.size())
+            return SIZE_MAX;
+        return section.rows[static_cast<size_t>(index.row)];
+    }
+
+    int numberOfSections(brls::RecyclerFrame*) override {
+        return static_cast<int>(sections_.size());
+    }
+
+    int numberOfRows(brls::RecyclerFrame*, int section) override {
+        if (section < 0 || static_cast<size_t>(section) >= sections_.size())
+            return 0;
+        const size_t n = sections_[static_cast<size_t>(section)].rows.size();
+        return n == 0 ? 1 : static_cast<int>(n);
+    }
+
+    std::string titleForHeader(brls::RecyclerFrame*, int section) override {
+        if (section < 0 || static_cast<size_t>(section) >= sections_.size())
+            return {};
+        return sections_[static_cast<size_t>(section)].title;
     }
 
     brls::RecyclerCell* cellForRow(brls::RecyclerFrame* recycler,
                                     brls::IndexPath index) override;
-
     void didSelectRowAt(brls::RecyclerFrame*, brls::IndexPath index) override;
-
-    const std::vector<CatalogEntry>& entries() const { return entries_; }
 
 private:
     ShopAddOnsActivity* owner_;
-    std::vector<CatalogEntry> entries_;
-    InstalledTitleService* installed_;
+    std::vector<ShopItem> items_;
+    std::vector<Section> sections_;
 };
 
 class ShopAddOnsActivity : public brls::Activity {
 public:
-    using PickCallback = std::function<void(const CatalogEntry&)>;
-
-    ShopAddOnsActivity(std::string gameTitle, std::vector<CatalogEntry> entries,
-                       InstalledTitleService* installed, PickCallback onPick)
-        : onPick_(std::move(onPick)) {
+    ShopAddOnsActivity(std::string gameTitle, std::vector<ShopItem> items,
+                       DownloadManager* manager, AppSettings* settings,
+                       std::function<void()> viewDownloads = nullptr)
+        : manager_(manager), settings_(settings),
+          viewDownloads_(std::move(viewDownloads)) {
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setGrow(1);
         content->setPadding(18, 38, 18, 34);
@@ -133,26 +249,40 @@ public:
         title->setText(tr("pipensx/addons/title"));
         content->addView(title);
 
-        auto* subtitle = new brls::Label();
-        subtitle->setFontSize(theme::kFontSmall);
-        subtitle->setTextColor(theme::textSecondary());
-        subtitle->setMarginBottom(10);
-        subtitle->setText(tr("pipensx/addons/hint"));
-        content->addView(subtitle);
+        summary_ = new brls::Label();
+        summary_->setFontSize(theme::kFontSmall);
+        summary_->setTextColor(theme::textSecondary());
+        summary_->setMarginBottom(10);
+        content->addView(summary_);
 
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
         recycler_->setPadding(6, 0, 6, 0);
         recycler_->estimatedRowHeight = 76;
-        recycler_->registerCell("AddOn", [] { return new ShopAddOnCell(); });
-        dataSource_ =
-            new ShopAddOnsDataSource(this, std::move(entries), installed);
+        recycler_->registerCell("Item", [] { return new ShopItemCell(); });
+        dataSource_ = new ShopAddOnsDataSource(this);
+        // Sembrado ANTES de entregarlo: ver la nota del mismo patron en
+        // downloads_view.hpp, que costo un crash.
+        dataSource_->setItems(std::move(items));
         recycler_->setDataSource(dataSource_);
         content->addView(recyclerHost(recycler_));
+
+        auto* buttons = new brls::Box(brls::Axis::ROW);
+        buttons->setMarginTop(12);
+        install_ = addButton(buttons, &brls::BUTTONSTYLE_PRIMARY,
+                             [this] { installSelected(); });
+        addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
+                  [this] { selectAll(true); })
+            ->setText(tr("pipensx/addons/select_all"));
+        addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
+                  [this] { selectAll(false); })
+            ->setText(tr("pipensx/addons/select_none"));
+        content->addView(buttons);
 
         frame_ = new brls::AppletFrame(content);
         frame_->setTitle(gameTitle.empty() ? tr("pipensx/addons/title")
                                            : gameTitle);
+        refreshSummary();
     }
 
     brls::View* createContentView() override { return frame_; }
@@ -165,42 +295,109 @@ public:
                        });
     }
 
-    void pick(const CatalogEntry& entry) {
-        if (onPick_)
-            onPick_(entry);
+    /// Alterna la seleccion de una fila. Lo instalado no se puede marcar.
+    void toggle(size_t index) {
+        auto& items = dataSource_->items();
+        if (index >= items.size() || items[index].installed)
+            return;
+        items[index].selected = !items[index].selected;
+        recycler_->reloadData();
+        refreshSummary();
     }
 
 private:
-    PickCallback onPick_;
+    brls::Button* addButton(brls::Box* row, brls::ButtonStyle* style,
+                            std::function<void()> action) {
+        auto* button = new brls::Button();
+        button->setStyle(style);
+        button->setFontSize(18);
+        button->setHeight(46);
+        button->setGrow(1);
+        if (row->getChildren().size())
+            button->setMarginLeft(12);
+        button->registerClickAction([action](brls::View*) {
+            action();
+            return true;
+        });
+        row->addView(button);
+        return button;
+    }
+
+    void selectAll(bool selected) {
+        for (ShopItem& item : dataSource_->items())
+            if (!item.installed)
+                item.selected = selected;
+        recycler_->reloadData();
+        refreshSummary();
+    }
+
+    std::vector<CatalogEntry> selectedEntries() const {
+        std::vector<CatalogEntry> out;
+        for (const ShopItem& item : dataSource_->items())
+            if (item.selected && !item.installed)
+                out.push_back(item.entry);
+        return out;
+    }
+
+    void refreshSummary() {
+        uint64_t bytes = 0;
+        int count = 0;
+        for (const ShopItem& item : dataSource_->items()) {
+            if (!item.selected || item.installed)
+                continue;
+            ++count;
+            bytes += item.entry.size;
+        }
+        setTextIfChanged(summary_, count == 0
+            ? tr("pipensx/addons/hint")
+            : tr("pipensx/addons/selected", count, formatBytes(bytes)));
+        setTextIfChanged(install_, count == 0
+            ? tr("pipensx/common/install")
+            : tr("pipensx/addons/install_n", count));
+        install_->setState(count == 0 ? brls::ButtonState::DISABLED
+                                      : brls::ButtonState::ENABLED);
+    }
+
+    void installSelected() {
+        std::vector<CatalogEntry> entries = selectedEntries();
+        if (entries.empty())
+            return;
+        // Ni una linea de instalacion propia: BatchInstallActivity ya sabe
+        // hacerlo, y desde que la tienda entro por la ruta de transferencia usa
+        // GameHubProvider cuando toda la seleccion es suya.
+        const StreamSelection selection = settings_
+            ? settings_->get().streamSelection
+            : StreamSelection::AllFiles;
+        brls::Application::pushActivity(new BatchInstallActivity(
+            manager_, settings_, std::move(entries), selection,
+            [](const std::unordered_set<std::string>&) {}, viewDownloads_));
+    }
+
+    DownloadManager* manager_;
+    AppSettings* settings_;
+    std::function<void()> viewDownloads_;
     brls::AppletFrame* frame_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     ShopAddOnsDataSource* dataSource_ = nullptr;
+    brls::Label* summary_ = nullptr;
+    brls::Button* install_ = nullptr;
 };
 
 inline brls::RecyclerCell* ShopAddOnsDataSource::cellForRow(
     brls::RecyclerFrame* recycler, brls::IndexPath index) {
     auto* cell =
-        static_cast<ShopAddOnCell*>(recycler->dequeueReusableCell("AddOn"));
-    if (index.row < 0 || static_cast<size_t>(index.row) >= entries_.size())
-        return cell;
-    const CatalogEntry& entry = entries_[static_cast<size_t>(index.row)];
-    // contains()/containsDlc() ya normalizan a mayusculas por dentro, asi que
-    // el id va tal cual. Un DLC vive en su propio conjunto: preguntar por el en
-    // contains() daria siempre que no.
-    const bool dlc = gamehub::isDlcTitleId(entry.titleId);
-    const bool installed =
-        installed_ && !entry.titleId.empty() &&
-        (dlc ? installed_->containsDlc(entry.titleId)
-             : installed_->contains(entry.titleId));
-    cell->setEntry(entry, installed);
+        static_cast<ShopItemCell*>(recycler->dequeueReusableCell("Item"));
+    const size_t i = itemIndexAt(index);
+    if (i != SIZE_MAX)
+        cell->setItem(items_[i]);
     return cell;
 }
 
 inline void ShopAddOnsDataSource::didSelectRowAt(brls::RecyclerFrame*,
                                                   brls::IndexPath index) {
-    if (index.row < 0 || static_cast<size_t>(index.row) >= entries_.size())
-        return;
-    owner_->pick(entries_[static_cast<size_t>(index.row)]);
+    const size_t i = itemIndexAt(index);
+    if (i != SIZE_MAX)
+        owner_->toggle(i);
 }
 
 }  // namespace pipensx::ui

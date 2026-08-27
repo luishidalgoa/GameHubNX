@@ -228,6 +228,9 @@ public:
         cover_->setBorderColor(highlight ? theme::accent()
                                          : brls::TRANSPARENT);
         iconPreserveAspect_ = info.iconPreserveAspect;
+        // Sin arte tampoco se ensancha: una tarjeta con la inicial de relleno
+        // al lado de otras con portada 2:3 rompia la reja visualmente.
+        posterPlate_ = info.iconPreserveAspect || info.iconUrl.empty();
         applyZoom(false);
         image_->setScalingType(info.iconPreserveAspect
             ? brls::ImageScalingType::FIT
@@ -272,9 +275,20 @@ private:
         const float baseWidth = iconPreserveAspect_
             ? grid::gameCoverWidth()
             : grid::kCardWidth;
+        // El RECUADRO, no solo la imagen. Se quedaba con los 180 de la tarjeta
+        // mientras el arte se dibujaba a 120 centrado dentro: el resultado eran
+        // dos bandas de fondo a los lados de cada portada. Ahora el plato mide
+        // lo que la portada y se centra en el hueco de la tarjeta, que sigue
+        // midiendo lo mismo para que las columnas no bailen.
+        const float plateWidth = posterPlate_ ? grid::gameCoverWidth()
+                                              : grid::kCardWidth;
+        cover_->setWidth(plateWidth);
+        cover_->setMarginLeft((grid::kCardWidth - plateWidth) / 2.0f);
         image_->setDimensions(baseWidth * zoom, grid::kCoverHeight * zoom);
         image_->setPositionTop(-(zoom - 1.0f) * grid::kCoverHeight / 2.0f);
-        image_->setPositionLeft((grid::kCardWidth - baseWidth * zoom) / 2.0f);
+        // El desplazamiento es DENTRO del plato, asi que se mide contra su
+        // ancho y no contra el de la tarjeta.
+        image_->setPositionLeft((plateWidth - baseWidth * zoom) / 2.0f);
     }
 
     brls::Box* cover_;
@@ -295,6 +309,7 @@ private:
     std::string infoHash_;
     int shelfRow_ = -1;
     bool iconPreserveAspect_ = false;
+    bool posterPlate_ = false;
     Activate onActivate_;
     Focused onFocus_;
 };
