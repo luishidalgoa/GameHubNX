@@ -99,11 +99,16 @@ public:
         const ProgressCallback& progress,
         DebridBatchTiming timing = {}) const;
 
+    // installTarget marca la memoria elegida en la pantalla de instalacion.
+    // Sin marcar, cada tarea hereda el ajuste global como hasta ahora.
     BatchEnqueueResult enqueueViaDebrid(
         BatchPreparation& prepared,
         DownloadManager& manager,
         DebridProviderKind providerKind,
-        DebridProvider& provider) const;
+        DebridProvider& provider,
+        bool hasInstallTarget = false,
+        install::InstallStorageTarget installTarget =
+            install::InstallStorageTarget::SdCard) const;
 
 private:
     std::string rootPath_;

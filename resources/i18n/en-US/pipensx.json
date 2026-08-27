@@ -313,7 +313,8 @@
     "eta_hours": "{}h {}m",
     "eta_days": "{}d {}h",
     "status_fetching": "Fetching",
-    "cell_fetching": "The server is fetching this   {}%"
+    "cell_fetching": "The server is fetching this   {}%",
+    "cell_preparing": "Preparing the download..."
   },
   "files": {
     "title": "Downloaded files",
@@ -446,6 +447,7 @@
     "sd_card": "SD card",
     "select_ready": "Select ready",
     "add_to_queue": "Add to queue",
+    "destination": "Install to: {}",
     "add_n_to_queue": "Add {} to queue",
     "view_downloads": "View downloads",
     "back_to_catalog": "Back to catalog",

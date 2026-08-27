@@ -109,8 +109,14 @@ public:
             meta = tr("pipensx/downloads/cell_installed_packages",
                       task.packagesInstalled);
         } else if (task.status == DownloadStatus::Fetching) {
-            meta = tr("pipensx/downloads/cell_fetching",
-                      percentOf(static_cast<float>(task.fetchProgress)));
+            // Con GameHub no hay servicio remoto preparando nada: fetchInfo
+            // responde "listo" en el primer sondeo y makeProvider ya no
+            // instancia ningun debrid. Decir "el servidor esta obteniendo
+            // esto" es herencia del debrid y aqui es mentira.
+            meta = task.source == TaskSource::Torrent
+                ? tr("pipensx/downloads/cell_fetching",
+                     percentOf(static_cast<float>(task.fetchProgress)))
+                : tr("pipensx/downloads/cell_preparing");
         } else if (task.status == DownloadStatus::Downloading) {
             meta += "   " + formatSpeed(task.speedBytesPerSecond);
             // Una descarga directa no tiene enjambre: "0 peers" no es un dato

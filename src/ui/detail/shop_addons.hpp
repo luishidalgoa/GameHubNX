@@ -110,7 +110,10 @@ public:
         addView(badge_);
     }
 
-    void setItem(const ShopItem& item) {
+    size_t index() const { return index_; }
+
+    void setItem(const ShopItem& item, size_t index) {
+        index_ = index;
         // Lo ya instalado no se puede marcar: seleccionarlo solo serviria para
         // volver a bajar lo que ya esta.
         setTextIfChanged(mark_, item.installed ? std::string()
@@ -147,6 +150,7 @@ public:
     }
 
 private:
+    size_t index_ = 0;
     brls::Label* mark_;
     brls::Label* title_;
     brls::Label* meta_;
@@ -301,7 +305,7 @@ public:
         if (index >= items.size() || items[index].installed)
             return;
         items[index].selected = !items[index].selected;
-        recycler_->reloadData();
+        repaintVisible();
         refreshSummary();
     }
 
@@ -327,8 +331,22 @@ private:
         for (ShopItem& item : dataSource_->items())
             if (!item.installed)
                 item.selected = selected;
-        recycler_->reloadData();
+        repaintVisible();
         refreshSummary();
+    }
+
+    // Repinta solo lo que hay en pantalla. reloadData() recicla todas las
+    // celdas, incluida la enfocada, y Borealis se queda con currentFocus
+    // apuntando a memoria liberada --giveFocus(nullptr) no limpia nada--, que
+    // es lo que dibuja el recuadro de seleccion fuera de sitio. Repintando en
+    // sitio la celda enfocada sigue viva y ademas el scroll no salta.
+    void repaintVisible() {
+        const auto& items = dataSource_->items();
+        for (ShopItemCell* cell : visibleCells<ShopItemCell>(recycler_)) {
+            const size_t i = cell->index();
+            if (i < items.size())
+                cell->setItem(items[i], i);
+        }
     }
 
     std::vector<CatalogEntry> selectedEntries() const {
@@ -389,7 +407,7 @@ inline brls::RecyclerCell* ShopAddOnsDataSource::cellForRow(
         static_cast<ShopItemCell*>(recycler->dequeueReusableCell("Item"));
     const size_t i = itemIndexAt(index);
     if (i != SIZE_MAX)
-        cell->setItem(items_[i]);
+        cell->setItem(items_[i], i);
     return cell;
 }
 

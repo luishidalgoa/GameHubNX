@@ -361,7 +361,9 @@ BatchEnqueueResult CatalogBatchInstaller::enqueueViaDebrid(
     BatchPreparation& prepared,
     DownloadManager& manager,
     DebridProviderKind providerKind,
-    DebridProvider& provider) const {
+    DebridProvider& provider,
+    bool hasInstallTarget,
+    install::InstallStorageTarget installTarget) const {
     BatchEnqueueResult result;
     for (PreparedCatalogInstall& item : prepared.items_) {
         if (!item.selected) {
@@ -379,6 +381,8 @@ BatchEnqueueResult CatalogBatchInstaller::enqueueViaDebrid(
         import.provider = providerKind;
         import.mode = item.mode;
         import.fileSelection = item.selection;
+        import.hasInstallTarget = hasInstallTarget;
+        import.installTarget = installTarget;
         import.packageCount = item.mode == TransferMode::StreamInstall
                                   ? item.space.packageFiles : 0;
         std::string taskId, error;

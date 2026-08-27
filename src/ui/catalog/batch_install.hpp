@@ -148,6 +148,8 @@ public:
         : manager_(manager), settings_(settings), entries_(std::move(entries)),
           selection_(selection), completion_(std::move(completion)),
           viewDownloads_(std::move(viewDownloads)),
+          target_(settings ? installTargetFor(settings->get().installLocation)
+                           : manager->installTarget()),
           alive_(std::make_shared<std::atomic<bool>>(true)),
           cancelled_(std::make_shared<std::atomic<bool>>(false)) {
         for (const CatalogEntry& entry : entries_)
@@ -247,6 +249,21 @@ public:
         });
         row->addView(clear);
         controls_->addView(row);
+
+        destination_ = new brls::Button();
+        destination_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        destination_->setHeight(48);
+        destination_->setMarginTop(8);
+        destination_->setText(tr("pipensx/batch/destination",
+                                 installDestinationLabel(target_)));
+        destination_->registerClickAction([this](brls::View*) {
+            target_ = target_ == pipensx::install::InstallStorageTarget::Nand
+                ? pipensx::install::InstallStorageTarget::SdCard
+                : pipensx::install::InstallStorageTarget::Nand;
+            refreshSummary();
+            return true;
+        });
+        controls_->addView(destination_);
 
         enqueue_ = new brls::Button();
         enqueue_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
@@ -457,7 +474,7 @@ private:
         const auto estimate = prepared_->selectedSpace();
         storage_ = pipensx::queryStorageSpace(manager_->rootPath());
         packageStorage_ = pipensx::queryInstallStorageSpace(
-            manager_->installTarget(), manager_->rootPath());
+            target_, manager_->rootPath());
         const auto check = pipensx::assessTransferSpace(
             estimate, storage_, packageStorage_);
 
@@ -475,7 +492,10 @@ private:
             text += "\n" + storage_.error;
         status_->setText(text);
 
-        meter_->setHeader(storageMeterHeader(manager_->installTarget()));
+        meter_->setHeader(storageMeterHeader(target_));
+        if (destination_)
+            destination_->setText(tr("pipensx/batch/destination",
+                                     installDestinationLabel(target_)));
         const StorageSpaceSnapshot& meterStorage =
             estimate.packageFiles > 0 ? packageStorage_ : storage_;
         if (meterStorage.available)
@@ -506,7 +526,7 @@ private:
         }
         storage_ = pipensx::queryStorageSpace(manager_->rootPath());
         packageStorage_ = pipensx::queryInstallStorageSpace(
-            manager_->installTarget(), manager_->rootPath());
+            target_, manager_->rootPath());
         const auto check = pipensx::assessTransferSpace(
             estimate, storage_, packageStorage_);
         if (check.status == InstallSpaceCheckStatus::Insufficient) {
@@ -519,8 +539,14 @@ private:
             debridMode_ && debridProvider_
                 ? installer_->enqueueViaDebrid(
                       *prepared_, *manager_, settings_->get().debridProvider,
-                      *debridProvider_)
+                      *debridProvider_, true, target_)
                 : installer_->enqueue(*prepared_, *manager_);
+        // La ruta de torrent encola con el ajuste global, asi que ahi el
+        // destino se corrige despues: la tarea recien encolada sigue en cola
+        // y todavia admite el cambio.
+        if (!(debridMode_ && debridProvider_))
+            for (const std::string& taskId : result.taskIds)
+                manager_->setTaskInstallTarget(taskId, target_);
         for (const std::string& hash : result.queuedInfoHashes)
             remaining_.erase(catalogLower(hash));
         if (completion_)
@@ -568,6 +594,9 @@ private:
     CompletionCallback completion_;
     std::function<void()> viewDownloads_;
     std::unordered_set<std::string> remaining_;
+    // Memoria elegida para esta tanda. Arranca en el ajuste global pero se
+    // cambia aqui mismo, antes de encolar, sin tocar el ajuste.
+    pipensx::install::InstallStorageTarget target_;
     std::shared_ptr<std::atomic<bool>> alive_;
     std::shared_ptr<std::atomic<bool>> cancelled_;
     std::shared_ptr<CatalogBatchInstaller> installer_;
@@ -583,6 +612,7 @@ private:
     BatchInstallDataSource* dataSource_ = nullptr;
     brls::Box* controls_ = nullptr;
     brls::Button* enqueue_ = nullptr;
+    brls::Button* destination_ = nullptr;
     brls::Box* resultControls_ = nullptr;
     brls::Button* resultBack_ = nullptr;
     brls::ActionIdentifier cancelAction_ = ACTION_NONE;

@@ -21,6 +21,11 @@
 #define GHNX_APP_DIR_NAME "gamehubnx"
 #define GHNX_NRO_NAME     GHNX_APP_DIR_NAME ".nro"
 
+/* Ayudante que sobreescribe la NRO tras una actualizacion. Va aqui, junto al
+   resto de nombres, porque estaba escrito a pelo en dos sitios y el test se
+   quedo con el nombre viejo tras renombrar el fork. */
+#define GHNX_UPDATER_NAME GHNX_APP_DIR_NAME "-updater.nro"
+
 /* Raiz de datos: ajustes, favoritos, cola de descargas, cache del catalogo. */
 #define GHNX_SWITCH_ROOT "sdmc:/switch"
 #define GHNX_APP_ROOT    GHNX_SWITCH_ROOT "/" GHNX_APP_DIR_NAME

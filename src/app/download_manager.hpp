@@ -113,6 +113,12 @@ struct DownloadTask {
        Empty = untrusted (crash or mid-run) and the next start does a full
        hash scan. */
     std::vector<uint8_t> resumeBitfield;
+    // Memoria donde se instalara esta tarea. Se congela al encolar a partir
+    // del ajuste global (o de la eleccion explicita) y solo se consume cuando
+    // el runner coge la tarea, asi que se puede descargar ya y decidir la
+    // memoria despues, mientras no haya empezado a instalar.
+    install::InstallStorageTarget installTarget =
+        install::InstallStorageTarget::SdCard;
 };
 
 // (done, total) download-progress byte pair. Falls back to the raw engine
@@ -158,6 +164,11 @@ struct DebridImport {
     TransferMode mode = TransferMode::DownloadOnly;
     std::vector<uint8_t> fileSelection;
     uint32_t packageCount = 0;         // selected packages (0 if mode DownloadOnly)
+    // Destino elegido en la pantalla de instalacion. Sin marcar se hereda el
+    // ajuste global, que es el comportamiento de siempre.
+    bool hasInstallTarget = false;
+    install::InstallStorageTarget installTarget =
+        install::InstallStorageTarget::SdCard;
 };
 
 class DownloadManager {
@@ -256,6 +267,11 @@ public:
     // Where stream installs commit content (PERF_PLAN 7.4). Applied to
     // coordinators started after the call; a transfer in flight keeps the
     // target it began with. Default is SD.
+    // Cambia el destino de una tarea concreta. Falla si ya esta instalando o
+    // terminada: a partir de ahi el backend ya escribe en una memoria.
+    bool setTaskInstallTarget(const std::string& id,
+                              install::InstallStorageTarget target);
+
     void setInstallTarget(install::InstallStorageTarget target) {
         installTarget_.store(target, std::memory_order_relaxed);
     }
@@ -297,6 +313,8 @@ private:
         std::vector<uint8_t> fileSelection;
         std::vector<uint8_t> initialPeers;
         std::vector<uint8_t> resumeBitfield;
+        install::InstallStorageTarget installTarget =
+            install::InstallStorageTarget::SdCard;
     };
 
     // One active torrent slot: a runner thread owning one engine instance.

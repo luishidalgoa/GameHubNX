@@ -313,7 +313,8 @@
     "eta_hours": "{}h {}m",
     "eta_days": "{}j {}h",
     "status_fetching": "Récupération",
-    "cell_fetching": "Le serveur récupère ce contenu   {}%"
+    "cell_fetching": "Le serveur récupère ce contenu   {}%",
+    "cell_preparing": "Préparation du téléchargement..."
   },
   "files": {
     "title": "Fichiers téléchargés",
@@ -446,6 +447,7 @@
     "sd_card": "Carte SD",
     "select_ready": "Sélectionner prêts",
     "add_to_queue": "Ajouter à la file",
+    "destination": "Installer sur : {}",
     "add_n_to_queue": "Ajouter {} à la file",
     "view_downloads": "Voir les téléchargements",
     "back_to_catalog": "Retour au catalogue",

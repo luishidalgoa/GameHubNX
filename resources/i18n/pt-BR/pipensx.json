@@ -313,7 +313,8 @@
     "eta_hours": "{}h {}m",
     "eta_days": "{}d {}h",
     "status_fetching": "Obtendo",
-    "cell_fetching": "O servidor está obtendo isto   {}%"
+    "cell_fetching": "O servidor está obtendo isto   {}%",
+    "cell_preparing": "Preparando o download..."
   },
   "files": {
     "title": "Arquivos baixados",
@@ -446,6 +447,7 @@
     "sd_card": "Cartão SD",
     "select_ready": "Selecionar prontos",
     "add_to_queue": "Adicionar à fila",
+    "destination": "Instalar em: {}",
     "add_n_to_queue": "Adicionar {} à fila",
     "view_downloads": "Ver downloads",
     "back_to_catalog": "Voltar ao catálogo",
