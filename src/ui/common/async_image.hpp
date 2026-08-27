@@ -23,15 +23,50 @@ struct AsyncImageLifetime {
     AsyncRgbaImage* image = nullptr;
 };
 
+// ── Apagado ─────────────────────────────────────────────────────────────────
+// brls::Image::~Image llama a nvgDeleteImage(Application::getNVGContext(), ...),
+// y getNVGContext() desreferencia Application::platform. Ese puntero se borra al
+// final de Application::exit() y NUNCA se pone a nullptr, asi que cualquier
+// imagen destruida despues --o destruida dos veces-- hace una llamada virtual
+// sobre memoria liberada y salta a una direccion basura. En la consola eso es un
+// Instruction Abort saltando a 0x0, que es el crash que se veia al cerrar.
+//
+// getExitEvent() se dispara como PRIMERA sentencia de exit(), antes de que se
+// destruya vista alguna. Es la misma señal que usa el TextureCache de borealis
+// para limpiarse a si mismo, asi que el patron no es un invento nuestro.
+//
+// A partir de ahi la textura se suelta sin tocar nvg: el contexto se la lleva
+// por delante igual, y no queda nadie a quien devolversela.
+inline bool& asyncImageShuttingDown() {
+    static bool value = false;
+    return value;
+}
+
+inline void watchAsyncImageShutdown() {
+    static const bool once = [] {
+        brls::Application::getExitEvent()->subscribe(
+            [] { asyncImageShuttingDown() = true; });
+        return true;
+    }();
+    (void)once;
+}
+
 class AsyncRgbaImage : public brls::Image {
 public:
     AsyncRgbaImage() : lifetime_(std::make_shared<AsyncImageLifetime>()) {
         lifetime_->image = this;
+        watchAsyncImageShutdown();
     }
 
     ~AsyncRgbaImage() override {
-        std::lock_guard<std::mutex> lock(lifetime_->mutex);
-        lifetime_->image = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(lifetime_->mutex);
+            lifetime_->image = nullptr;
+        }
+        if (asyncImageShuttingDown()) {
+            freeTexture = false;
+            texture = 0;
+        }
     }
 
     // UI_PLAN F6: synchronous upload for memory-cache hits. UI thread only
