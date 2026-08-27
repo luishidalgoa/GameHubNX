@@ -28,6 +28,7 @@
 #include "app/gamehub_catalog.hpp"
 #include "app/installed_title_service.hpp"
 #include "ui/catalog/batch_install.hpp"
+#include "ui/common/action_icon.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
@@ -82,10 +83,16 @@ public:
         setPadding(10, 20, 10, 20);
         setHeight(76);
 
-        mark_ = new brls::Label();
-        mark_->setFontSize(theme::kFontBody);
-        mark_->setWidth(34);
+        // Dos glifos, no un "[x]" de texto: la marca de seleccion y el tipo
+        // de contenido. El tipo es lo que resuelve el "no distingo un DLC de
+        // una actualizacion", y se lee por peso de relleno --macizo, contorno,
+        // anillo-- que a tamano de fila funciona sin fijarse.
+        mark_ = new ActionIcon(ActionIconKind::Unchecked);
+        mark_->setMarginRight(14);
         addView(mark_);
+        kind_ = new ActionIcon(ActionIconKind::Game);
+        kind_->setMarginRight(16);
+        addView(kind_);
 
         auto* text = new brls::Box(brls::Axis::COLUMN);
         text->setGrow(1);
@@ -116,10 +123,14 @@ public:
         index_ = index;
         // Lo ya instalado no se puede marcar: seleccionarlo solo serviria para
         // volver a bajar lo que ya esta.
-        setTextIfChanged(mark_, item.installed ? std::string()
-                                               : (item.selected ? "[x]" : "[ ]"));
-        mark_->setTextColor(item.selected ? theme::accent()
-                                          : theme::textSecondary());
+        mark_->setKind(item.installed  ? ActionIconKind::Skip
+                       : item.selected ? ActionIconKind::Checked
+                                       : ActionIconKind::Unchecked);
+        switch (item.kind) {
+        case ShopItemKind::Game:   kind_->setKind(ActionIconKind::Game);   break;
+        case ShopItemKind::Update: kind_->setKind(ActionIconKind::Update); break;
+        case ShopItemKind::Dlc:    kind_->setKind(ActionIconKind::Dlc);    break;
+        }
         setTextIfChanged(title_, item.entry.title);
         std::string meta = kindLabel(item.kind);
         if (item.entry.size)
@@ -151,7 +162,8 @@ public:
 
 private:
     size_t index_ = 0;
-    brls::Label* mark_;
+    ActionIcon* mark_;
+    ActionIcon* kind_;
     brls::Label* title_;
     brls::Label* meta_;
     brls::Label* badge_;
@@ -275,12 +287,7 @@ public:
         buttons->setMarginTop(12);
         install_ = addButton(buttons, &brls::BUTTONSTYLE_PRIMARY,
                              [this] { installSelected(); });
-        addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
-                  [this] { selectAll(true); })
-            ->setText(tr("gamehubnx/addons/select_all"));
-        addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
-                  [this] { selectAll(false); })
-            ->setText(tr("gamehubnx/addons/select_none"));
+        install_->setHeight(58);
         content->addView(buttons);
 
         frame_ = new brls::AppletFrame(content);
@@ -295,6 +302,16 @@ public:
         registerAction(tr("gamehubnx/common/close"), brls::BUTTON_B,
                        [](brls::View*) {
                            brls::Application::popActivity();
+                           return true;
+                       });
+        registerAction(tr("gamehubnx/addons/select_all"), brls::BUTTON_Y,
+                       [this](brls::View*) {
+                           selectAll(true);
+                           return true;
+                       });
+        registerAction(tr("gamehubnx/addons/select_none"), brls::BUTTON_X,
+                       [this](brls::View*) {
+                           selectAll(false);
                            return true;
                        });
     }

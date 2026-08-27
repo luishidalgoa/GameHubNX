@@ -223,33 +223,15 @@ public:
         recyclerHost_->setVisibility(brls::Visibility::GONE);
         content->addView(recyclerHost_);
 
+        // Seleccionar todo y no seleccionar nada viven en Y y X, no en dos
+        // botones apilados. Son acciones de mando: no tienen por que comerse
+        // alto de pantalla en un panel de 720 px, donde cada boton que se
+        // quita es una fila mas de lista visible. Con esto la lista pasa de
+        // dos o tres filas a seis. Se registran en onContentAvailable, junto
+        // al resto de acciones de la actividad.
         controls_ = new brls::Box(brls::Axis::COLUMN);
         controls_->setMarginTop(14);
         controls_->setVisibility(brls::Visibility::GONE);
-        auto* row = new brls::Box(brls::Axis::ROW);
-        row->setMarginBottom(10);
-        auto* selectAll = new brls::Button();
-        selectAll->setStyle(&brls::BUTTONSTYLE_DEFAULT);
-        selectAll->setGrow(1);
-        selectAll->setHeight(48);
-        selectAll->setMarginRight(10);
-        selectAll->setText(tr("gamehubnx/batch/select_ready"));
-        selectAll->registerClickAction([this](brls::View*) {
-            setAllPrepared(true);
-            return true;
-        });
-        row->addView(selectAll);
-        auto* clear = new brls::Button();
-        clear->setStyle(&brls::BUTTONSTYLE_DEFAULT);
-        clear->setGrow(1);
-        clear->setHeight(48);
-        clear->setText(tr("gamehubnx/common/clear"));
-        clear->registerClickAction([this](brls::View*) {
-            setAllPrepared(false);
-            return true;
-        });
-        row->addView(clear);
-        controls_->addView(row);
 
         enqueue_ = new brls::Button();
         enqueue_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
@@ -416,10 +398,16 @@ private:
                     unregisterAction(cancelAction_);
                     cancelAction_ = ACTION_NONE;
                 }
-                queueAction_ = registerAction(
-                    tr("gamehubnx/batch/add_to_queue"), brls::BUTTON_RB,
+                selectAllAction_ = registerAction(
+                    tr("gamehubnx/batch/select_ready"), brls::BUTTON_Y,
                     [this](brls::View*) {
-                        enqueuePrepared();
+                        setAllPrepared(true);
+                        return true;
+                    });
+                clearAction_ = registerAction(
+                    tr("gamehubnx/common/clear"), brls::BUTTON_X,
+                    [this](brls::View*) {
+                        setAllPrepared(false);
                         return true;
                     });
                 refreshSummary();
@@ -584,9 +572,12 @@ private:
         resultBack_->setText(remaining_.empty()
                                  ? tr("gamehubnx/batch/back_to_catalog")
                                  : tr("gamehubnx/batch/back_to_selected"));
-        if (queueAction_ != ACTION_NONE) {
-            unregisterAction(queueAction_);
-            queueAction_ = ACTION_NONE;
+        for (brls::ActionIdentifier* action : {&selectAllAction_,
+                                               &clearAction_}) {
+            if (*action != ACTION_NONE) {
+                unregisterAction(*action);
+                *action = ACTION_NONE;
+            }
         }
     }
 
@@ -618,7 +609,8 @@ private:
     brls::Box* resultControls_ = nullptr;
     brls::Button* resultBack_ = nullptr;
     brls::ActionIdentifier cancelAction_ = ACTION_NONE;
-    brls::ActionIdentifier queueAction_ = ACTION_NONE;
+    brls::ActionIdentifier selectAllAction_ = ACTION_NONE;
+    brls::ActionIdentifier clearAction_ = ACTION_NONE;
     bool enqueueFinished_ = false;
     bool debridMode_ = false;
     /* Cierto cuando toda la seleccion es de la tienda. Entonces no hay nada que
