@@ -172,6 +172,8 @@
     "status_error_percent": "Ошибка {}%",
     "status_removing": "Удаление",
     "resolving": "Получение...",
+    "shop_preparing": "Подготовка загрузки...",
+    "shop_unavailable": "Сервер не смог передать этот файл.",
     "cancel_hint": "   (Y — отмена)",
     "finding_peers": "Поиск пиров...",
     "contacting_peer": "Подключение к пиру {}/{}...",

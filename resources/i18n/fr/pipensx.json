@@ -172,6 +172,8 @@
     "status_error_percent": "Erreur {}%",
     "status_removing": "Suppression",
     "resolving": "Résolution...",
+    "shop_preparing": "Préparation du téléchargement...",
+    "shop_unavailable": "Le serveur n'a pas pu fournir ce fichier.",
     "cancel_hint": "   (Y pour annuler)",
     "finding_peers": "Recherche de pairs...",
     "contacting_peer": "Contact du pair {}/{}...",

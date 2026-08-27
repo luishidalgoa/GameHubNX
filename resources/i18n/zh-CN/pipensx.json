@@ -172,6 +172,8 @@
     "status_error_percent": "错误 {}%",
     "status_removing": "正在移除",
     "resolving": "解析中…",
+    "shop_preparing": "正在准备下载…",
+    "shop_unavailable": "服务器无法提供此文件。",
     "cancel_hint": "   （按 Y 取消）",
     "finding_peers": "正在寻找节点…",
     "contacting_peer": "正在连接节点 {}/{}…",
