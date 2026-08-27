@@ -19,6 +19,7 @@
 #include "app/favorites_service.hpp"
 #include "app/game_update_install.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/gamehub_catalog.hpp"
 #include "app/gamehub_provider.hpp"
 #include "app/install_space.hpp"
 #include "app/installed_title_service.hpp"
@@ -87,6 +88,10 @@ public:
     // O12: fired (deferred one frame) when the page is torn down after the
     // B-pop, so the catalog can re-seat scroll + focus on the opening card.
     using CloseCallback = std::function<void()>;
+    /* Abrir la pantalla de DLC y actualizaciones. La pone quien crea la ficha
+       --la vista de catalogo-- porque es quien conoce las dos clases: esta
+       cabecera no puede incluir shop_addons.hpp, que la incluye a ella. */
+    using AddOnsCallback = std::function<void(const std::vector<CatalogEntry>&)>;
 
     GameDetailActivity(CatalogEntry entry, std::string lastFailure,
                        DownloadManager* manager, GameMetadataService* metadata,
@@ -97,9 +102,11 @@ public:
                         FavoritesService* favorites = nullptr,
                         SwitchDeployService* deploy = nullptr,
                         std::vector<CatalogEntry> addOns = {},
-                        bool catalogKnowsAddOns = false)
+                        bool catalogKnowsAddOns = false,
+                        AddOnsCallback onAddOns = nullptr)
         : addOns_(std::move(addOns)),
-          catalogKnowsAddOns_(catalogKnowsAddOns), entry_(std::move(entry)),
+          catalogKnowsAddOns_(catalogKnowsAddOns),
+          onAddOns_(std::move(onAddOns)), entry_(std::move(entry)),
           lastFailure_(std::move(lastFailure)),
           manager_(manager), metadata_(metadata), installed_(installed),
           settings_(settings), mods_(mods), favorites_(favorites),
@@ -258,6 +265,25 @@ private:
             return true;
         });
         left->addView(primary_);
+
+        // Boton de complementos. Solo aparece si este juego tiene alguno en la
+        // tienda: antes la ficha decia cuantos habia y no daba manera de
+        // llegar a ellos, que era la queja.
+        if (!addOns_.empty() && onAddOns_) {
+            addOns_button_ = new brls::Button();
+            addOns_button_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+            addOns_button_->setFontSize(theme::kFontBody);
+            addOns_button_->setHeight(52);
+            addOns_button_->setMarginTop(10);
+            addOns_button_->setText(tr("pipensx/detail/addons_button",
+                                       (int)addOns_.size()));
+            addOns_button_->registerClickAction([this](brls::View*) {
+                if (onAddOns_)
+                    onAddOns_(addOns_);
+                return true;
+            });
+            left->addView(addOns_button_);
+        }
 
         installContract_ = new brls::Label();
         installContract_->setFontSize(theme::kFontCaption);
@@ -460,13 +486,24 @@ private:
         right->addView(table);
     }
 
+    size_t dlcCount() const {
+        size_t n = 0;
+        for (const CatalogEntry& e : addOns_)
+            if (gamehub::isDlcTitleId(e.titleId))
+                ++n;
+        return n;
+    }
+
     std::string dlcFact() const {
         // Dos datos distintos que antes se confundian en uno: lo que hay en la
         // tienda y lo que ya esta puesto en la consola. Antes solo se contaba
         // lo instalado, asi que un juego con veinte DLC disponibles no lo
         // decia por ningun lado -- y esos veinte aparecian sueltos en la
         // rejilla, que era la queja.
-        const size_t disponibles = addOns_.size();
+        // addOns_ trae DLC y actualizaciones; esta fila cuenta DLC. La
+        // actualizacion ya tiene la suya ("version disponible") y sumarla aqui
+        // inflaba la cifra con algo que el usuario ya estaba viendo.
+        const size_t disponibles = dlcCount();
         const bool puesto = installed_ && !titleId_.empty() &&
                             installed_->contains(titleId_);
         const int instalados =
@@ -1308,6 +1345,7 @@ private:
        entonces la fila de DLC se calla en vez de afirmar un cero sin
        comprobar. */
     bool catalogKnowsAddOns_ = false;
+    AddOnsCallback onAddOns_;
     CatalogEntry entry_;
     CatalogPresentation presentation_;
     std::string lastFailure_;
@@ -1328,6 +1366,7 @@ private:
     std::shared_ptr<std::atomic<bool>> cancelled_;
     brls::AppletFrame* frame_ = nullptr;
     InstallButton* primary_ = nullptr;
+    brls::Button* addOns_button_ = nullptr;
     brls::Label* installContract_ = nullptr;
     brls::Button* secondary_ = nullptr;
     brls::Button* favorite_ = nullptr;

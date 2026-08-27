@@ -32,6 +32,7 @@
 #include "ui/common/message_cells.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/game_detail.hpp"
+#include "ui/detail/shop_addons.hpp"
 #include "ui/theme.hpp"
 
 namespace pipensx::ui {
@@ -487,6 +488,17 @@ public:
             brls::KEYBOARD_DISABLE_NONE);
     }
 
+    // Ficha de un complemento (DLC o actualizacion), abierta desde la lista.
+    // Reducida a proposito: un complemento no tiene complementos suyos, no
+    // arrastra el historial de fallos del catalogo y no re-badgea la rejilla al
+    // cerrarse. Lo que si trae es el camino de instalacion, que es a lo que se
+    // viene desde esa pantalla.
+    void openEntry(const CatalogEntry& entry) {
+        brls::Application::pushActivity(new GameDetailActivity(
+            entry, std::string{}, manager_, metadata_, installed_, settings_,
+            mods_, nullptr, nullptr, nullptr, favorites_, deploy_));
+    }
+
     void onEntrySelected(int row) {
         const CatalogEntry* picked = dataSource_->entryAt(row);
         if (!picked || busy_)
@@ -566,20 +578,30 @@ public:
                 catalogKnowsAddOns = true;
                 if (base.empty())
                     continue;
-                // Solo DLC: la actualizacion de un juego ya tiene su propia
-                // fila ("version disponible") y contarla como DLC mentia.
-                if (!gamehub::isDlcTitleId(other.titleId))
-                    continue;
                 if (gamehub::baseTitleIdOf(other.titleId) != base)
                     continue;                       // de otro juego
+                // DLC y actualizacion, los dos: la pantalla de complementos
+                // ensena y descarga ambos. Quien cuenta solo DLC es la fila de
+                // datos de la ficha, y lo hace ella al pintarse.
                 addOns.push_back(other);
             }
         }
+        // Abrir la lista de complementos, y desde ella la ficha del que se
+        // elija: un DLC de la tienda es una CatalogEntry como el juego, asi
+        // que GameDetailActivity ya sabe describirlo e instalarlo. Se cablea
+        // aqui, que es el unico sitio que conoce las dos pantallas.
+        const std::string gameTitle = entry.title;
+        auto onAddOns = [this, gameTitle](const std::vector<CatalogEntry>& list) {
+            brls::Application::pushActivity(new ShopAddOnsActivity(
+                gameTitle, list, installed_,
+                [this](const CatalogEntry& pick) { openEntry(pick); }));
+        };
         brls::Application::pushActivity(new GameDetailActivity(
             std::move(entry), std::move(lastFailure), manager_, metadata_,
             installed_, settings_, mods_,
             std::move(onFailure), std::move(onChange), std::move(onClose),
-            favorites_, deploy_, std::move(addOns), catalogKnowsAddOns));
+            favorites_, deploy_, std::move(addOns), catalogKnowsAddOns,
+            std::move(onAddOns)));
     }
 
 private:
