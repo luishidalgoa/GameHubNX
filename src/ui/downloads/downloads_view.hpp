@@ -82,6 +82,19 @@ public:
         recycler_->registerCell("Download", [] { return new DownloadCell(); });
         recycler_->registerCell("Message", [] { return new MessageCell(); });
         dataSource_ = new DownloadDataSource(this);
+        // Sembrar ANTES de entregarlo. RecyclerFrame::onLayout() llama a
+        // reloadData() en cuanto la vista recibe su primer ancho, y eso puede
+        // pasar antes de que refresh() haya llamado a setTasks(). Con el data
+        // source recien creado numberOfSections() devuelve 0, cacheCellFrames()
+        // no guarda ni un frame y selectRowAt() indexa un vector VACIO:
+        //
+        //     offset += this->cacheFramesData[count++].height;
+        //
+        // Size es {float width; float height}, asi que .height cae en el
+        // desplazamiento 4 y sobre un vector vacio --data() nulo-- eso es leer
+        // la direccion 0x4. Que es, byte por byte, la excepcion del crash:
+        // Data Abort, Address 0x4, Fault Address 0x0.
+        dataSource_->setTasks({}, {});
         recycler_->setDataSource(dataSource_);
         addView(recycler_);
         refresh();
@@ -503,8 +516,16 @@ private:
         settingsGeneration_ = settingsGeneration;
         initialized_ = true;
         dataSource_->setTasks(tasks_, activeDeployTask);
+        // defaultCellFocus sobrevive a las recargas, y selectRowAt() lo recorre
+        // sumando alturas sin comprobar limites: una fila que ya no existe
+        // pasea el indice mas alla del vector. Se pide solo lo que el data
+        // source puede servir; indexForTask ya devuelve (0,0) cuando no
+        // encuentra la tarea, y esa fila existe siempre porque una seccion
+        // vacia pinta su fila de relleno.
         recycler_->setDefaultCellFocus(
-            dataSource_->indexForTask(focusedTaskId));
+            dataSource_->hasRows()
+                ? dataSource_->indexForTask(focusedTaskId)
+                : brls::IndexPath(0, 0));
         recycler_->reloadData();
         // Por el data source y no por tasks_: si un estado se queda sin
         // seccion --como le pasaba a Fetching-- lo que se pinta es la fila de
