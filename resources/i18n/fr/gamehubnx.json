@@ -61,7 +61,7 @@
     "players_coop": "Coop locale",
     "players_lan": "Sans fil local",
     "players_online": "En ligne",
-    "action_favorite": "Favoris",
+    "action_favorite": "\u2605",
     "favorites_full": "La liste de souhaits est pleine ({} jeux).",
     "favorites_failed": "Impossible d'enregistrer la liste de souhaits : {}",
     "action_batch": "Installation par lots",

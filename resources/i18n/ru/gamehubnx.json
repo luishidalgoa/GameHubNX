@@ -61,7 +61,7 @@
     "players_coop": "Локальный ко-оп",
     "players_lan": "По локалке",
     "players_online": "Онлайн",
-    "action_favorite": "Избранное",
+    "action_favorite": "\u2605",
     "favorites_full": "Избранное заполнено ({} игр).",
     "favorites_failed": "Не удалось сохранить избранное: {}",
     "action_batch": "Выбор игр",

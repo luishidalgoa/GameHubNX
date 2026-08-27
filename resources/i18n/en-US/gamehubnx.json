@@ -61,7 +61,7 @@
     "players_coop": "Local co-op",
     "players_lan": "Local wireless",
     "players_online": "Online",
-    "action_favorite": "Favourites",
+    "action_favorite": "\u2605",
     "favorites_full": "The wishlist is full ({} games).",
     "favorites_failed": "Could not save the wishlist: {}",
     "action_batch": "Batch install",

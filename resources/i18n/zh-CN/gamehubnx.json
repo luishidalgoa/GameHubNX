@@ -61,7 +61,7 @@
     "players_coop": "本地合作",
     "players_lan": "本地联机",
     "players_online": "在线",
-    "action_favorite": "收藏",
+    "action_favorite": "\u2605",
     "favorites_full": "愿望单已满（{} 个游戏）。",
     "favorites_failed": "无法保存愿望单：{}",
     "action_batch": "批量安装",
