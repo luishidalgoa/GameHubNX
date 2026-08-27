@@ -64,7 +64,7 @@
     "action_favorite": "\u2605",
     "favorites_full": "Избранное заполнено ({} игр).",
     "favorites_failed": "Не удалось сохранить избранное: {}",
-    "action_batch": "Выбор игр",
+    "action_batch": "Пакет",
     "action_batch_close": "Закрыть выбор",
     "search_placeholder": "Поиск по каталогу",
     "select_visible": "Видимые",

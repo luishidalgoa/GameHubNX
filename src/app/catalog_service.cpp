@@ -9,6 +9,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
+#include <atomic>
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -656,9 +657,22 @@ bool CatalogService::isTrustedSource(const std::string& url,
     return !prefix.empty() && url.rfind(prefix, 0) == 0;
 }
 
+namespace {
+std::atomic<bool> gCatalogNetworkEnabled{true};
+} // namespace
+
+void CatalogService::setNetworkEnabled(bool enabled) {
+    gCatalogNetworkEnabled.store(enabled, std::memory_order_relaxed);
+}
+
 bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
                                  std::string& error,
                                  const std::string& sourceUrl) {
+    if (!gCatalogNetworkEnabled.load(std::memory_order_relaxed)) {
+        parsed = entries();
+        error.clear();
+        return true;
+    }
     // Network fetch + parse + cache write only, so it never touches entries_.
     // The cached catalogue in memory survives a failure — the caller keeps
     // showing it on error.

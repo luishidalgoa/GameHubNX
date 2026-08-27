@@ -444,6 +444,12 @@ int main(int argc, char** argv) {
                      error.c_str());
     metadata.setImageNetwork(
         GameMetadataService::ImageNetwork::Off); // placeholders, no network
+    // Y el catalogo tampoco sale a la red. CatalogView se refresca solo al
+    // construirse --en el sandbox no hay marca de refresco previo, asi que
+    // siempre toca-- y traia el catalogo real: la pantalla "frame" salia unas
+    // veces con 61 juegos y otras con 64, con caratulas y titulos distintos,
+    // que es una captura imposible de comparar con nada.
+    CatalogService::setNetworkEnabled(false);
 
     // Fixture mod index: no network, the table lists the fixture title so the
     // ModCD chip and fact row are covered by the golden screens.
