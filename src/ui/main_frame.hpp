@@ -35,6 +35,28 @@ enum class NavIconType {
     Catalog, Platforms, Downloads, Installed, Updates, Settings, Help, About
 };
 
+// Alto que el pie anclado ocupa dentro de la columna, y por tanto lo que la
+// lista de navegacion tiene que dejar libre. Sumando sus piezas (ver
+// attachStorageFooter, mas abajo):
+//
+//   fila del servidor web   texto de 15px (~20) + margen inferior 8   =  28
+//   medidor: cabecera       texto de 15px (~20) + margen 6            =  26
+//   medidor: barra          14 + margen 2                             =  16
+//   medidor: pie            texto de 15px (~20) + margen 6            =  26
+//   relleno inferior del dock (kFooterPad)                            =  16
+//                                                                       ---
+//                                                                       112
+//
+// Se reservan 120. Pasarse deja hueco de mas al final de la lista; quedarse
+// corto reproduce el solape.
+//
+// Va como MARGEN de la barra, no como relleno de su contenido: rellenar por
+// dentro no mueve nada, porque la lista se dibuja de arriba abajo y la ultima
+// entrada se queda donde estaba con mas hueco detras. Lo que hace falta es que
+// la barra TERMINE antes; como es un ScrollingFrame, lo que no quepa se
+// desplaza, que es exactamente lo que se quiere.
+inline constexpr float kSidebarFooterReserve = 120.0f;
+
 // Shrinks the stock sidebar so the icon rail + expanded menu both look right.
 // Style metrics back a shared global table, so this must run once after
 // Application::init() and BEFORE the first TabFrame/Sidebar is constructed
@@ -373,6 +395,18 @@ public:
         dock_->setJustifyContent(brls::JustifyContent::FLEX_END);
         dock_->setPadding(0, kFooterPad, kFooterPad, kFooterPad);
         dock_->setClipsToBounds(true);
+
+        // La barra termina donde empieza el pie. Sin esto ocupa toda la
+        // columna y el pie --que va por encima, en absoluto-- se le monta:
+        // con siete entradas, "Acerca de" queda debajo de la IP.
+        //
+        // OJO al verificarlo: el arnes golden NO ve este cambio. El fondo de la
+        // barra es rgb(50,50,50) y el de la app rgb(45,45,45), cinco de
+        // diferencia por canal, y con fuzz del 5% cuentan como el mismo color.
+        // Recortar 120 px de barra mueve ~30.000 pixeles y la comparacion los
+        // da por identicos. Para comprobarlo hay que medir donde termina ese
+        // fondo, no fiarse del veredicto de golden ni del ojo.
+        this->sidebar->setMarginBottom(kSidebarFooterReserve);
 
         webRow_ = new WebStatusRow();
         webRow_->setVisibility(collapsed_ ? brls::Visibility::GONE
