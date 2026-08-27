@@ -325,14 +325,22 @@ public:
             fitsOnly_ = !fitsOnly_;
             rebuildEntries();
         });
+        filterMissing_ = makeChip(tr("gamehubnx/catalog/filter_missing"),
+                                  [this] {
+            missingOnly_ = !missingOnly_;
+            rebuildEntries();
+        });
         filterPlayers_ = makeChip(tr("gamehubnx/catalog/filter_players"),
                                   [this] { openPlayerFilterMenu(); });
         filterFavorites_->setMarginLeft(16);
         header_->addView(filterFavorites_);
         header_->addView(filterFits_);
+        header_->addView(filterMissing_);
         header_->addView(filterPlayers_);
         if (!favorites_)
             filterFavorites_->setVisibility(brls::Visibility::GONE);
+        if (!installed_)
+            filterMissing_->setVisibility(brls::Visibility::GONE);
         // Hidden until a metadata index that carries player data is loaded, so
         // the chip never offers a menu that can only answer "nothing found".
         updatePlayerChipVisibility();
@@ -945,6 +953,16 @@ private:
                 continue;
             const GameMetadata* meta =
                 metadata_ ? metadata_->findByInfoHash(entry.infoHash) : nullptr;
+            // Mismo criterio que la insignia "Instalado" de la rejilla, para
+            // que el filtro y lo que se ve pintado no puedan discrepar.
+            if (missingOnly_ && installed_) {
+                const CatalogPresentation presentation =
+                    resolveCatalogPresentation(entry, meta,
+                                               catalogTextPreference());
+                if (!presentation.titleId.empty() &&
+                    installed_->contains(presentation.titleId))
+                    continue;
+            }
             // catalogEntryIsGame, no catalogEntryHasMatchedTitle: la segunda exige que
             // la entrada CRUCE con el indice de metadatos, y ese cruce va por
             // info-hash. Las entradas de la tienda no tienen torrent, asi que llevan
@@ -1041,6 +1059,36 @@ private:
         }
         applySortDirection(visible);
 
+        // Version mas alta publicada para cada juego, calculada UNA vez por
+        // reconstruccion. Emparejar complemento a complemento dentro del bucle
+        // de la rejilla seria cuadratico sobre el catalogo entero.
+        std::unordered_map<std::string, uint64_t> newestUpdateByBase;
+        std::unordered_map<int64_t, uint64_t> newestUpdateByGameId;
+        if (installed_ && catalog_) {
+            for (const CatalogEntry& other : catalog_->entries()) {
+                if (other.directUrl.empty())
+                    continue;                       // no es de la tienda
+                if (!other.fromSubIndex &&
+                    gamehub::isBaseTitleId(other.titleId))
+                    continue;                       // es un juego, no un extra
+                if (gamehub::isDlcTitleId(other.titleId))
+                    continue;                       // un DLC no es version
+                const uint64_t version = shopVersionFromName(other.title);
+                if (version == 0)
+                    continue;                       // sin [vNNNN] no se sabe
+                const std::string otherBase =
+                    gamehub::baseTitleIdOf(other.titleId);
+                if (!otherBase.empty()) {
+                    uint64_t& slot = newestUpdateByBase[otherBase];
+                    slot = std::max(slot, version);
+                }
+                if (other.gameId != 0) {
+                    uint64_t& slot = newestUpdateByGameId[other.gameId];
+                    slot = std::max(slot, version);
+                }
+            }
+        }
+
         std::vector<std::string> stateBadges;
         std::vector<std::string> gameNames;
         std::vector<std::string> iconUrls;
@@ -1074,8 +1122,33 @@ private:
                 resolveCatalogPresentation(entry, meta,
                                            catalogTextPreference());
             if (it == added.end() && !presentation.titleId.empty() &&
-                installed_ && installed_->contains(presentation.titleId))
+                installed_ && installed_->contains(presentation.titleId)) {
                 stateBadges.back() = tr("gamehubnx/catalog/badge_installed");
+                // Si ademas hay una version mas nueva publicada, eso manda:
+                // "instalado" ya se ve por la caratula, y lo accionable es que
+                // falta la actualizacion.
+                //
+                // Solo cuando se conocen las DOS versiones. Sin la instalada
+                // (ncm no contesta) o sin [vNNNN] en el nombre, callarse es
+                // mejor que ofrecer una actualizacion que quiza ya esta puesta.
+                const std::string entryBase =
+                    gamehub::baseTitleIdOf(presentation.titleId);
+                uint64_t available = 0;
+                if (entry.gameId != 0) {
+                    auto found = newestUpdateByGameId.find(entry.gameId);
+                    if (found != newestUpdateByGameId.end())
+                        available = found->second;
+                }
+                if (available == 0 && !entryBase.empty()) {
+                    auto found = newestUpdateByBase.find(entryBase);
+                    if (found != newestUpdateByBase.end())
+                        available = found->second;
+                }
+                const uint64_t current = installedVersionOf(entryBase);
+                if (current != 0 && available > current)
+                    stateBadges.back() =
+                        tr("gamehubnx/catalog/badge_update");
+            }
             gameNames.push_back(std::move(presentation.title));
             iconUrls.push_back(std::move(presentation.iconUrl));
             iconPreserveAspect.push_back(
@@ -1354,6 +1427,7 @@ private:
         styleChip(filterGames_, gamesOnly);
         styleChip(filterFavorites_, favoritesOnly_);
         styleChip(filterFits_, fitsOnly_);
+        styleChip(filterMissing_, missingOnly_);
         // The chip carries the active choice, so the header states the filter
         // in force without opening the menu.
         filterPlayers_->setText(playerFilter_ == PlayerFilter::Any
@@ -2074,6 +2148,7 @@ private:
     brls::Button* filterAll_ = nullptr;
     brls::Button* filterGames_ = nullptr;
     brls::Button* filterFavorites_ = nullptr;
+    brls::Button* filterMissing_ = nullptr;
     brls::Button* filterFits_ = nullptr;
     brls::Button* filterPlayers_ = nullptr;
     brls::Label* count_ = nullptr;
@@ -2114,6 +2189,7 @@ private:
     // always comes back to the full catalog.
     bool favoritesOnly_ = false;
     bool fitsOnly_ = false;
+    bool missingOnly_ = false;
     PlayerFilter playerFilter_ = PlayerFilter::Any;
     brls::RepeatingTimer timer_;
     uint64_t observedSettingsGeneration_ = 0;
