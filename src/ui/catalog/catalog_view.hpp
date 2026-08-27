@@ -488,6 +488,65 @@ public:
             brls::KEYBOARD_DISABLE_NONE);
     }
 
+    /// Version instalada del titulo, tal y como la reporta ncm, o 0 si no se
+    /// sabe. Se usa para marcar una actualizacion como ya puesta.
+    uint64_t installedVersionOf(const std::string& titleId) const {
+        if (!installed_ || titleId.empty())
+            return 0;
+        const std::string want = lowerAscii(titleId);
+        for (const InstalledTitle& title : installed_->titles()) {
+            if (lowerAscii(title.titleId) != want || title.version.empty())
+                continue;
+            uint64_t value = 0;
+            for (char c : title.version) {
+                if (c < '0' || c > '9') return 0;
+                value = value * 10 + static_cast<uint64_t>(c - '0');
+            }
+            return value;
+        }
+        return 0;
+    }
+
+    /// Filas de la pantalla "que instalar": el juego, sus actualizaciones y sus
+    /// DLC, cada uno con la marca de si la consola ya lo tiene.
+    ///
+    /// El juego solo aparece si NO esta instalado: ofrecer reinstalar 6 GB
+    /// junto a los DLC que faltan invita a marcarlo sin querer.
+    std::vector<ShopItem> buildShopItems(
+        const CatalogEntry& base,
+        const std::vector<CatalogEntry>& addOns) const {
+        std::vector<ShopItem> items;
+        const std::string baseId = gamehub::baseTitleIdOf(base.titleId);
+        const bool baseInstalled =
+            installed_ && !base.titleId.empty() &&
+            installed_->contains(base.titleId);
+        if (!baseInstalled) {
+            ShopItem item;
+            item.entry = base;
+            item.kind = ShopItemKind::Game;
+            items.push_back(std::move(item));
+        }
+        const uint64_t installedVersion = installedVersionOf(baseId);
+        for (const CatalogEntry& entry : addOns) {
+            ShopItem item;
+            item.entry = entry;
+            if (gamehub::isDlcTitleId(entry.titleId)) {
+                item.kind = ShopItemKind::Dlc;
+                item.installed = installed_ && !entry.titleId.empty() &&
+                                 installed_->containsDlc(entry.titleId);
+            } else {
+                item.kind = ShopItemKind::Update;
+                // Solo se marca cuando se pueden comparar las DOS versiones.
+                // Decir "instalada" sin poder comprobarlo es peor que callarse.
+                const uint64_t candidate = shopVersionFromName(entry.title);
+                item.installed = installedVersion != 0 && candidate != 0 &&
+                                 installedVersion >= candidate;
+            }
+            items.push_back(std::move(item));
+        }
+        return items;
+    }
+
     // Ficha de un complemento (DLC o actualizacion), abierta desde la lista.
     // Reducida a proposito: un complemento no tiene complementos suyos, no
     // arrastra el historial de fallos del catalogo y no re-badgea la rejilla al
@@ -606,10 +665,11 @@ public:
         // que GameDetailActivity ya sabe describirlo e instalarlo. Se cablea
         // aqui, que es el unico sitio que conoce las dos pantallas.
         const std::string gameTitle = entry.title;
-        auto onAddOns = [this, gameTitle](const std::vector<CatalogEntry>& list) {
+        auto onAddOns = [this, gameTitle](const CatalogEntry& base,
+                                          const std::vector<CatalogEntry>& list) {
             brls::Application::pushActivity(new ShopAddOnsActivity(
-                gameTitle, list, installed_,
-                [this](const CatalogEntry& pick) { openEntry(pick); }));
+                gameTitle, buildShopItems(base, list), manager_, settings_,
+                openDownloads_));
         };
         brls::Application::pushActivity(new GameDetailActivity(
             std::move(entry), std::move(lastFailure), manager_, metadata_,

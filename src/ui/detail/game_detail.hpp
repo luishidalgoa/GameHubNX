@@ -91,7 +91,8 @@ public:
     /* Abrir la pantalla de DLC y actualizaciones. La pone quien crea la ficha
        --la vista de catalogo-- porque es quien conoce las dos clases: esta
        cabecera no puede incluir shop_addons.hpp, que la incluye a ella. */
-    using AddOnsCallback = std::function<void(const std::vector<CatalogEntry>&)>;
+    using AddOnsCallback = std::function<void(const CatalogEntry& base,
+                                             const std::vector<CatalogEntry>&)>;
 
     GameDetailActivity(CatalogEntry entry, std::string lastFailure,
                        DownloadManager* manager, GameMetadataService* metadata,
@@ -279,7 +280,7 @@ private:
                                        (int)addOns_.size()));
             addOns_button_->registerClickAction([this](brls::View*) {
                 if (onAddOns_)
-                    onAddOns_(addOns_);
+                    onAddOns_(entry_, addOns_);
                 return true;
             });
             left->addView(addOns_button_);

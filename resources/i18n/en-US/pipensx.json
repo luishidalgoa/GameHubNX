@@ -231,11 +231,19 @@
     "preset_download_all": "Download all"
   },
   "addons": {
-    "title": "DLC and updates",
-    "hint": "Pick one to see it and install it.",
+    "title": "What to install",
+    "hint": "Mark what you want and install it in one go.",
     "kind_dlc": "DLC",
     "kind_update": "Update",
-    "installed": "Installed"
+    "kind_game": "Game",
+    "installed": "Installed",
+    "section_game": "Game",
+    "section_updates": "Updates",
+    "section_dlc": "DLC",
+    "select_all": "Select all",
+    "select_none": "Clear",
+    "install_n": "Install {}",
+    "selected": "{} selected  ·  {}"
   },
   "downloads": {
     "import": "Import torrent",

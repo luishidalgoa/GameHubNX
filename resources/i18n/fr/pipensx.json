@@ -231,11 +231,19 @@
     "preset_download_all": "Tout télécharger"
   },
   "addons": {
-    "title": "DLC et mises à jour",
-    "hint": "Choisissez-en un pour le voir et l'installer.",
+    "title": "Que installer",
+    "hint": "Cochez ce que vous voulez et installez en une fois.",
     "kind_dlc": "DLC",
     "kind_update": "Mise à jour",
-    "installed": "Installé"
+    "kind_game": "Jeu",
+    "installed": "Installé",
+    "section_game": "Jeu",
+    "section_updates": "Mises à jour",
+    "section_dlc": "DLC",
+    "select_all": "Tout cocher",
+    "select_none": "Tout décocher",
+    "install_n": "Installer {}",
+    "selected": "{} sélectionnés  ·  {}"
   },
   "downloads": {
     "import": "Importer un torrent",

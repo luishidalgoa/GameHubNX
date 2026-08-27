@@ -231,11 +231,19 @@
     "preset_download_all": "Скачать всё"
   },
   "addons": {
-    "title": "DLC и обновления",
-    "hint": "Выберите, чтобы открыть и установить.",
+    "title": "Что установить",
+    "hint": "Отметьте нужное и установите разом.",
     "kind_dlc": "DLC",
     "kind_update": "Обновление",
-    "installed": "Установлено"
+    "kind_game": "Игра",
+    "installed": "Установлено",
+    "section_game": "Игра",
+    "section_updates": "Обновления",
+    "section_dlc": "DLC",
+    "select_all": "Выбрать все",
+    "select_none": "Снять",
+    "install_n": "Установить {}",
+    "selected": "выбрано {}  ·  {}"
   },
   "downloads": {
     "import": "Добавить .torrent",
