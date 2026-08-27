@@ -510,6 +510,21 @@ int main(int argc, char** argv) {
                                            &mods, &favorites, &webServer,
                                            &deploy, &gameUpdates);
 
+        // Diagnostico del recuadro de foco mal dibujado (issue #15/#25). El
+        // recuadro se pinta con getX/getY/getWidth/getHeight de la vista
+        // enfocada (borealis view.cpp:545), asi que con la clase y el marco de
+        // cada cambio de foco se distingue "el foco esta en otra vista" de "la
+        // geometria de esa vista es la que no cuadra". Una linea por cambio de
+        // foco, solo cuando el log de diagnostico esta activo.
+        brls::Application::getGlobalFocusChangeEvent()->subscribe(
+            [](brls::View* view) {
+                if (!view)
+                    return;
+                log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f\n",
+                        view->describe().c_str(), view->getX(), view->getY(),
+                        view->getWidth(), view->getHeight());
+            });
+
         startupStage("push MainActivity");
         brls::Application::pushActivity(activity);
         if (updatePendingFinish) {
