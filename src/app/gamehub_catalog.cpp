@@ -229,6 +229,26 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         e.title   = name;
         e.titleId = titleIdOf(name);
 
+        // ── Claves gh_ por fichero ──────────────────────────────────────────
+        // El titledb va indexado por Title ID, que sale del nombre del fichero:
+        // un volcado mal nombrado se quedaba sin entrada y por tanto sin
+        // portada, aunque el servidor la tuviera guardada. Estas claves viajan
+        // en la propia fila de files[] y no dependen de ese id.
+        if (const auto it = f.find("gh_id");
+            it != f.end() && it->is_number_integer())
+            e.gameId = it->get<int64_t>();
+        if (const auto it = f.find("gh_title"); it != f.end()) {
+            const std::string t = asString(*it);
+            if (!t.empty()) e.title = t;
+        }
+        if (const auto it = f.find("gh_cover"); it != f.end()) {
+            const std::string u = asString(*it);
+            if (!u.empty() && isTrustedUrl(u)) e.posterUrl = u;
+        }
+        // gh_kind ("dlc"/"update") no se guarda: la procedencia --de que indice
+        // vino-- ya dice que es un complemento, y el Title ID distingue el tipo
+        // cuando hace falta. Se documenta aqui para que nadie lo busque.
+
         // Rich metadata when the index carries it for this Title ID.
         if (titledb && !e.titleId.empty()) {
             const auto m = titledb->find(e.titleId);
