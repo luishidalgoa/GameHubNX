@@ -443,7 +443,8 @@ private:
                              : tr("pipensx/downloads/resume_all"));
         uint64_t settingsGeneration = settings_ ? settings_->generation() : 0;
         bool settingsChanged = settingsGeneration != settingsGeneration_;
-        bool structureChanged = !initialized_ || settingsChanged ||
+        bool structureChanged = !initialized_ || pendingReload_ ||
+                                 settingsChanged ||
                                  next.size() != tasks_.size() ||
                                  activeDeployTask != activeDeployTask_;
         bool progressChanged = deployState.generation != deployGeneration_;
@@ -500,6 +501,17 @@ private:
             settingsGeneration_ = settingsGeneration;
             initialized_ = true;
             dataSource_->setTasks(tasks_, activeDeployTask);
+            // Se publican secciones nuevas SIN recargar --el recycler no se
+            // puede tocar con un overlay encima-- asi que queda con el reparto
+            // anterior, que tiene mas entradas. Las sobrantes se pintan como
+            // filas de relleno sin cabecera: la tarjeta fantasma.
+            //
+            // Y como aqui arriba ya se ha consumido toda la contabilidad de
+            // cambios, el siguiente refresco ve structureChanged==false y se va
+            // por el camino barato, que tampoco recarga: el desajuste no se
+            // corregia NUNCA. Queda anotado para forzar la recarga en cuanto el
+            // overlay deje de estorbar.
+            pendingReload_ = true;
             return;
         }
         auto* focusedCell = ownsFocus
@@ -527,6 +539,7 @@ private:
                 ? dataSource_->indexForTask(focusedTaskId)
                 : brls::IndexPath(0, 0));
         recycler_->reloadData();
+        pendingReload_ = false;
         // Por el data source y no por tasks_: si un estado se queda sin
         // seccion --como le pasaba a Fetching-- lo que se pinta es la fila de
         // relleno, y decidir desde tasks_ dejaba el recycler visible con el
@@ -561,6 +574,9 @@ private:
     brls::RepeatingTimer timer_;
     std::vector<DownloadTask> tasks_;
     bool initialized_ = false;
+    /* Cierto cuando se publicaron secciones nuevas sin poder recargar el
+       recycler (habia un overlay en la pila). Ver el comentario en refresh(). */
+    bool pendingReload_ = false;
     bool fastRefresh_ = false;
     uint64_t settingsGeneration_ = 0;
     SwitchDeploySnapshot deploySnapshot_;
