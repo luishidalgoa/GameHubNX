@@ -62,6 +62,7 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/game_detail.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
+#include "ui/detail/shop_addons.hpp"
 #include "ui/detail/torrent_selection.hpp"
 #include "ui/downloads/downloads_view.hpp"
 #include "ui/downloads/task_files_activity.hpp"
@@ -938,6 +939,29 @@ int main(int argc, char** argv) {
             DebridLinkFixture{{"192.168.50.42", setupDiagnosticFixture},
                               /*pairingAvailable=*/true,
                               /*validationSucceeded=*/true}));
+    } else if (screen == "addons" || screen == "addons-focus") {
+        auto item = [](const char* title, uint64_t bytes, ShopItemKind kind,
+                       bool installed, bool selected) {
+            ShopItem it;
+            it.entry.title = title;
+            it.entry.size = bytes;
+            it.kind = kind;
+            it.installed = installed;
+            it.selected = selected;
+            return it;
+        };
+        std::vector<ShopItem> items;
+        items.push_back(item("Cadence of Hyrule", 703181783ull,
+                             ShopItemKind::Game, false, true));
+        items.push_back(item("Cadence of Hyrule [v327680]", 260173824ull,
+                             ShopItemKind::Update, false, true));
+        items.push_back(item("Symphony of the Mask", 18580111ull,
+                             ShopItemKind::Dlc, false, false));
+        items.push_back(item("Season Pass", 629923ull,
+                             ShopItemKind::Dlc, true, false));
+        activity = new ShopAddOnsActivity("Cadence of Hyrule",
+                                          std::move(items), &manager,
+                                          &settings);
     } else if (screen == "about") {
         activity = new GoldenActivity(new AboutView());
     } else if (screen == "bug-report" || screen == "bug-report-detail" ||
