@@ -26,6 +26,11 @@ enum class ActionIconKind {
     Skip,       // thin hollow ring, dimmed
     Checked,    // solid accent badge, checkmark knocked out
     Unchecked,  // thin hollow ring, dimmed
+    // Casilla vacia CUADRADA. La redonda choca con el anillo del glifo de DLC:
+    // puestos uno al lado del otro en la misma fila se leen como dos circulos
+    // y hay que pararse a mirar cual es cual. Se ve en el render de "que
+    // instalar", no en un mockup.
+    UncheckedBox,
     Error,      // outline warning triangle
     // Tipo de contenido, en la lista de "que instalar". Mismo sistema que los
     // tres de arriba: se distinguen por PESO DE RELLENO, no por detalle, que a
@@ -93,6 +98,9 @@ public:
             case ActionIconKind::Dlc:
                 drawRingPlus(vg, 0.0f, 0.0f, kGlyph, theme::textSecondary());
                 break;
+            case ActionIconKind::UncheckedBox:
+                drawEmptyBox(vg, 0.0f, 0.0f, kGlyph, theme::textTertiary());
+                break;
         }
         nvgRestore(vg);
     }
@@ -137,6 +145,19 @@ private:
         nvgMoveTo(vg, cx - 3.4f, gy + 11.4f);
         nvgLineTo(vg, cx, gy + 8.0f);
         nvgLineTo(vg, cx + 3.4f, gy + 11.4f);
+        nvgStroke(vg);
+    }
+
+    // Casilla vacia: mismo cuadrado redondeado que la placa marcada, en
+    // contorno. Que la marcada y la vacia compartan silueta es lo que hace
+    // que una columna de casillas se lea de un vistazo.
+    static void drawEmptyBox(NVGcontext* vg, float gx, float gy, float s,
+                             NVGcolor color) {
+        nvgStrokeColor(vg, color);
+        nvgStrokeWidth(vg, 1.8f);
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, gx + 3.0f, gy + 3.0f, s - 6.0f, s - 6.0f,
+                       theme::kRadiusSmall - 1.0f);
         nvgStroke(vg);
     }
 
