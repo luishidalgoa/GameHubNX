@@ -417,11 +417,12 @@ void testMetadataSnapshotAcceptsVerifiedIndex() {
         "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
         "\"index\":{\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
         "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
+    // Sin feed remoto no hay URL por defecto que rellenar: indexUrl pasa a ser
+    // informativo y se queda vacio. El manifiesto se sigue aceptando porque lo
+    // que verifica el indice es su SHA-256, no de donde venia.
     assert(GameMetadataService::prepareSnapshot(manifestWithoutUrl, index,
                                                 snapshot, error));
-    assert(snapshot.manifest.indexUrl.find(
-        "/releases/latest/download/game_metadata_index.json") !=
-           std::string::npos);
+    assert(snapshot.manifest.indexUrl.empty());
 }
 
 void testMetadataSnapshotRejectsTamperedIndex() {
