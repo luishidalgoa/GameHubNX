@@ -17,6 +17,7 @@
     "about": "Acerca de"
   },
   "common": {
+        "loading": "Cargando…",
     "ok": "OK",
     "cancel": "Cancelar",
     "clear": "Borrar",
@@ -754,6 +755,12 @@
         "free": "  ({} libres)"
     },
     "platforms": {
+        "saved_to": "Se guardará en",
+        "path_unverified": "Esta carpeta no está confirmada para tico: comprueba que el emulador la lee.",
+        "downloading": "Descargando {}",
+        "count": "{} plataformas",
+        "unavailable": "Tu servidor todavía no publica plataformas. Hace falta una versión más reciente de GameHub.",
+        "on_sd": "En la SD",
         "title": "Plataformas",
         "games": "{} juegos",
         "native": "Nativa",

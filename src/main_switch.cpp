@@ -48,6 +48,7 @@ extern "C" {
 #include "ui/first_run_view.hpp"
 #include "ui/i18n.hpp"
 #include "ui/main_frame.hpp"
+#include "ui/platforms/platforms_view.hpp"
 #include "ui/downloads/downloads_view.hpp"
 #include "ui/downloads/task_files_activity.hpp"
 #include "ui/installed/installed_view.hpp"
@@ -150,8 +151,16 @@ public:
                         [manager, catalog, metadata, installed,
                          settings, mods, favorites, deploy, tabs] {
             return new CatalogView(manager, catalog, metadata, installed,
-                                   settings, [tabs] { tabs->focusTab(1); },
+                                   // Indice 2 = Descargas. Plataformas se
+                                   // metio en medio y corrio esta pestana un
+                                   // puesto; con el 1 se abria Plataformas.
+                                   settings, [tabs] { tabs->focusTab(2); },
                                    mods, favorites, deploy);
+        });
+        tabs->addNavTab(tr("gamehubnx/platforms/title"),
+                        NavIconType::Platforms,
+                        [catalog, metadata, manager] {
+            return new gamehubnx::ui::PlatformsView(catalog, metadata, manager);
         });
         tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [manager, metadata, settings, deploy] {
