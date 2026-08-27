@@ -390,6 +390,10 @@ void updateTaskInstallProgress(DownloadTask& task, uint64_t installedBytes,
                                DownloadStatus status, uint64_t nowMs);
 void updateTaskDownloadProgress(DownloadTask& task, uint64_t completedBytes,
                                 uint64_t nowMs);
+// Velocidad vigente de cada fase, o 0. Las dos exigen el estado correspondiente
+// y una muestra reciente: un valor viejo pintado como si fuera de ahora hace
+// creer que descarga e instalacion corren a la vez.
+uint64_t currentDownloadSpeed(const DownloadTask& task, uint64_t nowMs);
 uint64_t currentInstallSpeed(const DownloadTask& task, uint64_t nowMs);
 std::optional<uint64_t> taskEtaSeconds(const DownloadTask& task,
                                        uint64_t nowMs);

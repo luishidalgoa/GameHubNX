@@ -545,7 +545,7 @@ private:
         recordSpeedSample(*task, now);
         setTextIfChanged(downloadSpeed_,
                           tr("gamehubnx/downloads/speed_download",
-                             formatSpeed(task->speedBytesPerSecond)));
+                             formatSpeed(currentDownloadSpeed(*task, now))));
         const uint64_t installSpeed = currentInstallSpeed(*task, now);
         if (task->mode == TransferMode::StreamInstall) {
             installSpeedItem_->setVisibility(brls::Visibility::VISIBLE);
@@ -660,7 +660,8 @@ private:
     }
 
     void recordSpeedSample(const DownloadTask& task, uint64_t now) {
-        appendSpeedSample(downloadSpeedSamples_, task.speedBytesPerSecond);
+        appendSpeedSample(downloadSpeedSamples_,
+                          currentDownloadSpeed(task, now));
 
         if (task.mode == TransferMode::StreamInstall) {
             appendSpeedSample(installSpeedSamples_,

@@ -118,7 +118,10 @@ public:
                      percentOf(static_cast<float>(task.fetchProgress)))
                 : tr("gamehubnx/downloads/cell_preparing");
         } else if (task.status == DownloadStatus::Downloading) {
-            meta += "   " + formatSpeed(task.speedBytesPerSecond);
+            // Misma guarda que el detalle: el estado ya es Downloading aqui,
+            // pero la muestra tambien tiene que ser reciente para no pintar
+            // una velocidad que ya no esta pasando.
+            meta += "   " + formatSpeed(currentDownloadSpeed(task, now_ms()));
             // Una descarga directa no tiene enjambre: "0 peers" no es un dato
             // pobre, es una mentira sobre como se esta bajando el fichero.
             if (task.source == TaskSource::Torrent)

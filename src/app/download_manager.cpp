@@ -368,6 +368,21 @@ void updateTaskInstallProgress(DownloadTask& task, uint64_t installedBytes,
     task.installRateBaseAtMs = nowMs;
 }
 
+uint64_t currentDownloadSpeed(const DownloadTask& task, uint64_t nowMs) {
+    // Simetrica a currentInstallSpeed, que si estaba protegida.
+    // speedBytesPerSecond solo significa algo mientras se esta descargando: en
+    // cuanto la tarea pasa a instalar, el campo se queda con el ultimo valor
+    // que tuvo. La pantalla de detalle lo pintaba igualmente, asi que durante
+    // la instalacion se veia una "velocidad de descarga" congelada al lado de
+    // la de instalacion, como si las dos estuvieran pasando a la vez.
+    if (task.status != DownloadStatus::Downloading ||
+        !task.speedBytesPerSecond || !task.downloadProgressUpdatedAtMs ||
+        nowMs < task.downloadProgressUpdatedAtMs ||
+        nowMs - task.downloadProgressUpdatedAtMs > kProgressRateStaleMs)
+        return 0;
+    return task.speedBytesPerSecond;
+}
+
 uint64_t currentInstallSpeed(const DownloadTask& task, uint64_t nowMs) {
     if (task.status != DownloadStatus::Installing ||
         !task.installSpeedBytesPerSecond || !task.installSpeedUpdatedAtMs ||
@@ -386,11 +401,7 @@ std::optional<uint64_t> taskEtaSeconds(const DownloadTask& task,
         const auto wanted = downloadProgressBytes(task);
         completed = wanted.first;
         total = wanted.second;
-        speed = task.speedBytesPerSecond;
-        if (!task.downloadProgressUpdatedAtMs ||
-            nowMs < task.downloadProgressUpdatedAtMs ||
-            nowMs - task.downloadProgressUpdatedAtMs > kProgressRateStaleMs)
-            return std::nullopt;
+        speed = currentDownloadSpeed(task, nowMs);
     } else if (task.status == DownloadStatus::Installing) {
         completed = task.installedBytes;
         total = task.installTotalBytes;
