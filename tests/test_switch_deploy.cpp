@@ -1,3 +1,4 @@
+#include "../src/app/app_paths.h"
 #include "../src/app/install_space.hpp"
 #include "../src/app/nx_file_types.hpp"
 #include "../src/app/port_archive.hpp"
@@ -247,8 +248,12 @@ int main() {
 
     const std::string recoveryRoot = root + "/recovery";
     const std::string recoveryTarget = recoveryRoot + "/sd/switch";
+    // El sufijo sale del macro, no de un literal: cuando el directorio de la
+    // app paso de pipensx a gamehubnx este test se quedo buscando el nombre
+    // viejo y la limpieza dejo de reconocerlo, con la CI en rojo desde
+    // entonces.
     const std::string staleTemp =
-        recoveryTarget + "/MyPort/file.pipensx-part-deadbeef";
+        recoveryTarget + "/MyPort/file" GHNX_PART_SUFFIX "-deadbeef";
     writeFile(staleTemp, "partial");
     std::string job = "d4:task" + bstr("deadbeef") +
                       "4:temp" + bstr(staleTemp) + "7:versioni1ee";
