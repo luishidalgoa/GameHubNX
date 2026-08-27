@@ -1070,9 +1070,13 @@ void testImageMemoryCache() {
 void testImageSizeClassesCacheSeparately() {
     char cwd[4096];
     assert(getcwd(cwd, sizeof(cwd)));
-    // Bundled 1280x720 JPEG — big enough that the card class must shrink it.
+    // Fixture JPEG de 1280x720 — bastante grande para que la clase de tarjeta
+    // tenga que encogerla. Antes esto apuntaba a una captura de resources/ que
+    // el README ensenaba; el test se rompio el dia que esas capturas se
+    // sustituyeron por renders del arnes. Un fixture de tests/ no se borra por
+    // motivos de documentacion.
     const std::string source =
-        std::string(cwd) + "/resources/2026071002004100.jpg";
+        std::string(cwd) + "/tests/fixtures/golden/screenshot-hires.jpg";
     const std::string root = "/tmp/gamehubnx-image-class-test-" +
                              std::to_string(static_cast<long long>(getpid()));
     {
