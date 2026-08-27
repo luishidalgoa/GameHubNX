@@ -139,6 +139,7 @@
     "fact_install_state": "状态",
     "install_state_installed": "已安装",
     "install_state_not_installed": "未安装",
+    "version_base": "未更新",
     "fact_installed_version": "已安装版本",
     "fact_available_version": "可用版本",
     "update_available_hint": "有可用更新 {}。",

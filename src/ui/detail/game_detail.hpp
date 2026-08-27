@@ -452,9 +452,9 @@ private:
                        ? tr("pipensx/detail/install_state_installed")
                        : tr("pipensx/detail/install_state_not_installed"));
         addFactRow(table, tr("pipensx/detail/fact_installed_version"),
-                   formatTitleVersion(installedVersionForTitle()));
+                   factVersion(installedVersionForTitle()));
         addFactRow(table, tr("pipensx/detail/fact_available_version"),
-                   formatTitleVersion(latestVersionForEntry()));
+                   factVersion(latestVersionForEntry()));
         addFactRow(table, tr("pipensx/detail/fact_developer"),
                    presentation_.developer);
         addFactRow(table, tr("pipensx/detail/fact_publisher"),
@@ -493,6 +493,16 @@ private:
             if (gamehub::isDlcTitleId(e.titleId))
                 ++n;
         return n;
+    }
+
+    /// Version para la tabla de datos.
+    ///
+    /// Un titulo sin parche reporta version 0, que formatTitleVersion convierte
+    /// en "0.0.0". Eso no le dice nada a nadie: significa el juego tal y como
+    /// salio, sin actualizar. Se dice con palabras.
+    static std::string factVersion(const std::string& decimal) {
+        const std::string text = formatTitleVersion(decimal);
+        return text == "0.0.0" ? tr("pipensx/detail/version_base") : text;
     }
 
     std::string dlcFact() const {

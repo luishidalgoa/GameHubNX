@@ -139,6 +139,7 @@
     "fact_install_state": "Statut",
     "install_state_installed": "Installé",
     "install_state_not_installed": "Non installé",
+    "version_base": "Non mise à jour",
     "fact_installed_version": "Version installée",
     "fact_available_version": "Version disponible",
     "update_available_hint": "Mise à jour {} disponible.",

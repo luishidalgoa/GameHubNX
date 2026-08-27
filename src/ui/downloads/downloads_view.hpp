@@ -96,7 +96,15 @@ public:
         // Data Abort, Address 0x4, Fault Address 0x0.
         dataSource_->setTasks({}, {});
         recycler_->setDataSource(dataSource_);
-        addView(recycler_);
+        // Envuelto, como el resto de pantallas con lista. Esta era la unica
+        // que metia el RecyclerFrame directo, y encima detras de summary_: al
+        // no ser el primer hijo de su padre, su getVisibleFrame() quedaba
+        // desplazado la altura del resumen. De ahi salen recuadros de foco
+        // dibujados donde no toca. Ademas la visibilidad se conmuta sobre el
+        // host --que es la caja con grow(1)--: ocultar solo el recycler dejaba
+        // su hueco detras.
+        recyclerHost_ = recyclerHost(recycler_);
+        addView(recyclerHost_);
         refresh();
         timer_.setCallback([this] {
             refresh();
@@ -549,8 +557,8 @@ private:
             ensureEmptyState()->setVisibility(brls::Visibility::VISIBLE);
         else if (emptyState_)
             emptyState_->setVisibility(brls::Visibility::GONE);
-        recycler_->setVisibility(empty ? brls::Visibility::GONE
-                                       : brls::Visibility::VISIBLE);
+        recyclerHost_->setVisibility(empty ? brls::Visibility::GONE
+                                           : brls::Visibility::VISIBLE);
         if (ownsFocus) {
             if (empty) {
                 brls::Application::giveFocus(ensureEmptyState());
@@ -577,6 +585,7 @@ private:
     /* Cierto cuando se publicaron secciones nuevas sin poder recargar el
        recycler (habia un overlay en la pila). Ver el comentario en refresh(). */
     bool pendingReload_ = false;
+    brls::Box* recyclerHost_ = nullptr;
     bool fastRefresh_ = false;
     uint64_t settingsGeneration_ = 0;
     SwitchDeploySnapshot deploySnapshot_;
