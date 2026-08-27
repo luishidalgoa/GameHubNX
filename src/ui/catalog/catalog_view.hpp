@@ -560,7 +560,8 @@ public:
             for (const CatalogEntry& other : catalog_->entries()) {
                 if (other.directUrl.empty())
                     continue;                       // no es de la tienda
-                if (gamehub::isBaseTitleId(other.titleId))
+                if (!other.fromSubIndex &&
+                    gamehub::isBaseTitleId(other.titleId))
                     continue;                       // es un juego, no un extra
                 catalogKnowsAddOns = true;
                 if (base.empty())
@@ -858,8 +859,15 @@ private:
             // DLC y actualizaciones no ocupan sitio en la rejilla: llegan de los
             // sub-indices y son PIEZAS de un juego, no juegos. Al buscar si
             // aparecen, para poder llegar a uno concreto.
+            //
+            // La procedencia manda sobre el Title ID. Antes esto era solo
+            // isBaseTitleId(), que ante un nombre sin id contesta "no se
+            // clasificarlo, muestralo" -- razonable para el indice raiz y
+            // desastroso para un sub-indice, donde colaba en la rejilla ocho
+            // actualizaciones como si fueran juegos, al lado del suyo.
             if (!searching && !entry.directUrl.empty() &&
-                !gamehub::isBaseTitleId(entry.titleId)) {
+                (entry.fromSubIndex ||
+                 !gamehub::isBaseTitleId(entry.titleId))) {
                 continue;
             }
             // Unlike the Games filter above, this one also narrows a search:
@@ -1719,7 +1727,8 @@ private:
     bool catalogHasAddOns() const {
         for (const CatalogEntry& entry : catalog_->entries())
             if (!entry.directUrl.empty() &&
-                !gamehub::isBaseTitleId(entry.titleId))
+                (entry.fromSubIndex ||
+                 !gamehub::isBaseTitleId(entry.titleId)))
                 return true;
         return false;
     }

@@ -574,6 +574,8 @@ void CatalogService::appendCachedSubIndexes() {
         std::vector<CatalogEntry> extra;
         if (!parseJson(data, extra, ignored))
             continue;                    // una cache corrupta no cuesta el resto
+        for (CatalogEntry& e : extra)
+            e.fromSubIndex = true;       // la cache tambien recuerda de donde salio
         all.insert(all.end(), std::make_move_iterator(extra.begin()),
                    std::make_move_iterator(extra.end()));
     }
@@ -695,6 +697,8 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
                 std::vector<std::string> deeper; // deliberately not followed
                 if (!gamehub::parseCatalog(body, extra, deeper, subError))
                     continue;
+                for (CatalogEntry& e : extra)
+                    e.fromSubIndex = true;
                 parsed.insert(parsed.end(),
                               std::make_move_iterator(extra.begin()),
                               std::make_move_iterator(extra.end()));
