@@ -313,7 +313,8 @@
     "eta_hours": "{} 时 {} 分",
     "eta_days": "{} 天 {} 时",
     "status_fetching": "获取中",
-    "cell_fetching": "服务器正在获取此文件   {}%"
+    "cell_fetching": "服务器正在获取此文件   {}%",
+    "cell_preparing": "正在准备下载..."
   },
   "files": {
     "title": "已下载文件",

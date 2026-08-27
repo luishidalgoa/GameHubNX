@@ -313,7 +313,8 @@
     "eta_hours": "{}h {}m",
     "eta_days": "{}j {}h",
     "status_fetching": "Récupération",
-    "cell_fetching": "Le serveur récupère ce contenu   {}%"
+    "cell_fetching": "Le serveur récupère ce contenu   {}%",
+    "cell_preparing": "Préparation du téléchargement..."
   },
   "files": {
     "title": "Fichiers téléchargés",

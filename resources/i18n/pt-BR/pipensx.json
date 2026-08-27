@@ -313,7 +313,8 @@
     "eta_hours": "{}h {}m",
     "eta_days": "{}d {}h",
     "status_fetching": "Obtendo",
-    "cell_fetching": "O servidor está obtendo isto   {}%"
+    "cell_fetching": "O servidor está obtendo isto   {}%",
+    "cell_preparing": "Preparando o download..."
   },
   "files": {
     "title": "Arquivos baixados",
