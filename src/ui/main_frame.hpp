@@ -32,7 +32,7 @@
 namespace gamehubnx::ui {
 
 enum class NavIconType {
-    Catalog, Downloads, Installed, Updates, Settings, Help, About
+    Catalog, Platforms, Downloads, Installed, Updates, Settings, Help, About
 };
 
 // Shrinks the stock sidebar so the icon rail + expanded menu both look right.
@@ -88,6 +88,7 @@ public:
         const float gy = y + (height - s) / 2.0f;
         switch (type_) {
             case NavIconType::Catalog:   drawCatalog(vg, gx, gy, s); break;
+            case NavIconType::Platforms: drawPlatforms(vg, gx, gy, s); break;
             case NavIconType::Downloads: drawDownloads(vg, gx, gy, s); break;
             case NavIconType::Installed: drawInstalled(vg, gx, gy, s); break;
             case NavIconType::Updates:   drawUpdates(vg, gx, gy, s); break;
@@ -98,6 +99,36 @@ public:
     }
 
 private:
+    // Mando: cuerpo redondeado con cruceta y dos botones. El catalogo de Switch
+    // es una rejilla de cajas; esto tenia que leerse distinto de un vistazo en
+    // la barra, y una consola es lo que estas plataformas son.
+    static void drawPlatforms(NVGcontext* vg, float gx, float gy, float s) {
+        const float top = gy + s * 0.24f;
+        const float h = s * 0.52f;
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, gx, top, s, h, h / 2.0f);
+        nvgStroke(vg);
+
+        const float cy = top + h / 2.0f;
+        const float arm = s * 0.13f;
+        const float lx = gx + s * 0.27f;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, lx - arm, cy);
+        nvgLineTo(vg, lx + arm, cy);
+        nvgMoveTo(vg, lx, cy - arm);
+        nvgLineTo(vg, lx, cy + arm);
+        nvgStroke(vg);
+
+        // Los botones van macizos: a tamano de barra un circulo de contorno de
+        // 2px de radio no se distingue de un punto sucio.
+        const float r = s * 0.075f;
+        for (int i = 0; i < 2; ++i) {
+            nvgBeginPath(vg);
+            nvgCircle(vg, gx + s * (0.70f + 0.14f * i), cy, r);
+            nvgFill(vg);
+        }
+    }
+
     // 2x2 grid of rounded squares.
     static void drawCatalog(NVGcontext* vg, float gx, float gy, float s) {
         const float cell = 9.0f;

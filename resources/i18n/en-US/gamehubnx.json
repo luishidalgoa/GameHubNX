@@ -17,6 +17,7 @@
     "about": "About"
   },
   "common": {
+        "loading": "Loading…",
     "ok": "OK",
     "cancel": "Cancel",
     "clear": "Clear",
@@ -754,6 +755,12 @@
         "free": "  ({} free)"
     },
     "platforms": {
+        "saved_to": "Saved to",
+        "path_unverified": "This folder is not confirmed for tico: check that the emulator reads it.",
+        "downloading": "Downloading {}",
+        "count": "{} platforms",
+        "unavailable": "Your server does not publish platforms yet. A newer GameHub is required.",
+        "on_sd": "On the SD card",
         "title": "Platforms",
         "games": "{} games",
         "native": "Native",
