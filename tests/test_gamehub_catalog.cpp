@@ -3,6 +3,7 @@
 // URL-encoded file names, a titledb keyed by Title ID, announced sub-indexes.
 
 #include "app/gamehub_catalog.hpp"
+#include "app/rom_paths.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -288,6 +289,108 @@ void test_complemento_apunta_a_su_juego() {
     assert(gamehub::baseTitleIdOf("zzzzzzzzzzzzzzzz").empty());
 }
 
+// ── Plataformas ──────────────────────────────────────────────────────────────
+
+void test_lista_de_plataformas() {
+    const std::string json = R"({"files":[
+      {"slug":"switch","name":"Nintendo Switch","extensions":[".nsp",".nsz"],
+       "games":72,"native":true,"emulator":null},
+      {"slug":"gba","name":"GBA","extensions":[".gba"],
+       "games":100,"native":false,"emulator":"Eden"}
+    ],"success":"ok"})";
+    std::vector<gamehub::ShopPlatform> out;
+    std::string err;
+    assert(gamehub::parsePlatforms(json, out, err));
+    assert(out.size() == 2);
+    assert(out[0].slug == "switch" && out[0].native);
+    assert(out[0].games == 72);
+    assert(out[1].slug == "gba" && !out[1].native);
+    assert(out[1].extensions.size() == 1 && out[1].extensions[0] == ".gba");
+    assert(out[1].emulator == "Eden");
+}
+
+void test_plataforma_sin_nombre_usa_el_slug() {
+    // Peor rotulo, pero la plataforma sigue siendo utilizable: lo unico que
+    // hace falta para pedirle el indice es el slug.
+    const std::string json = R"({"files":[{"slug":"psp"}]})";
+    std::vector<gamehub::ShopPlatform> out;
+    std::string err;
+    assert(gamehub::parsePlatforms(json, out, err));
+    assert(out.size() == 1 && out[0].name == "psp");
+}
+
+void test_plataforma_sin_slug_se_salta() {
+    // Sin slug no hay nada que pedir despues, asi que la fila no vale para
+    // nada. Se salta, y las demas siguen.
+    const std::string json =
+        R"({"files":[{"name":"Rota"},{"slug":""},{"slug":"wii","name":"Wii"}]})";
+    std::vector<gamehub::ShopPlatform> out;
+    std::string err;
+    assert(gamehub::parsePlatforms(json, out, err));
+    assert(out.size() == 1 && out[0].slug == "wii");
+}
+
+void test_indice_de_plataforma_marca_sus_entradas() {
+    const std::string json = R"({"files":[
+      {"url":"https://gamehub.example.com/api/shop/download/7/Metroid.gba",
+       "size":5741824,"gh_id":7,"gh_kind":"rom","gh_title":"Metroid Fusion"}
+    ]})";
+    std::vector<CatalogEntry> out;
+    std::string err;
+    assert(gamehub::parsePlatformIndex(json, "gba", out, err));
+    assert(out.size() == 1);
+    // La marca es lo que distingue una ROM de un paquete instalable: sin ella
+    // el resto de la app la trataria como un juego de Switch.
+    assert(out[0].platformSlug == "gba");
+    assert(out[0].isRom());
+    assert(out[0].isDirectDownload());
+}
+
+void test_indice_de_plataforma_exige_slug() {
+    const std::string json = R"({"files":[]})";
+    std::vector<CatalogEntry> out;
+    std::string err;
+    assert(!gamehub::parsePlatformIndex(json, "", out, err));
+    assert(!err.empty());
+}
+
+void test_una_entrada_de_switch_no_es_rom() {
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(sample(), out, subs, err));
+    assert(!out.empty());
+    for (const CatalogEntry& e : out)
+        assert(!e.isRom());
+}
+
+// ── Rutas de ROM ─────────────────────────────────────────────────────────────
+
+void test_rutas_de_tico() {
+    // Nombres COMPROBADOS de tico. No es una preferencia estetica: tico no lee
+    // una carpeta que no se llame exactamente asi (ticohq/tico#148), y una
+    // equivocada significa una ROM descargada que no aparece en el frontend.
+    assert(roms::defaultRomPath("gba") == "sdmc:/tico/roms/gba");
+    assert(roms::defaultRomPath("psp") == "sdmc:/tico/roms/psp");
+    assert(roms::defaultRomPath("wii") == "sdmc:/tico/roms/wii");
+    // El slug largo del servidor no es el nombre que tico espera.
+    assert(roms::defaultRomPath("super-nintendo-entertainment-system") ==
+           "sdmc:/tico/roms/snes");
+    assert(roms::defaultPathIsKnown("gba"));
+}
+
+void test_plataforma_desconocida_cae_al_slug() {
+    // Sin correspondencia comprobada NO se adivina: se usa el slug, que al
+    // menos es estable y unico, y la interfaz avisa de que hay que revisarla.
+    assert(roms::defaultRomPath("nds") == "sdmc:/tico/roms/nds");
+    assert(!roms::defaultPathIsKnown("nds"));
+    assert(!roms::defaultPathIsKnown("3ds"));
+    assert(!roms::defaultPathIsKnown("psvita-ports"));
+    // Y una plataforma que el servidor anada manana tampoco rompe nada.
+    assert(roms::defaultRomPath("inventada") == "sdmc:/tico/roms/inventada");
+    assert(!roms::defaultPathIsKnown("inventada"));
+}
+
 } // namespace
 
 int main() {
@@ -305,6 +408,14 @@ int main() {
     test_index_without_gh_keys_still_works();
     test_clasificacion_de_title_id();
     test_complemento_apunta_a_su_juego();
+    test_lista_de_plataformas();
+    test_plataforma_sin_nombre_usa_el_slug();
+    test_plataforma_sin_slug_se_salta();
+    test_indice_de_plataforma_marca_sus_entradas();
+    test_indice_de_plataforma_exige_slug();
+    test_una_entrada_de_switch_no_es_rom();
+    test_rutas_de_tico();
+    test_plataforma_desconocida_cae_al_slug();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

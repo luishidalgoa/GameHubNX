@@ -79,6 +79,36 @@ std::string baseTitleIdOf(const std::string& titleId);
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                   std::vector<std::string>& subIndexes, std::string& error);
 
+// Una plataforma que la tienda puede servir, tal y como la describe
+// /api/shop/platforms.
+struct ShopPlatform {
+    std::string slug;
+    std::string name;
+    std::vector<std::string> extensions;
+    // Techo, no promesa: el servidor no comprueba el disco al contar --seria un
+    // stat por juego de la biblioteca entera en cada peticion-- asi que el
+    // indice de la plataforma puede traer menos.
+    int games = 0;
+    // Lo dice el servidor, no se deduce del slug: es la diferencia entre lo que
+    // se INSTALA en la consola y lo que solo se descarga para un emulador, y de
+    // ella dependen la accion primaria, los complementos y la insignia de
+    // estado de toda la interfaz.
+    bool native = false;
+    std::string emulator;   // recomendado por el servidor, puede venir vacio
+};
+
+// Parsea /api/shop/platforms. Misma tolerancia que parseCatalog: una entrada
+// mal formada se salta, no tumba la lista.
+bool parsePlatforms(const std::string& json, std::vector<ShopPlatform>& out,
+                    std::string& error);
+
+// Parsea /api/shop/platform/<slug>. Es el mismo formato que el indice de
+// Switch, asi que reutiliza parseCatalog y despues marca cada entrada con su
+// plataforma; sin esa marca el resto de la app no puede distinguir una ROM de
+// un paquete instalable.
+bool parsePlatformIndex(const std::string& json, const std::string& slug,
+                        std::vector<CatalogEntry>& out, std::string& error);
+
 // Proporcion de portada publicada por la tienda en la raiz del indice
 // (gh_cover_width / gh_cover_height). Es la preferencia por plataforma que el
 // usuario configura en la web de GameHub; sin ella la app pintaba las cajas con

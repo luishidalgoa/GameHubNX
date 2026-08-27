@@ -90,6 +90,21 @@ struct CatalogEntry {
        Quien lo pone es el unico que lo sabe: el que descarga el sub-indice. */
     bool fromSubIndex = false;
 
+    /* Slug de la plataforma cuando la entrada viene de un indice que NO es el
+       de Switch (/api/shop/platform/<slug>). Vacio para todo lo demas.
+
+       No es decorativo: decide que se puede hacer con la entrada. Una ROM no se
+       instala en la consola, asi que no tiene actualizaciones ni DLC, no
+       pregunta memoria y no puede decir "instalado" --lo unico comprobable es
+       si el fichero esta en su carpeta--. Quien lo pone es el unico que lo
+       sabe: el que descarga ese indice. */
+    std::string platformSlug;
+
+    /* Cierto cuando la entrada es una ROM para un emulador y no un paquete que
+       la consola instale. Se deriva de lo anterior y existe para que quien lo
+       lea no tenga que saber que "slug vacio" significa Switch. */
+    bool isRom() const { return !platformSlug.empty(); }
+
     /* Identidad del juego en GameHub (clave gh_id del indice), 0 si no viene.
        Es la relacion DICHA por el servidor, que la conoce desde que escaneo los
        directorios, en vez de deducida comparando Title IDs sacados del nombre

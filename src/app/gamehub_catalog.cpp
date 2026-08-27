@@ -188,6 +188,76 @@ bool parseCoverAspect(const std::string& json, int& width, int& height) {
     return true;
 }
 
+bool parsePlatforms(const std::string& json, std::vector<ShopPlatform>& out,
+                    std::string& error) {
+    nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
+    if (root.is_discarded() || !root.is_object()) {
+        error = "gamehub: payload is not a JSON object";
+        return false;
+    }
+    const auto filesIt = root.find("files");
+    if (filesIt == root.end() || !filesIt->is_array()) {
+        error = "gamehub: platform list has no 'files' array";
+        return false;
+    }
+
+    for (const auto& f : *filesIt) {
+        if (!f.is_object()) continue;
+        const auto slugIt = f.find("slug");
+        // Sin slug no hay nada que pedir despues, asi que la fila no sirve de
+        // nada. Se salta, como cualquier otra mal formada.
+        if (slugIt == f.end() || !slugIt->is_string()) continue;
+
+        ShopPlatform p;
+        p.slug = slugIt->get<std::string>();
+        if (p.slug.empty()) continue;
+
+        const auto nameIt = f.find("name");
+        // Sin nombre se ensena el slug: peor rotulo, pero la plataforma sigue
+        // siendo utilizable, que es lo que importa.
+        p.name = nameIt != f.end() && nameIt->is_string()
+            ? nameIt->get<std::string>() : p.slug;
+
+        const auto extIt = f.find("extensions");
+        if (extIt != f.end() && extIt->is_array())
+            for (const auto& e : *extIt)
+                if (e.is_string()) p.extensions.push_back(e.get<std::string>());
+
+        const auto gamesIt = f.find("games");
+        if (gamesIt != f.end() && gamesIt->is_number_integer())
+            p.games = gamesIt->get<int>();
+
+        const auto nativeIt = f.find("native");
+        if (nativeIt != f.end() && nativeIt->is_boolean())
+            p.native = nativeIt->get<bool>();
+
+        const auto emuIt = f.find("emulator");
+        if (emuIt != f.end() && emuIt->is_string())
+            p.emulator = emuIt->get<std::string>();
+
+        out.push_back(std::move(p));
+    }
+    return true;
+}
+
+bool parsePlatformIndex(const std::string& json, const std::string& slug,
+                        std::vector<CatalogEntry>& out, std::string& error) {
+    if (slug.empty()) {
+        error = "gamehub: platform index needs a slug";
+        return false;
+    }
+    const size_t before = out.size();
+    // Los sub-indices son cosa de Switch --actualizaciones y DLC-- y una
+    // plataforma emulada no los tiene, asi que lo que venga se descarta.
+    std::vector<std::string> ignoredSubIndexes;
+    if (!parseCatalog(json, out, ignoredSubIndexes, error))
+        return false;
+
+    for (size_t i = before; i < out.size(); ++i)
+        out[i].platformSlug = slug;
+    return true;
+}
+
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                   std::vector<std::string>& subIndexes, std::string& error) {
     nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
