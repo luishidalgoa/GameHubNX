@@ -33,6 +33,10 @@ namespace {
 // Live Langegen switch_games.json is ~27 MiB (2026-08); leave headroom.
 constexpr size_t kMaxCatalogBytes = 48 * 1024 * 1024;
 constexpr size_t kMaxCatalogEntries = 20000;
+// Cuantos sub-indices se siguen y se cachean. El indice de la tienda anuncia
+// dos (DLC y actualizaciones); el tope existe para que un payload hostil no
+// pueda hacernos escribir ficheros sin fin.
+constexpr size_t kMaxSubIndexes = 8;
 constexpr size_t kMaxInfoDictBytes = 8 * 1024 * 1024;
 
 int base64Value(char c) {
@@ -539,6 +543,9 @@ bool CatalogService::loadFile(const std::string& path,
         return false;
     entries_ = std::make_shared<const std::vector<CatalogEntry>>(
         std::move(parsed));
+    // La proporcion de portada viaja en la raiz del indice, y la cache guarda
+    // ese mismo cuerpo: se recupera igual desde disco que desde la red.
+    gamehub::parseCoverAspect(data, coverWidth_, coverHeight_);
     sourceLabel_ = label;
     struct stat st {};
     // Wall-clock only: now_sec() is monotonic (boot-relative), useless for
@@ -549,6 +556,33 @@ bool CatalogService::loadFile(const std::string& path,
     log_msg("[catalog] loaded %zu entries from %s\n", entries_->size(),
             path.c_str());
     return true;
+}
+
+std::string CatalogService::subIndexCachePath(size_t n) const {
+    return catalogRoot_ + "/catalog.sub" + std::to_string(n) + ".json";
+}
+
+void CatalogService::appendCachedSubIndexes() {
+    std::vector<CatalogEntry> all = *entries_;
+    const size_t root = all.size();
+    for (size_t n = 0; n < kMaxSubIndexes; ++n) {
+        std::string data;
+        std::string ignored;
+        if (!readFile(subIndexCachePath(n), data, ignored))
+            break;                       // numeradas sin huecos: el primer
+                                         // fallo significa "no hay mas"
+        std::vector<CatalogEntry> extra;
+        if (!parseJson(data, extra, ignored))
+            continue;                    // una cache corrupta no cuesta el resto
+        all.insert(all.end(), std::make_move_iterator(extra.begin()),
+                   std::make_move_iterator(extra.end()));
+    }
+    if (all.size() == root)
+        return;
+    log_msg("[catalog] +%zu entradas de sub-indices en cache\n",
+            all.size() - root);
+    entries_ = std::make_shared<const std::vector<CatalogEntry>>(
+        std::move(all));
 }
 
 bool CatalogService::cacheMatchesSource() const {
@@ -569,8 +603,16 @@ bool CatalogService::load(std::string& error) {
     // Solo se acepta la cache si la escribio la fuente que se va a usar ahora.
     // Una cache sin sello viene de una version anterior a este cambio, o de
     // otra app que compartia carpeta: tampoco se acepta.
-    if (cacheMatchesSource() && loadFile(cachePath_, "cached catalog", cacheError))
+    if (cacheMatchesSource() &&
+        loadFile(cachePath_, "cached catalog", cacheError)) {
+        // Los DLC y las actualizaciones viven en sub-indices propios. Antes no
+        // se guardaban: la cache era solo el raiz, asi que un arranque en frio
+        // dejaba la tienda sin un solo complemento hasta que terminara el
+        // refresco --y el refresco solo corre una vez al dia. El resultado era
+        // que la ficha de un juego nunca decia si tenia DLC.
+        appendCachedSubIndexes();
         return true;
+    }
     if (!bundledPath_.empty()) {
         if (loadFile(bundledPath_, "bundled catalog", error))
             return true;
@@ -628,6 +670,7 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
         return false;
     if (!parseJson(catalogBody, parsed, error))
         return false;
+    gamehub::parseCoverAspect(catalogBody, coverWidth_, coverHeight_);
     // A GameHub index announces its DLC and update sub-indexes rather than
     // inlining them, so follow what it declares. This cannot live in parseJson
     // — that runs on the cache too, with no network — so it belongs on the only
@@ -641,7 +684,10 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
         std::vector<std::string> subIndexes;
         std::string subError;
         if (gamehub::parseCatalog(catalogBody, rootOnly, subIndexes, subError)) {
+            size_t cached = 0;
             for (const std::string& sub : subIndexes) {
+                if (cached >= kMaxSubIndexes)
+                    break;
                 std::string body;
                 if (!httpGet(sub, body, subError, sourceUrl))
                     continue;
@@ -652,6 +698,22 @@ bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
                 parsed.insert(parsed.end(),
                               std::make_move_iterator(extra.begin()),
                               std::make_move_iterator(extra.end()));
+                // Y a disco, cada uno en su fichero. Guardar el conjunto
+                // combinado obligaria a un formato propio; guardarlos por
+                // separado deja que load() los reparsee con el mismo parser.
+                std::string cacheError;
+                if (writeAtomic(subIndexCachePath(cached), body, cacheError))
+                    ++cached;
+                else
+                    log_msg("[catalog] no pude cachear el sub-indice %s: %s\n",
+                            sub.c_str(), cacheError.c_str());
+            }
+            // Barre las caches sobrantes de un refresco anterior que traia mas
+            // sub-indices: si no, load() las seguiria leyendo para siempre.
+            for (size_t n = cached; n < kMaxSubIndexes; ++n) {
+                const std::string stale = subIndexCachePath(n);
+                if (unlink(stale.c_str()) != 0)
+                    break;
             }
         }
     }

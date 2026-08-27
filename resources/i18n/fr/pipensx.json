@@ -195,6 +195,7 @@
     "fact_region": "Région",
     "fact_languages": "Langues",
     "trailer_qr": "Scannez pour voir la bande-annonce",
+    "dlc_none": "Aucun dans la boutique",
     "dlc_available": "{0} dans la boutique",
     "dlc_available_installed": "{0} dans la boutique · {1} installés"
   },
@@ -229,7 +230,7 @@
   "downloads": {
     "import": "Importer un torrent",
     "import_action": "Importer un .torrent",
-    "empty_cell": "Aucun téléchargement. Appuyez sur X pour ajouter un fichier .torrent.",
+    "empty_cell": "Aucun téléchargement. Installez un jeu depuis la boutique.",
     "empty_title": "Aucun téléchargement",
     "empty_body": "Choisissez un jeu dans la boutique : il apparaîtra ici pendant le téléchargement et l’installation.",
     "section_active": "Actifs",
@@ -283,6 +284,7 @@
     "peers_line": "Pairs : {}   DHT : {} bons / {} douteux",
     "pieces_line": "Pièces : {} / {}   Vérifiées : {}",
     "health_line": "Santé du torrent : {0}",
+    "health_line_direct": "État du téléchargement : {0}",
     "health_excellent": "Excellente",
     "health_slow": "Lente",
     "health_poor": "Mauvaise",

@@ -195,6 +195,7 @@
     "fact_region": "Region",
     "fact_languages": "Languages",
     "trailer_qr": "Scan to watch the trailer",
+    "dlc_none": "None in the store",
     "dlc_available": "{0} in the store",
     "dlc_available_installed": "{0} in the store · {1} installed"
   },
@@ -229,7 +230,7 @@
   "downloads": {
     "import": "Import torrent",
     "import_action": "Import .torrent",
-    "empty_cell": "No downloads yet. Press X to add a .torrent file.",
+    "empty_cell": "No downloads yet. Install a game from the store.",
     "empty_title": "No downloads yet",
     "empty_body": "Pick a game from the store and it will show up here while it downloads and installs.",
     "section_active": "Active",
@@ -283,6 +284,7 @@
     "peers_line": "Peers: {}   DHT: {} good / {} dubious",
     "pieces_line": "Pieces: {} / {}   Checked: {}",
     "health_line": "Torrent health: {0}",
+    "health_line_direct": "Download health: {0}",
     "health_excellent": "Excellent",
     "health_slow": "Slow",
     "health_poor": "Poor",

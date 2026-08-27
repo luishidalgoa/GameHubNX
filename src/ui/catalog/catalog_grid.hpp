@@ -34,6 +34,10 @@ inline constexpr float kCoverHeight = 180.0f;
 // eShop icons. Render them at their natural portrait aspect inside the same
 // 180px card slot so they do not get stretched/cropped like square icons.
 inline constexpr float kGameCoverWidth = 112.0f;
+
+/// Ancho de portada para la proporcion en vigor (ver coverAspect() en
+/// ui_helpers.hpp): la tienda publica la suya y sustituye a la constante.
+inline float gameCoverWidth() { return kCoverHeight * coverAspect(); }
 // Cover + name line (17px) + sub line (15px) + inner margins.
 inline constexpr float kCardHeight = 232.0f;
 inline constexpr float kRowHeight = 248.0f;
@@ -266,7 +270,7 @@ private:
     void applyZoom(bool focused) {
         const float zoom = focused ? grid::kFocusZoom : 1.0f;
         const float baseWidth = iconPreserveAspect_
-            ? grid::kGameCoverWidth
+            ? grid::gameCoverWidth()
             : grid::kCardWidth;
         image_->setDimensions(baseWidth * zoom, grid::kCoverHeight * zoom);
         image_->setPositionTop(-(zoom - 1.0f) * grid::kCoverHeight / 2.0f);

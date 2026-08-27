@@ -27,6 +27,31 @@ extern "C" {
 
 namespace pipensx::ui {
 
+// ── Proporcion de portada ────────────────────────────────────────────────────
+// Ancho/alto con que se pintan las cajas. El valor por defecto es el del
+// catalogo Langegen (box-art ~393x640 dibujado a 112x180); la tienda GameHub
+// publica el suyo en la raiz de su indice --gh_cover_width/height, que es la
+// preferencia por plataforma que el usuario configura en la web-- y lo
+// sustituye al cargar el catalogo.
+//
+// Vive aqui, y no en la rejilla, porque lo necesitan dos vistas que no se
+// incluyen entre si: las tarjetas del catalogo y el plate de la ficha. Lo
+// escribe la vista de catalogo en el hilo de UI antes de recrear las tarjetas,
+// y a partir de ahi solo se lee.
+namespace detail_cover {
+inline float gAspect = 112.0f / 180.0f;
+}
+
+inline float coverAspect() { return detail_cover::gAspect; }
+
+/// Adopta la proporcion publicada por la tienda. Ignora lo absurdo: una portada
+/// de un pixel, o cuatro veces mas ancha que alta, es un indice roto y no un
+/// gusto del usuario.
+inline void setCoverAspect(float aspect) {
+    if (aspect > 0.05f && aspect < 4.0f)
+        detail_cover::gAspect = aspect;
+}
+
 inline pipensx::install::InstallStorageTarget installTargetFor(InstallLocation value) {
     return value == InstallLocation::SystemMemory
                ? pipensx::install::InstallStorageTarget::Nand
