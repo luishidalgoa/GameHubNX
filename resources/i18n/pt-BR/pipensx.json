@@ -172,6 +172,8 @@
     "status_error_percent": "Erro {}%",
     "status_removing": "Removendo",
     "resolving": "Resolvendo...",
+    "shop_preparing": "Preparando o download...",
+    "shop_unavailable": "O servidor não conseguiu fornecer este arquivo.",
     "cancel_hint": "   (Y para cancelar)",
     "finding_peers": "Procurando peers...",
     "contacting_peer": "Contatando peer {}/{}...",

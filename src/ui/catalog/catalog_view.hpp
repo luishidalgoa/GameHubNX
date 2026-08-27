@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <numeric>
@@ -665,9 +666,6 @@ private:
     void prepareSelectedEntries() {
         if (!batchMode_ || selectedHashes_.empty() || busy_)
             return;
-        if (debridModeActive(settings_) &&
-            !ensureDebridLinked(settings_, manager_))
-            return;
 
         std::unordered_set<std::string> managed;
         for (const DownloadTask& task : manager_->snapshot())
@@ -719,6 +717,20 @@ private:
             selectedHashes_ = remaining;
             rebuildEntries();
         };
+        // Una seleccion enteramente de la tienda no necesita cuenta de nadie:
+        // son ficheros del servidor del propio usuario, y pedir una cuenta
+        // ajena dejaba la instalacion por lotes tan muerta como la individual.
+        // Se comprueba aqui y no arriba porque hasta este punto no se sabe que
+        // entradas sobreviven al filtro de "ya esta en descargas".
+        const bool shopOnly =
+            std::all_of(entries.begin(), entries.end(),
+                        [](const CatalogEntry& entry) {
+                            return entry.isDirectDownload();
+                        });
+        if (!shopOnly && debridModeActive(settings_) &&
+            !ensureDebridLinked(settings_, manager_))
+            return;
+
         const StreamSelection selection = settings_
             ? settings_->get().streamSelection
             : StreamSelection::AllFiles;

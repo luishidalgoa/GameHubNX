@@ -19,6 +19,7 @@
 #include "app/favorites_service.hpp"
 #include "app/game_update_install.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/gamehub_provider.hpp"
 #include "app/install_space.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/magnet_resolver.hpp"
@@ -764,6 +765,15 @@ private:
     void startInstall(bool forcePicker) {
         if (busy_)
             return;
+        // La tienda va PRIMERO porque ninguna de las dos ramas de abajo puede
+        // servirla: no hay magnet que resolver --entry_.magnetUri viene vacio,
+        // el indice solo trae directUrl-- ni cuenta de debrid que vincular. Es
+        // una descarga cliente-servidor de toda la vida contra el servidor del
+        // propio usuario.
+        if (entry_.isDirectDownload()) {
+            startShopInstall(TransferMode::StreamInstall, forcePicker);
+            return;
+        }
         if (debridModeActive(settings_)) {
             startDebridInstall(TransferMode::StreamInstall, forcePicker);
             return;
@@ -853,6 +863,115 @@ private:
                 finishImport(tmp, forcePicker, std::move(initialPeers));
             });
         });
+    }
+
+    // Instalar una entrada de la tienda GameHub.
+    //
+    // GameHubProvider implementa la interfaz de debrid, pero de debrid no tiene
+    // nada: el "handle" ES la URL, no crea nada remoto y no necesita clave. Se
+    // instancia aqui a mano en vez de por makeDebridProvider() a proposito --
+    // esa fabrica devuelve TorBox/Real-Debrid/TorrServer segun un ajuste que en
+    // este fork ya no existe, y por ahi se pedia vincular una cuenta ajena para
+    // bajar un fichero del servidor de casa.
+    void startShopInstall(TransferMode mode, bool forcePicker) {
+        setBusy(true);
+        operationMessage_.clear();
+        cancelled_->store(false);
+        primary_->setState(brls::ButtonState::DISABLED);
+        secondary_->setState(brls::ButtonState::DISABLED);
+        primary_->setText(tr("pipensx/detail/resolving"));
+        statusLabel_->setText(tr("pipensx/detail/shop_preparing"));
+
+        auto alive = alive_;
+        auto cancelled = cancelled_;
+        const CatalogEntry entry = entry_;
+        brls::async([this, alive, cancelled, entry, mode, forcePicker] {
+            // createFromMagnet solo valida que la URL sea del host configurado;
+            // fetchInfo le pregunta el tamano al servidor con un HEAD. Ninguna
+            // de las dos deja nada que limpiar si esto se cancela.
+            GameHubProvider provider;
+            std::string id;
+            std::string error;
+            DebridInfo info;
+            const bool ok =
+                provider.createFromMagnet(entry.directUrl, id, error) &&
+                provider.fetchInfo(id, info, error);
+            brls::sync([this, alive, cancelled, ok, error, id, info, entry,
+                        mode, forcePicker] {
+                if (!alive->load())
+                    return;
+                setBusy(false);
+                if (cancelled->load()) {
+                    refreshButtons();
+                    return;
+                }
+                if (!ok || info.files.empty()) {
+                    operationMessage_ = error.empty()
+                        ? tr("pipensx/detail/shop_unavailable") : error;
+                    refreshButtons();
+                    brls::Application::notify(operationMessage_);
+                    return;
+                }
+                queueShopImport(entry, id, info, mode, forcePicker);
+            });
+        });
+    }
+
+    // Una entrada de la tienda es UN fichero, asi que aqui no hay nada que
+    // elegir ni que adivinar: se marca para instalar y se encola. No se pasa
+    // por smartInstallMask() --que existe para decidir que ficheros de un
+    // torrent con muchos hacen falta-- porque con uno solo su respuesta util es
+    // siempre la misma, y su respuesta inutil (0 seleccionados, "abre las
+    // opciones") dejaria colgado justo lo que el usuario acaba de pulsar.
+    void queueShopImport(const CatalogEntry& entry, const std::string& id,
+                         const DebridInfo& info, TransferMode mode,
+                         bool forcePicker) {
+        const DebridFile& file = info.files.front();
+        // La tienda sirve .nsp y .nsz, que se instalan. Cualquier otra cosa se
+        // baja y se deja en la SD: mejor un fichero puesto donde el usuario
+        // pueda verlo que un error por no saber instalarlo.
+        const bool package = isPackageName(file.path);
+
+        DebridImport import;
+        import.infoHash = catalogLower(entry.infoHash);
+        import.name = info.name.empty() ? entry.title : info.name;
+        import.totalBytes = info.bytes ? info.bytes : entry.size;
+        // `provider` se queda en su valor por defecto: DownloadManager lo
+        // ignora y siempre construye GameHubProvider (ver makeProvider).
+        import.debridId = id;
+        import.mode = package ? mode : TransferMode::DownloadOnly;
+        import.fileSelection = {static_cast<uint8_t>(
+            package ? FileAction::Install : FileAction::Download)};
+        import.packageCount = package ? 1u : 0u;
+
+        if (forcePicker) {
+            TorrentPreview preview;
+            preview.name = import.name;
+            preview.totalBytes = import.totalBytes;
+            preview.fileCount = 1;
+            preview.files.push_back({file.path, file.bytes, package,
+                                     isCompressedName(file.path),
+                                     isCartridgeName(file.path)});
+            preview.packageCount = package ? 1u : 0u;
+            preview.cartridgeCount = isCartridgeName(file.path) ? 1u : 0u;
+            // Sin callback de abandono: no se creo nada en ningun servidor.
+            brls::Application::pushActivity(new TorrentSelectionActivity(
+                manager_, "", std::move(preview), import.mode,
+                settings_->get().streamSelection, {}, import));
+            return;
+        }
+
+        std::string taskId;
+        std::string importError;
+        if (!manager_->importDebrid(import, taskId, importError)) {
+            operationMessage_ = importError;
+            brls::Application::notify(importError);
+        } else {
+            statusLabel_->setText(tr("pipensx/debrid/queued"));
+            if (onChange_)
+                onChange_();
+        }
+        refreshButtons();
     }
 
     void startDebridInstall(TransferMode mode, bool forcePicker = false) {

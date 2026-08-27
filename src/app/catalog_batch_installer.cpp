@@ -258,7 +258,7 @@ BatchPreparation CatalogBatchInstaller::prepareViaDebrid(
         if (progress) progress({i + 1, entries.size(), entries[i].title, {}});
         std::string id;
         std::string err;
-        if (!provider.createFromMagnet(entries[i].magnetUri, id, err)) {
+        if (!provider.createFromMagnet(entries[i].transferHandle(), id, err)) {
             result.failures_.push_back(
                 {entries[i], err.empty() ? "Debrid service rejected the magnet." : err});
             continue;

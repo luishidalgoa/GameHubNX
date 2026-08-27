@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <unordered_set>
@@ -12,6 +13,7 @@
 #include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/gamehub_provider.hpp"
 #include "app/install_space.hpp"
 #include "app/installed_title_service.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
@@ -164,8 +166,20 @@ public:
         };
         installer_ = std::make_shared<CatalogBatchInstaller>(
             manager_->rootPath(), std::move(resolver));
-        debridMode_ = debridModeActive(settings_);
-        if (debridMode_) {
+        // La tienda se baja por la ruta "debrid" porque es la que sabe pedir
+        // una URL por rangos e instalar en streaming, no porque haya debrid de
+        // por medio: GameHubProvider no tiene cuenta ni clave. Se exige que
+        // TODA la seleccion sea de la tienda -- una mezclada sigue el camino de
+        // siempre, que es lo unico que sabe hacer con un magnet.
+        const bool shopOnly = !entries_.empty() &&
+            std::all_of(entries_.begin(), entries_.end(),
+                        [](const CatalogEntry& entry) {
+                            return entry.isDirectDownload();
+                        });
+        debridMode_ = shopOnly || debridModeActive(settings_);
+        if (shopOnly) {
+            debridProvider_ = std::make_shared<GameHubProvider>();
+        } else if (debridMode_) {
             const AppSettingsData values = settings_->get();
             debridProvider_ = std::shared_ptr<DebridProvider>(
                 makeDebridProvider(values.debridProvider,

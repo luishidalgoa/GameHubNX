@@ -75,6 +75,20 @@ struct CatalogEntry {
     CatalogHealth health = CatalogHealth::Unknown;
     bool metadataOk = false;
 
+    /* Cierto cuando la entrada viene de la tienda GameHub: es una descarga
+       HTTPS directa contra el servidor del usuario y no toca el motor de
+       torrent ni ningun servicio de terceros. */
+    bool isDirectDownload() const { return !directUrl.empty(); }
+
+    /* El identificador que se le entrega al proveedor de transferencia. Para
+       un torrent es el magnet; para la tienda es la propia URL, que es lo que
+       GameHubProvider usa como handle. Tenerlo aqui evita que cada sitio que
+       inicia una descarga tenga que acordarse de cual de los dos campos mirar
+       -- olvidarlo es justo lo que dejaba la tienda sin instalar. */
+    const std::string& transferHandle() const {
+        return directUrl.empty() ? magnetUri : directUrl;
+    }
+
     bool isHiddenByDefault() const {
         return health == CatalogHealth::Dead ||
                health == CatalogHealth::Replaced ||

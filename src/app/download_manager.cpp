@@ -1667,21 +1667,16 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
         std::lock_guard<std::mutex> lock(mutex_);
         apiKey = apiKeyFor(claim.debridProvider);
     }
-    if (apiKey.empty()) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (DownloadTask* task = findLocked(activeId)) {
-            task->status = DownloadStatus::Error;
-            task->error =
-                claim.debridProvider == DebridProviderKind::TorrServer
-                    ? "TorrServer address missing — set it in Settings."
-                    : claim.debridProvider == DebridProviderKind::RealDebrid
-                    ? "Real-Debrid key missing — link your account in Settings."
-                    : "TorBox key missing — link your account in Settings.";
-            std::string ignored;
-            saveLocked(ignored);
-        }
-        return;
-    }
+    // Sin guardia de clave. Este fork siempre construye GameHubProvider (ver
+    // makeProvider), que no tiene cuenta, ni clave, ni cuota: el fichero esta
+    // en un servidor del propio usuario. La guardia que habia aqui abortaba la
+    // tarea con "TorBox key missing" antes siquiera de crear el proveedor, y
+    // como la seccion de debrid ya no existe en Ajustes no habia forma humana
+    // de satisfacerla: ninguna descarga de la tienda llegaba a arrancar.
+    //
+    // apiKey se sigue leyendo porque abajo decide si merece la pena pedirle a
+    // un servicio remoto que borre la transferencia; con GameHub va vacia y esa
+    // llamada se salta sola, que es justo lo correcto.
 
     DebridTaskSpec spec;
     spec.taskId = activeId;
