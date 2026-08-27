@@ -1,58 +1,76 @@
-# gamehubnx
+# GameHubNX
 
 [![CI](https://github.com/luishidalgoa/GameHubNX/actions/workflows/ci.yml/badge.svg)](https://github.com/luishidalgoa/GameHubNX/actions/workflows/ci.yml)
 [![Golden screenshots](https://github.com/luishidalgoa/GameHubNX/actions/workflows/golden.yml/badge.svg)](https://github.com/luishidalgoa/GameHubNX/actions/workflows/golden.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-Native BitTorrent download manager and streaming package installer for
-Nintendo Switch homebrew.
+Nintendo Switch homebrew client for a self-hosted
+[GameHub](https://github.com/luishidalgoa/GameHub) library. Browse the catalog
+your own server publishes and install games, updates and DLC straight to the
+console.
 
-DOWNLOAD LATEST - [gamehubnx.nro](https://github.com/luishidalgoa/GameHubNX/releases/latest/download/gamehubnx.nro)
+DOWNLOAD LATEST — [gamehubnx.nro](https://github.com/luishidalgoa/GameHubNX/releases/latest/download/gamehubnx.nro)
 
-<img src="resources/2026071001590800_anonymized.jpg" width="400"> <img src="resources/2026071002002700_anonymized.jpg" width="400">
+<img src="resources/screenshots/frame.png" width="400"> <img src="resources/screenshots/addons.png" width="400">
 <br><br>
-<img src="resources/2026071002003500_anonymized.jpg" width="400"> <img src="resources/2026071002004100.jpg" width="400">
+<img src="resources/screenshots/installed-populated.png" width="400"> <img src="resources/screenshots/detail.png" width="400">
 
+> The screenshots above are rendered by the golden-screenshot CI from the
+> current build, not captured by hand, so they cannot drift away from what the
+> application actually draws.
 
 > [!IMPORTANT]
-> gamehubnx does not include Nintendo keys, firmware, games, or a torrent catalog.
-> Use it only with content you are legally allowed to download and install. The
-> project is not affiliated with Nintendo, RuTracker, or the catalog provider.
+> GameHubNX does not include Nintendo keys, firmware, games, or a catalog. Use
+> it only with content you are legally allowed to download and install. The
+> project is not affiliated with Nintendo.
 
 > [!NOTE]
 > This project was developed with substantial assistance from AI tools for code
 > generation, refactoring, testing, review, and documentation. Changes are
 > still built and validated before they are merged.
 
-## Features
+## What it does
 
-- native Borealis interface with controller, touch, light/dark, handheld, and
-  docked support
-- persistent FIFO queue with pause, resume, retry, recheck, and safe shutdown
-- restart-safe piece verification and download recovery
-- tracker, DHT, and PEX peer discovery
-- live, cached catalog loaded from the allowlisted
-  [`Langegen/switch-games`](https://github.com/Langegen/switch-games) source
-- offline magnet resolution when the catalog provides a verified info dictionary
-- download-only mode and sequential NSP/NSZ installation while pieces arrive
-- downloaded-file inventory and safe, previewed copying of recognized
-  homebrew-port `switch/` layouts into `SD:/switch/`
-- Application, Patch, and AddOnContent packages with installed-version checks
-- optional debrid fetch via TorBox or a self-hosted TorrServer (no Real-Debrid)
-- optional HTTPS/SOCKS proxy for catalog, artwork, and debrid HTTPS traffic
-- download diagnostics, speed history, peer state, and extended telemetry
+**The store.** Point it at a GameHub instance and its catalog becomes the
+Catalog view: cover art, search, sorting, and filters. Updates and DLC arrive
+from the server's sub-indexes and are paired with their game by the id the
+server publishes, so a dump named any way at all still lands under the right
+title. Downloads are plain client/server HTTPS — no account with a third-party
+service, no torrent involved.
 
-The public build intentionally starts without a bundled catalog or game
-metadata index. On first use, the Catalog view refreshes from the trusted source
-and then uses its on-SD cache.
+**Installing.** One screen shows a game together with its updates and its DLC,
+grouped and marked with what the console already has, and installs the marked
+set in one go. Packages are installed while their bytes arrive rather than
+after, and an interrupted install resumes from its last safe point instead of
+starting over.
+
+**Where it lands.** Each task carries its own install target, so the memory is
+chosen per install rather than once in Settings — and it can still be changed
+from Downloads while the task is queued or downloading. What is already on the
+console is read from `ncm`, so "installed" means the content is really there,
+not merely that the HOME menu still lists it.
+
+**Torrents.** The original BitTorrent path is intact: a queue with pause,
+resume, retry and recheck, tracker/DHT/PEX peer discovery, restart-safe piece
+verification, and magnet resolution from a verified info dictionary when the
+catalog provides one.
+
+**Also inside.** Recognized homebrew-port `switch/` layouts can be previewed and
+copied to `SD:/switch/`; a small web companion serves the queue over the local
+network; an HTTPS/SOCKS proxy can front catalog and artwork traffic; and the
+app updates itself from its own GitHub releases.
+
+The game metadata index ships inside the NRO. Nothing is fetched from a
+third-party metadata repository at runtime.
 
 ## Quick start
 
-Clone the pinned submodules:
+Clone with the pinned submodules — the UI framework is a fork of
+[borealis](https://github.com/luishidalgoa/borealis) and the build needs it:
 
 ```bash
 git clone --recurse-submodules https://github.com/luishidalgoa/GameHubNX.git
-cd gamehubnx
+cd GameHubNX
 ```
 
 Run the portable PC test suite:
@@ -69,8 +87,8 @@ make switch
 ```
 
 The resulting application is `build-switch/gamehubnx.nro`. See
-[BUILD.md](BUILD.md) for dependency installation, golden tests, optional
-metadata input, and deployment helpers.
+[BUILD.md](BUILD.md) for dependency installation, golden tests, and deployment
+helpers.
 
 ## Install on Nintendo Switch
 
@@ -84,44 +102,34 @@ Launch it through hbmenu in **application mode** by holding `R` while opening a
 game. Album applet mode is rejected because it does not provide enough memory
 and network resources for the application.
 
-Runtime data is stored below `SD:/switch/gamehubnx/`, including:
+Runtime data is stored below `SD:/switch/gamehubnx/`:
 
 ```text
-queue.bencode
-torrents/
-downloads/
-task-files/
-deployments/
-dht_nodes.bin
-catalog/catalog.json
-catalog/metadata/
-catalog/images/
+queue.bencode          downloads/          catalog/catalog.json
+torrents/              task-files/         catalog/metadata/
+deployments/           dht_nodes.bin       catalog/images/
 gamehubnx.log
 ```
 
-The interface displays contextual controller hints. The main actions cover
-adding torrents, opening details, pausing/resuming, retrying/rechecking, and
-safely stopping the active task before exit.
+The interface shows contextual controller hints for whatever is focused. The
+primary action of a screen is always an on-screen button, never a hint: the
+bottom bar has a hard width budget and is checked against it by the golden CI.
 
 ## Catalog and network behavior
 
-The application fetches `switch_games.json` over HTTPS from the built-in
-Langegen source by default. Settings let you point at any other HTTPS URL
-that serves the same JSON shape. Redirects are limited to the source file's
-directory; look-alike hosts are rejected before catalog bytes are parsed. A
-failed refresh leaves the last valid SD-card cache active.
+Two catalog sources coexist. A GameHub instance serves its own library over
+HTTPS, including the update and DLC sub-indexes. Independently, the
+Langegen [`switch-games`](https://github.com/Langegen/switch-games) source can
+be used for torrent entries; Settings accept any other HTTPS URL serving the
+same JSON shape. Redirects are limited to the source file's directory and
+look-alike hosts are rejected before catalog bytes are parsed. A failed refresh
+leaves the last valid SD-card cache active.
 
-Catalog magnets are resolved from a pre-verified info dictionary when one is
-available, otherwise through BitTorrent extension-protocol peers. Received
-metadata is checked against the magnet info hash before entering the normal
-torrent preview and queue flow.
-
-One to four downloads may run concurrently, while stream installation remains
+One to four downloads may run concurrently, while installation stays
 serialized. Existing files are verified before a task starts or resumes.
-Interrupted package streams resume from their last persisted safe point;
-packages committed before the interruption remain installed and are skipped.
-Runtime behavior such as sleep/wake, long installs, and `/switch` file copying
-must ultimately be validated on physical Switch hardware.
+Packages committed before an interruption remain installed and are skipped on
+resume. Sleep/wake, long installs and `/switch` file copying must ultimately be
+validated on physical hardware.
 
 ## Contributing and security
 
@@ -134,6 +142,6 @@ Historical implementation notes are archived under
 
 ## License
 
-gamehubnx is licensed under the GNU General Public License v3.0. See
+GameHubNX is licensed under the GNU General Public License v3.0. See
 [LICENSE](LICENSE). Third-party components retain their original licenses as
 listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
