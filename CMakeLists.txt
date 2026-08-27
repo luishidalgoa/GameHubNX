@@ -57,6 +57,12 @@ project(pipensx VERSION ${PIPENSX_VERSION} LANGUAGES C CXX)
 #
 # Se puede apagar con -DPIPENSX_SYMBOLS=OFF si alguna vez estorba.
 option(PIPENSX_SYMBOLS "Tablas de linea en el ELF de Switch (-g1)" ON)
+# Build de desarrollo: comprueba si hay release nueva pero no se ofrece a
+# instalarla. Lo enciende el CI para sus artefactos, que se identifican con la
+# version por defecto y a los que cualquier release publicada les parece mas
+# nueva -- probar un build antes de publicarlo acababa con la app proponiendo
+# volver atras.
+option(PIPENSX_DEV_BUILD "Marcar el binario como build de desarrollo" OFF)
 if (PLATFORM_SWITCH)
     set(PIPENSX_DEBUG_FLAG "")
     if (PIPENSX_SYMBOLS)
@@ -323,6 +329,7 @@ target_compile_definitions(pipensx PRIVATE
     __SWITCH__
     USE_MBEDTLS
     PIPENSX_VERSION="${PROJECT_VERSION}"
+    $<$<BOOL:${PIPENSX_DEV_BUILD}>:PIPENSX_DEV_BUILD>
 )
 target_compile_options(pipensx PRIVATE
     -Wall
@@ -427,17 +434,26 @@ file(MAKE_DIRECTORY ${ROMFS_DIR})
 # lacks a NACP/asset section and abort with a User Break while loading it, so
 # the helper is built as a complete homebrew NRO with a NACP and icon, exactly
 # like the main app.
+#
+# OJO CON EL NOMBRE: UpdateService lo abre como "romfs:/gamehubnx-updater.nro"
+# (ver el valor por defecto de helperSourcePath en update_service.hpp). Se
+# llamo "pipensx-updater" hasta que el fork cambio de marca y el nombre se
+# quedo atras aqui, asi que el fichero que se empaquetaba no era el que se
+# buscaba: la actualizacion desde la propia app fallaba SIEMPRE con
+# "Unable to create update helper: No such file or directory". El objetivo de
+# enlace sigue siendo pipensx_updater --renombrarlo tocaria mas de lo que
+# aporta-- pero lo que acaba en la romfs lleva ya el nombre del fork.
 add_custom_target(sync_update_helper ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${ROMFS_DIR}"
     COMMAND ${NX_NACPTOOL_EXE}
-        --create "pipensx-updater" "${APP_AUTHOR}" "${PROJECT_VERSION}"
-        pipensx_updater.nacp
+        --create "gamehubnx-updater" "${APP_AUTHOR}" "${PROJECT_VERSION}"
+        gamehubnx_updater.nacp
     COMMAND ${NX_ELF2NRO_EXE}
-        pipensx_updater.elf "${ROMFS_DIR}/pipensx-updater.nro"
+        pipensx_updater.elf "${ROMFS_DIR}/gamehubnx-updater.nro"
         --icon=${APP_ICON}
-        --nacp=pipensx_updater.nacp
+        --nacp=gamehubnx_updater.nacp
     DEPENDS pipensx_updater
-    BYPRODUCTS "${ROMFS_DIR}/pipensx-updater.nro" pipensx_updater.nacp
+    BYPRODUCTS "${ROMFS_DIR}/gamehubnx-updater.nro" gamehubnx_updater.nacp
     VERBATIM
 )
 file(COPY

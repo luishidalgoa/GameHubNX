@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 all:
-	./scripts/build_switch.sh
+	PIPENSX_DEV_BUILD="$(PIPENSX_DEV_BUILD)" ./scripts/build_switch.sh
 
 clean:
 	rm -rf build-switch

@@ -466,8 +466,22 @@ UpdateCheckResult UpdateService::check() const {
     if (!parseRelease(body, result.release, result.error))
         return result;
     result.ok = true;
+#ifdef PIPENSX_DEV_BUILD
+    // Un build de desarrollo NO se ofrece a sustituirse por una release.
+    //
+    // Los artefactos del CI se compilan sin version de release, asi que se
+    // identifican con el valor por defecto de CMake --1.0.0-- y CUALQUIER
+    // release publicada les parece mas nueva. El resultado es que probar un
+    // build antes de publicarlo lleva a la app a proponer volver atras, y eso
+    // costo una tarde entera de "no veo ningun cambio" hasta dar con ello.
+    //
+    // La comprobacion se hace igual --el usuario ve que release hay-- pero no
+    // se marca como actualizacion disponible.
+    result.updateAvailable = false;
+#else
     result.updateAvailable = isNewerVersion(result.release.version,
                                             PIPENSX_VERSION);
+#endif
     return result;
 }
 
