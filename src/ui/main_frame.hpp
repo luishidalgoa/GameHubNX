@@ -51,8 +51,15 @@ enum class NavIconType {
 //                                                                       ---
 //                                                                       112
 //
-// Se reservan 120. Pasarse solo permite desplazar un poco mas de la cuenta;
+// Se reservan 120. Pasarse solo deja hueco de mas al final de la lista;
 // quedarse corto reproduce el solape, que es el fallo que esto arregla.
+//
+// Se aplica como MARGEN INFERIOR de la barra, no como relleno de su contenido.
+// Rellenar por dentro no sirve: la lista se dibuja de arriba abajo y la ultima
+// entrada se queda exactamente donde estaba, solo que con mas hueco detras --lo
+// probe y el render golden salio identico, 2526 px de diferencia, que es el
+// reloj--. Lo que hace falta es que la barra TERMINE antes; como es un
+// ScrollingFrame, lo que no quepa se desplaza.
 inline constexpr float kSidebarFooterReserve = 120.0f;
 
 inline void installSidebarStyle() {
@@ -67,7 +74,6 @@ inline void installSidebarStyle() {
     // lateral es un ScrollingFrame y este relleno va a su caja de contenido, de
     // modo que reservarlo permite que la ultima entrada suba por encima del pie
     // en vez de quedarse debajo.
-    style.addMetric("brls/sidebar/padding_bottom", kSidebarFooterReserve);
 }
 
 // Box that reports no hit at all, so touches fall through to whatever sits
@@ -365,6 +371,11 @@ public:
         dock_->setJustifyContent(brls::JustifyContent::FLEX_END);
         dock_->setPadding(0, kFooterPad, kFooterPad, kFooterPad);
         dock_->setClipsToBounds(true);
+
+        // La barra termina donde empieza el pie. Sin esto, la lista ocupa toda
+        // la columna y el pie --que es una caja absoluta por encima-- se le
+        // monta encima: con siete entradas, "Acerca de" queda debajo de la IP.
+        this->sidebar->setMarginBottom(kSidebarFooterReserve);
 
         webRow_ = new WebStatusRow();
         webRow_->setVisibility(collapsed_ ? brls::Visibility::GONE
