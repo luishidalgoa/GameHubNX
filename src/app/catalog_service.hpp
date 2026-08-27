@@ -80,6 +80,16 @@ struct CatalogEntry {
        torrent ni ningun servicio de terceros. */
     bool isDirectDownload() const { return !directUrl.empty(); }
 
+    /* Cierto cuando la entrada salio de un SUB-INDICE (/dlc, /updates) y no
+       del indice raiz.
+       Es procedencia, no deduccion, y esa es toda la gracia: un fichero de la
+       carpeta de actualizaciones es una actualizacion aunque su nombre no
+       lleve Title ID. Clasificar por el nombre hacia que los ocho ficheros sin
+       id de esos sub-indices --DRAGON QUEST VII v1.1.0, arceus v1.1.1, GTA
+       Vice City…-- salieran en la rejilla como juegos, duplicando el suyo.
+       Quien lo pone es el unico que lo sabe: el que descarga el sub-indice. */
+    bool fromSubIndex = false;
+
     /* El identificador que se le entrega al proveedor de transferencia. Para
        un torrent es el magnet; para la tienda es la propia URL, que es lo que
        GameHubProvider usa como handle. Tenerlo aqui evita que cada sitio que
