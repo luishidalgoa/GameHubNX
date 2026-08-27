@@ -7,10 +7,10 @@
 #include <iostream>
 
 namespace fs = std::filesystem;
-using namespace pipensx;
+using namespace gamehubnx;
 
 int main() {
-    const std::string root = "/tmp/pipensx-task-files";
+    const std::string root = "/tmp/gamehubnx-task-files";
     fs::remove_all(root);
     fs::create_directories(root + "/downloads/task/Release/switch/MyPort");
 

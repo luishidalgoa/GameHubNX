@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class CatalogFilter {
     All,
@@ -161,4 +161,4 @@ private:
     uint64_t generation_ = 0;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

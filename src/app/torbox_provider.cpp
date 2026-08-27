@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace pipensx {
+namespace gamehubnx {
 
 bool TorboxProvider::createFromMagnet(const std::string& magnet,
                                       std::string& id, std::string& error) {
@@ -77,4 +77,4 @@ bool TorboxProvider::remove(const std::string& id, std::string& error) {
     return client_.remove(u64, error);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

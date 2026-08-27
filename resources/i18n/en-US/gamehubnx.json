@@ -53,6 +53,7 @@
     "filter_all": "All",
     "filter_games": "Games",
     "filter_fits": "Fits",
+    "filter_missing": "Not installed",
     "filter_players": "Players",
     "players_title": "Play together",
     "players_any": "Any",
@@ -60,7 +61,7 @@
     "players_coop": "Local co-op",
     "players_lan": "Local wireless",
     "players_online": "Online",
-    "action_favorite": "Favourites",
+    "action_favorite": "\u2605",
     "favorites_full": "The wishlist is full ({} games).",
     "favorites_failed": "Could not save the wishlist: {}",
     "action_batch": "Batch install",
@@ -71,6 +72,7 @@
     "prepare_n": "Prepare {}",
     "unknown_size": "Unknown size",
     "badge_installed": "Installed",
+    "badge_update": "Update",
     "shelf_popular": "Popular",
     "shelf_new": "New",
     "shelf_updated": "Recently updated",
@@ -447,7 +449,6 @@
     "sd_card": "SD card",
     "select_ready": "Select ready",
     "add_to_queue": "Add to queue",
-    "destination": "Install to: {}",
     "add_n_to_queue": "Add {} to queue",
     "view_downloads": "View downloads",
     "back_to_catalog": "Back to catalog",
@@ -744,5 +745,12 @@
     "install_completed": "{} installed.",
     "download_failed": "{} download failed.",
     "install_failed": "{} install failed."
-  }
+  },
+    "install_target": {
+        "question": "Where do you want to install it?",
+        "change": "Change storage",
+        "changed": "Will install to {}",
+        "too_late": "Already installing: the storage cannot be changed now",
+        "free": "  ({} free)"
+    }
 }

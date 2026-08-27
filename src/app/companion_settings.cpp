@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_set>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 using Json = nlohmann::json;
@@ -198,4 +198,4 @@ bool applyCompanionSettingsPatch(AppSettingsData& values,
     return true;
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

@@ -41,7 +41,7 @@ jobs:
       - name: Build golden_runner
         run: |
           cmake -S . -B build-golden -G Ninja \
-            -DPIPENSX_GOLDEN=ON -DCMAKE_BUILD_TYPE=Release
+            -DGAMEHUBNX_GOLDEN=ON -DCMAKE_BUILD_TYPE=Release
           cmake --build build-golden --target golden_runner
 
       # No xvfb-run wrapper here: golden.sh starts its own virtual display

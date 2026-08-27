@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class CatalogHealth {
     Unknown,
@@ -143,6 +143,13 @@ public:
     // adopts the parsed batch on the UI thread via adopt().
     bool fetchLatest(std::vector<CatalogEntry>& parsed, std::string& error,
                      const std::string& sourceUrl);
+    // Costura del arnes de capturas, como setImageNetwork en los metadatos:
+    // con la red apagada fetchLatest devuelve lo que ya hay cargado en vez de
+    // salir a buscarlo. El catalogo remoto cambia cuando le da la gana, asi
+    // que una captura que lo espere no se puede comparar con nada estable.
+    // Devuelve exito, no fallo: un fallo pintaria un aviso en pantalla y eso
+    // tambien saldria en la captura.
+    static void setNetworkEnabled(bool enabled);
     // UI-thread only: adopt a freshly fetched batch as the live catalogue.
     // entries() is read unsynchronised by the render thread every frame, so
     // entries_ may only be reassigned here — never from a fetch worker.
@@ -222,4 +229,4 @@ private:
         onAdopt_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

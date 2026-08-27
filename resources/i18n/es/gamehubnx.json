@@ -33,7 +33,7 @@
     "unknown": "Desconocido",
     "error": "Error",
     "select_files": "Selecionar archivos",
-    "search": "Búsquedar",
+    "search": "Buscar",
     "sort": "Ordenar",
     "stop": "Parar",
     "toggle": "Alternar",
@@ -53,6 +53,7 @@
     "filter_all": "Todos",
     "filter_games": "Juegos",
     "filter_fits": "Caben en SD",
+    "filter_missing": "Sin instalar",
     "filter_players": "Jugadores",
     "players_title": "Jugar juntos",
     "players_any": "Cualquiera",
@@ -60,7 +61,7 @@
     "players_coop": "Cooperativo local",
     "players_lan": "Inalámbrico local",
     "players_online": "Online",
-    "action_favorite": "Favoritos",
+    "action_favorite": "\u2605",
     "favorites_full": "La lista de deseos está llena ({} juegos).",
     "favorites_failed": "No se pudo guardar la lista de deseos: {}",
     "action_batch": "Instalación por lotes",
@@ -71,6 +72,7 @@
     "prepare_n": "Preparar {}",
     "unknown_size": "Tamanho desconocido",
     "badge_installed": "Instalado",
+    "badge_update": "Actualización",
     "shelf_popular": "Populares",
     "shelf_new": "Nuevos",
     "shelf_updated": "Actualizade los recentemente",
@@ -447,7 +449,6 @@
     "sd_card": "Tarjeta SD",
     "select_ready": "Seleccionar listos",
     "add_to_queue": "Añadir a la cola",
-    "destination": "Instalar en: {}",
     "add_n_to_queue": "Añadir {} a la cola",
     "view_downloads": "Ver descargas",
     "back_to_catalog": "Volver al catálogo",
@@ -744,5 +745,12 @@
     "install_completed": "{} instalado.",
     "download_failed": "La descarga de {} falló.",
     "install_failed": "La instalación de {} falló."
-  }
+  },
+    "install_target": {
+        "question": "¿Dónde quieres instalarlo?",
+        "change": "Cambiar memoria",
+        "changed": "Se instalará en {}",
+        "too_late": "Ya ha empezado a instalarse: la memoria no se puede cambiar",
+        "free": "  ({} libres)"
+    }
 }

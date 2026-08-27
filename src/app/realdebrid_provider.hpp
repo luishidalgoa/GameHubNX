@@ -3,7 +3,7 @@
 #include "debrid_provider.hpp"
 #include "realdebrid_client.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 class RealdebridProvider : public DebridProvider {
 public:
@@ -32,4 +32,4 @@ private:
     RdClient client_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

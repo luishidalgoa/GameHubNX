@@ -29,7 +29,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <thread>
 
-namespace pipensx {
+namespace gamehubnx {
 
 DebridProgress::DebridProgress() : status(DownloadStatus::Fetching) {}
 
@@ -1144,4 +1144,4 @@ DebridRunResult DebridTransfer::run(
     return DebridRunResult::Finished;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -12,7 +12,7 @@ extern "C" {
 #include <string>
 #include <unistd.h>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 static std::string makeTorrent(const std::string& directory) {
     const std::string payload = "test payload";
@@ -42,7 +42,7 @@ static bool copyFile(const std::string& source, const std::string& target) {
 }
 
 int main() {
-    char rootTemplate[] = "/tmp/pipensx-batch-XXXXXX";
+    char rootTemplate[] = "/tmp/gamehubnx-batch-XXXXXX";
     char* root = mkdtemp(rootTemplate);
     assert(root);
     std::string source = makeTorrent(root);

@@ -9,7 +9,7 @@ description: >
   changes that move pixels.
 ---
 
-# Golden screenshots in pipensx
+# Golden screenshots in gamehubnx
 
 Two rules carry the weight: **triage a diff with numbers, not by looking at
 the PNG**, and **`update` is a decision you justify, never a way to make red

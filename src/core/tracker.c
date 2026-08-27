@@ -122,7 +122,7 @@ static uint32_t http_announce_once(const char *url,
 
     curl_buf_t buf = {0};
     curl_easy_setopt(curl, CURLOPT_URL, full_url);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
     /* Every handle here runs on a background thread; without this

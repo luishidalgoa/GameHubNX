@@ -9,8 +9,8 @@
  * console is asleep: fs may be unavailable there, so samples are collected in
  * RAM and only flushed once we are awake again.
  */
-#ifndef PIPENSX_PROBE_REPORT_H
-#define PIPENSX_PROBE_REPORT_H
+#ifndef GAMEHUBNX_PROBE_REPORT_H
+#define GAMEHUBNX_PROBE_REPORT_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -123,4 +123,4 @@ void probe_config_parse(probe_config_t *cfg, const char *text, size_t len);
 }
 #endif
 
-#endif /* PIPENSX_PROBE_REPORT_H */
+#endif /* GAMEHUBNX_PROBE_REPORT_H */

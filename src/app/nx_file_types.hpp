@@ -3,7 +3,7 @@
 #include <cctype>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Case-insensitive test that `name` ends with the 4-character extension
 // `ext4` (e.g. ".nsp"). Shared by every Switch file-name classifier so the
@@ -83,4 +83,4 @@ inline bool isPortPayloadName(const std::string& path) {
     return isPortArchiveName(path) || pathContainsSwitchComponent(path);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

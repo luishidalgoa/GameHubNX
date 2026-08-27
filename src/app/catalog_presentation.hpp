@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct CatalogPresentation {
     std::string title;
@@ -73,4 +73,4 @@ bool catalogEntryHasMatchedTitle(const GameMetadata* metadata);
 bool catalogEntryMatchesPlayerFilter(const GameMetadata* metadata,
                                      PlayerFilter filter);
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -13,8 +13,8 @@
 
 namespace {
 
-constexpr const char* Target = "/tmp/pipensx-update-test.nro";
-constexpr const char* HelperSource = "/tmp/pipensx-updater-fixture.nro";
+constexpr const char* Target = "/tmp/gamehubnx-update-test.nro";
+constexpr const char* HelperSource = "/tmp/gamehubnx-updater-fixture.nro";
 
 bool emulateSwitchRename = false;
 bool failHelperPublish = false;
@@ -58,36 +58,38 @@ void write(const std::string& path, const std::string& value) {
 }
 
 void testVersionsAndReleaseValidation() {
-    assert(pipensx::UpdateService::isNewerVersion("v1.2.3", "1.2.2"));
-    assert(!pipensx::UpdateService::isNewerVersion("1.2.3", "1.2.3"));
-    assert(!pipensx::UpdateService::isNewerVersion("next", "1.2.3"));
-    pipensx::ReleaseInfo release;
+    assert(gamehubnx::UpdateService::isNewerVersion("v1.2.3", "1.2.2"));
+    assert(!gamehubnx::UpdateService::isNewerVersion("1.2.3", "1.2.3"));
+    assert(!gamehubnx::UpdateService::isNewerVersion("next", "1.2.3"));
+    gamehubnx::ReleaseInfo release;
     std::string error;
-    assert(pipensx::UpdateService::parseRelease(releaseJson("v1.2.3"),
+    assert(gamehubnx::UpdateService::parseRelease(releaseJson("v1.2.3"),
                                                 release, error));
     assert(release.version == "v1.2.3");
-    assert(!pipensx::UpdateService::parseRelease(releaseJson("v1.2.3", false),
+    assert(!gamehubnx::UpdateService::parseRelease(releaseJson("v1.2.3", false),
                                                  release, error));
 }
 
 void testStagedReadyRecoversInterruptedRestart() {
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro");
     write(Target, "old");
     write(HelperSource, "minimal updater helper");
-    const std::string payload = "new verified pipensx nro";
+    // sha256 del payload de arriba. Si se toca ese texto hay que recalcularlo:
+    // el renombrado de pipensx a gamehubnx lo cambio y el hash se quedo atras.
+    const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
-    pipensx::UpdateService service(Target,
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
+    gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
         [payload](const std::string&, const std::string& path, size_t,
                   std::string&) { write(path, payload); return true; },
         HelperSource);
     assert(!service.stagedReady());
-    pipensx::ReleaseInfo release{"v1.2.3",
+    gamehubnx::ReleaseInfo release{"v1.2.3",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
@@ -95,9 +97,9 @@ void testStagedReadyRecoversInterruptedRestart() {
     // The app quit before chain-loading the helper: the staged download must
     // still be recognized as complete so the next launch can finalize it.
     assert(service.stagedReady());
-    write("/tmp/pipensx-update-test.nro.update", "corrupted");
+    write("/tmp/gamehubnx-update-test.nro.update", "corrupted");
     assert(!service.stagedReady());
-    write("/tmp/pipensx-update-test.nro.update", payload);
+    write("/tmp/gamehubnx-update-test.nro.update", payload);
     assert(service.stagedReady());
     service.discardStaged();
     unlink(Target);
@@ -105,33 +107,33 @@ void testStagedReadyRecoversInterruptedRestart() {
 
 void testInstallVerifiesBeforeStaging() {
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro");
     write(Target, "old");
     write(HelperSource, "minimal updater helper");
-    const std::string payload = "new verified pipensx nro";
+    const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
-    pipensx::UpdateService service(Target,
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
+    gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
         [payload](const std::string&, const std::string& path, size_t,
                   std::string&) { write(path, payload); return true; },
         HelperSource);
-    pipensx::ReleaseInfo release{"v1.2.3",
+    gamehubnx::ReleaseInfo release{"v1.2.3",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
     assert(service.install(release, error));
-    std::ifstream installed("/tmp/pipensx-update-test.nro.update",
+    std::ifstream installed("/tmp/gamehubnx-update-test.nro.update",
                             std::ios::binary);
     std::string bytes((std::istreambuf_iterator<char>(installed)), {});
     assert(bytes == payload);
     std::ifstream current(Target, std::ios::binary);
     bytes.assign((std::istreambuf_iterator<char>(current)), {});
     assert(bytes == "old");
-    std::ifstream marker("/tmp/pipensx-update-test.nro.update.sha256");
+    std::ifstream marker("/tmp/gamehubnx-update-test.nro.update.sha256");
     bytes.assign((std::istreambuf_iterator<char>(marker)), {});
     assert(bytes == checksum + "\n");
     std::ifstream helper(service.helperPath(), std::ios::binary);
@@ -143,11 +145,11 @@ void testInstallVerifiesBeforeStaging() {
     marker.close();
     helper.close();
     service.discardStaged();
-    assert(access("/tmp/pipensx-update-test.nro.update", F_OK) != 0);
+    assert(access("/tmp/gamehubnx-update-test.nro.update", F_OK) != 0);
     assert(access(service.helperPath().c_str(), F_OK) != 0);
 
     write(Target, "old");
-    pipensx::UpdateService wrongChecksum(Target,
+    gamehubnx::UpdateService wrongChecksum(Target,
         [](const std::string&, size_t, std::string& body,
            std::string&) { body = "0000000000000000000000000000000000000000000000000000000000000000\n"; return true; },
         [payload](const std::string&, const std::string& path, size_t,
@@ -158,16 +160,16 @@ void testInstallVerifiesBeforeStaging() {
     bytes.assign((std::istreambuf_iterator<char>(preserved)), {});
     assert(bytes == "old");
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink(HelperSource);
 }
 
 void testTransientNetworkFailuresAreRetried() {
     int checkAttempts = 0;
-    pipensx::UpdateService checkService(Target,
+    gamehubnx::UpdateService checkService(Target,
         [&checkAttempts](const std::string&, size_t, std::string& body,
                          std::string& error) {
             ++checkAttempts;
@@ -183,15 +185,15 @@ void testTransientNetworkFailuresAreRetried() {
     assert(checkAttempts == 3);
 
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
     write(Target, "old");
     write(HelperSource, "minimal updater helper");
-    const std::string payload = "new verified pipensx nro";
+    const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     int checksumAttempts = 0;
     int downloadAttempts = 0;
-    pipensx::UpdateService installService(Target,
+    gamehubnx::UpdateService installService(Target,
         [&checksumAttempts, checksum](const std::string&, size_t,
                                       std::string& body,
                                       std::string& error) {
@@ -214,7 +216,7 @@ void testTransientNetworkFailuresAreRetried() {
             write(path, payload);
             return true;
         }, HelperSource);
-    pipensx::ReleaseInfo release{"v9.9.9",
+    gamehubnx::ReleaseInfo release{"v9.9.9",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v9.9.9/gamehubnx.nro",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v9.9.9/gamehubnx.nro.sha256"};
     std::string error;
@@ -222,27 +224,27 @@ void testTransientNetworkFailuresAreRetried() {
     assert(checksumAttempts == 3);
     assert(downloadAttempts == 3);
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
 }
 
 void testInstallNeverTouchesRunningNro() {
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro");
-    unlink("/tmp/pipensx-update-test.nro.previous");
+    unlink("/tmp/gamehubnx-update-test.nro.previous");
     write(Target, "old");
     write(HelperSource, "minimal updater helper");
-    const std::string payload = "new verified pipensx nro";
+    const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
-    pipensx::UpdateService service(Target,
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
+    gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
         [payload](const std::string&, const std::string& path, size_t,
                   std::string&) { write(path, payload); return true; },
         HelperSource);
-    pipensx::ReleaseInfo release{"v1.2.3",
+    gamehubnx::ReleaseInfo release{"v1.2.3",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
@@ -253,27 +255,27 @@ void testInstallNeverTouchesRunningNro() {
     std::ifstream result(Target, std::ios::binary);
     std::string bytes((std::istreambuf_iterator<char>(result)), {});
     assert(bytes == "old");
-    std::ifstream staged("/tmp/pipensx-update-test.nro.update",
+    std::ifstream staged("/tmp/gamehubnx-update-test.nro.update",
                          std::ios::binary);
     bytes.assign((std::istreambuf_iterator<char>(staged)), {});
     assert(bytes == payload);
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro");
-    unlink("/tmp/pipensx-update-test.nro.previous");
+    unlink("/tmp/gamehubnx-update-test.nro.previous");
 }
 
 void testShutdownInterruptsRetryWait() {
     std::atomic<int> attempts{0};
-    pipensx::UpdateService service(Target,
+    gamehubnx::UpdateService service(Target,
         [&attempts](const std::string&, size_t, std::string&,
                     std::string& error) {
             ++attempts;
             error = "Update network error: Timeout was reached";
             return false;
         });
-    service.checkAsync([](pipensx::UpdateCheckResult) {});
+    service.checkAsync([](gamehubnx::UpdateCheckResult) {});
     while (attempts.load() == 0)
         std::this_thread::yield();
     // Give the worker time to enter the retry backoff wait; without this the
@@ -291,22 +293,22 @@ void testShutdownInterruptsRetryWait() {
 
 void testHelperPublishFailurePreservesPreviousHelper() {
     unlink(Target);
-    unlink("/tmp/pipensx-update-test.nro.update");
-    unlink("/tmp/pipensx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
     unlink("/tmp/gamehubnx-updater.nro.tmp");
     write(Target, "old");
     write(HelperSource, "new minimal updater helper");
     write("/tmp/gamehubnx-updater.nro", "previous helper");
-    const std::string payload = "new verified pipensx nro";
+    const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
-    pipensx::UpdateService service(Target,
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
+    gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
         [payload](const std::string&, const std::string& path, size_t,
                   std::string&) { write(path, payload); return true; },
         HelperSource);
-    pipensx::ReleaseInfo release{"v1.2.3",
+    gamehubnx::ReleaseInfo release{"v1.2.3",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
         "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
@@ -319,8 +321,8 @@ void testHelperPublishFailurePreservesPreviousHelper() {
     std::string bytes((std::istreambuf_iterator<char>(helper)), {});
     assert(bytes == "previous helper");
     assert(access("/tmp/gamehubnx-updater.nro.tmp", F_OK) != 0);
-    assert(access("/tmp/pipensx-update-test.nro.update", F_OK) != 0);
-    assert(access("/tmp/pipensx-update-test.nro.update.sha256", F_OK) != 0);
+    assert(access("/tmp/gamehubnx-update-test.nro.update", F_OK) != 0);
+    assert(access("/tmp/gamehubnx-update-test.nro.update.sha256", F_OK) != 0);
     unlink(Target);
     unlink(service.helperPath().c_str());
     unlink(HelperSource);

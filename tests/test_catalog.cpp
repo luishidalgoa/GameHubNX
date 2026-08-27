@@ -28,27 +28,27 @@ extern "C" {
 #include <unistd.h>
 #include <vector>
 
-using pipensx::CatalogEntry;
-using pipensx::CatalogHealth;
-using pipensx::CatalogPresentation;
-using pipensx::CatalogRefreshBatch;
-using pipensx::CatalogService;
-using pipensx::defaultCatalogSourceUrl;
-using pipensx::catalogEntryIsGame;
-using pipensx::catalogEntryHasMatchedTitle;
-using pipensx::catalogEntryMatchesPlayerFilter;
-using pipensx::PlayerFilter;
-using pipensx::adoptCatalogRefresh;
-using pipensx::GameMetadata;
-using pipensx::GameMetadataService;
-using pipensx::MetadataSnapshot;
-using pipensx::ModIndexEntry;
-using pipensx::ModIndexService;
-using pipensx::ModIndexSnapshot;
-using pipensx::MagnetResolver;
-using pipensx::MagnetSpec;
-using pipensx::mergeScreenshotUrls;
-using pipensx::resolveCatalogPresentation;
+using gamehubnx::CatalogEntry;
+using gamehubnx::CatalogHealth;
+using gamehubnx::CatalogPresentation;
+using gamehubnx::CatalogRefreshBatch;
+using gamehubnx::CatalogService;
+using gamehubnx::defaultCatalogSourceUrl;
+using gamehubnx::catalogEntryIsGame;
+using gamehubnx::catalogEntryHasMatchedTitle;
+using gamehubnx::catalogEntryMatchesPlayerFilter;
+using gamehubnx::PlayerFilter;
+using gamehubnx::adoptCatalogRefresh;
+using gamehubnx::GameMetadata;
+using gamehubnx::GameMetadataService;
+using gamehubnx::MetadataSnapshot;
+using gamehubnx::ModIndexEntry;
+using gamehubnx::ModIndexService;
+using gamehubnx::ModIndexSnapshot;
+using gamehubnx::MagnetResolver;
+using gamehubnx::MagnetSpec;
+using gamehubnx::mergeScreenshotUrls;
+using gamehubnx::resolveCatalogPresentation;
 
 namespace {
 
@@ -201,7 +201,7 @@ void testResolveFromPresetInfoDict() {
                          "&tr=http://bt.t-ru.org/ann?magnet";
     std::vector<uint8_t> preset(info.begin(), info.end());
 
-    char pathTemplate[] = "/tmp/pipensx-preset-XXXXXX";
+    char pathTemplate[] = "/tmp/gamehubnx-preset-XXXXXX";
     int fd = mkstemp(pathTemplate);
     assert(fd >= 0);
     close(fd);
@@ -300,7 +300,7 @@ void testMetadataIndexPlayerFields() {
     assert(items[0].players == 4);
     assert(items[0].hasModes);
     assert(items[0].modes ==
-           (pipensx::kPlayerModeSplit | pipensx::kPlayerModeOnline));
+           (gamehubnx::kPlayerModeSplit | gamehubnx::kPlayerModeOnline));
     assert(items[1].players == 2);
     assert(!items[1].hasModes && items[1].modes == 0);
     assert(items[2].players == 0);
@@ -311,7 +311,7 @@ void testMetadataIndexPlayerFields() {
 }
 
 void testFindByTitleIdBundles() {
-    const std::string root = "/tmp/pipensx-metadata-titleid-" +
+    const std::string root = "/tmp/gamehubnx-metadata-titleid-" +
         std::to_string(static_cast<long long>(getpid()));
     const std::string bundled = root + "/bundled.json";
     mkdir(root.c_str(), 0755);
@@ -366,7 +366,7 @@ void testFindByTitleIdBundles() {
 void testPlayerFilterPredicate() {    GameMetadata igdb;
     igdb.players = 4;
     igdb.hasModes = true;
-    igdb.modes = pipensx::kPlayerModeSplit | pipensx::kPlayerModeLan;
+    igdb.modes = gamehubnx::kPlayerModeSplit | gamehubnx::kPlayerModeLan;
 
     assert(catalogEntryMatchesPlayerFilter(&igdb, PlayerFilter::Splitscreen));
     assert(catalogEntryMatchesPlayerFilter(&igdb, PlayerFilter::Lan));
@@ -400,8 +400,8 @@ void testMetadataSnapshotAcceptsVerifiedIndex() {
     const std::string manifest =
         "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
         "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
-        "\"index\":{\"url\":\"https://github.com/i3sey/"
-        "pipensx-metadata/releases/download/metadata-test/"
+        "\"index\":{\"url\":\"https://github.com/luishidalgoa/"
+        "gamehubnx-metadata/releases/download/metadata-test/"
         "game_metadata_index.json\","
         "\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
         "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
@@ -417,11 +417,12 @@ void testMetadataSnapshotAcceptsVerifiedIndex() {
         "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
         "\"index\":{\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
         "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
+    // Sin feed remoto no hay URL por defecto que rellenar: indexUrl pasa a ser
+    // informativo y se queda vacio. El manifiesto se sigue aceptando porque lo
+    // que verifica el indice es su SHA-256, no de donde venia.
     assert(GameMetadataService::prepareSnapshot(manifestWithoutUrl, index,
                                                 snapshot, error));
-    assert(snapshot.manifest.indexUrl.find(
-        "/releases/latest/download/game_metadata_index.json") !=
-           std::string::npos);
+    assert(snapshot.manifest.indexUrl.empty());
 }
 
 void testMetadataSnapshotRejectsTamperedIndex() {
@@ -432,7 +433,7 @@ void testMetadataSnapshotRejectsTamperedIndex() {
         "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
         "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
         "\"index\":{\"url\":\"https://raw.githubusercontent.com/"
-        "i3sey/pipensx-metadata/data/game_metadata_index.json\","
+        "luishidalgoa/gamehubnx-metadata/data/game_metadata_index.json\","
         "\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
         "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
     MetadataSnapshot snapshot;
@@ -443,7 +444,7 @@ void testMetadataSnapshotRejectsTamperedIndex() {
 }
 
 void testMetadataLoadPrefersVerifiedRuntimeCache() {
-    const std::string root = "/tmp/pipensx-metadata-cache-" +
+    const std::string root = "/tmp/gamehubnx-metadata-cache-" +
         std::to_string(static_cast<long long>(getpid()));
     const std::string bundled = root + "/bundled.json";
     mkdir(root.c_str(), 0755);
@@ -463,8 +464,8 @@ void testMetadataLoadPrefersVerifiedRuntimeCache() {
             "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
             "\"langegenCommit\":\"langegen-sha\","
             "\"titledbCommit\":\"titledb-sha\",\"index\":{"
-            "\"url\":\"https://raw.githubusercontent.com/i3sey/"
-            "pipensx-metadata/data/game_metadata_index.json\","
+            "\"url\":\"https://raw.githubusercontent.com/luishidalgoa/"
+            "gamehubnx-metadata/data/game_metadata_index.json\","
             "\"bytes\":103,\"sha256\":\"" + sha +
             "\",\"entries\":1}}";
         writeTextFile(root + "/catalog/metadata/" + sha + ".json", index);
@@ -489,73 +490,8 @@ void testMetadataLoadPrefersVerifiedRuntimeCache() {
     rmdir(root.c_str());
 }
 
-void testMetadataFetchVerifiesBeforeAdoptAndFallsBackToCache() {
-    const std::string root = "/tmp/pipensx-metadata-fetch-" +
-        std::to_string(static_cast<long long>(getpid()));
-    mkdir(root.c_str(), 0755);
-    const std::string manifestUrl =
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/manifest.json";
-    const std::string indexUrl =
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/game_metadata_index.json";
-    const std::string index =
-        "[{\"infoHash\":\"E21269D03D34B557F63CE915DEA14F765C9C9798\","
-        "\"titleId\":\"0100230005A52000\",\"name\":\"Runtime\"}]";
-    const std::string manifest =
-        "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
-        "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
-        "\"index\":{\"url\":\"" + indexUrl +
-        "\",\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
-        "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
-    bool failIndex = false;
-    GameMetadataService::MetadataFetcher fetcher =
-        [&](const std::string& url, size_t, std::vector<uint8_t>& bytes,
-            std::string& error) {
-            if (url == manifestUrl) {
-                bytes.assign(manifest.begin(), manifest.end());
-                return true;
-            }
-            if (url == indexUrl && !failIndex) {
-                bytes.assign(index.begin(), index.end());
-                return true;
-            }
-            error = "simulated index failure";
-            return false;
-        };
-
-    {
-        GameMetadataService metadata(root, root + "/missing.json",
-                                     manifestUrl, fetcher);
-        MetadataSnapshot snapshot;
-        std::string error;
-        assert(metadata.fetchLatest(snapshot, error));
-        assert(metadata.size() == 0);
-
-        failIndex = true;
-        MetadataSnapshot cached;
-        assert(metadata.fetchLatest(cached, error));
-        assert(metadata.size() == 0);
-        assert(cached.items.size() == 1);
-        assert(cached.items[0].name == "Runtime");
-        metadata.adopt(std::move(cached));
-        assert(metadata.size() == 1);
-        assert(metadata.findByInfoHash(
-            "E21269D03D34B557F63CE915DEA14F765C9C9798"));
-    }
-
-    unlink((root + "/catalog/metadata/manifest.json").c_str());
-    unlink((root + "/catalog/metadata/"
-            "75b92238836d44279c24060d060e49f5b76e8049ca7fade0b736078433c4de80"
-            ".json").c_str());
-    rmdir((root + "/catalog/metadata").c_str());
-    rmdir((root + "/catalog/images").c_str());
-    rmdir((root + "/catalog").c_str());
-    rmdir(root.c_str());
-}
-
 void testMetadataLoadFallsBackWhenRuntimeCacheIsCorrupt() {
-    const std::string root = "/tmp/pipensx-metadata-corrupt-" +
+    const std::string root = "/tmp/gamehubnx-metadata-corrupt-" +
         std::to_string(static_cast<long long>(getpid()));
     const std::string bundled = root + "/bundled.json";
     mkdir(root.c_str(), 0755);
@@ -572,8 +508,8 @@ void testMetadataLoadFallsBackWhenRuntimeCacheIsCorrupt() {
             "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
             "\"langegenCommit\":\"langegen-sha\","
             "\"titledbCommit\":\"titledb-sha\",\"index\":{"
-            "\"url\":\"https://raw.githubusercontent.com/i3sey/"
-            "pipensx-metadata/data/game_metadata_index.json\","
+            "\"url\":\"https://raw.githubusercontent.com/luishidalgoa/"
+            "gamehubnx-metadata/data/game_metadata_index.json\","
             "\"bytes\":2,\"sha256\":\"" + sha +
             "\",\"entries\":1}}");
         std::string error;
@@ -638,7 +574,7 @@ void testModIndexTitleIdNormalization() {
 }
 
 void testModIndexLookupAndCache() {
-    const std::string root = "/tmp/pipensx-mods-" +
+    const std::string root = "/tmp/gamehubnx-mods-" +
         std::to_string(static_cast<long long>(getpid()));
     mkdir(root.c_str(), 0755);
     const std::string bundled = root + "/bundled_table.md";
@@ -688,7 +624,7 @@ void testModIndexTrustedSourceAllowlist() {
 }
 
 void testCatalogAndMetadataRefreshAdoptIndependently() {
-    const std::string root = "/tmp/pipensx-refresh-adopt-" +
+    const std::string root = "/tmp/gamehubnx-refresh-adopt-" +
         std::to_string(static_cast<long long>(getpid()));
     mkdir(root.c_str(), 0755);
     {
@@ -716,8 +652,8 @@ void testCatalogAndMetadataRefreshAdoptIndependently() {
             "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
             "\"langegenCommit\":\"langegen-sha\","
             "\"titledbCommit\":\"titledb-sha\",\"index\":{"
-            "\"url\":\"https://raw.githubusercontent.com/i3sey/"
-            "pipensx-metadata/data/game_metadata_index.json\","
+            "\"url\":\"https://raw.githubusercontent.com/luishidalgoa/"
+            "gamehubnx-metadata/data/game_metadata_index.json\","
             "\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
             "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
         CatalogRefreshBatch metadataOnly;
@@ -760,7 +696,7 @@ void testCatalogAndMetadataRefreshAdoptIndependently() {
 }
 
 void testOptionalCatalogDataMayBeAbsent() {
-    const std::string root = "/tmp/pipensx-optional-catalog-" +
+    const std::string root = "/tmp/gamehubnx-optional-catalog-" +
                              std::to_string(static_cast<long long>(getpid()));
     mkdir(root.c_str(), 0755);
 
@@ -876,7 +812,7 @@ void testCatalogPresentationPrefersCatalogNativeText() {
     entry.year = "2024, май";
 
     CatalogPresentation native = resolveCatalogPresentation(
-        entry, &metadata, pipensx::TextPreference::CatalogNative);
+        entry, &metadata, gamehubnx::TextPreference::CatalogNative);
     assert(native.description == "Русское описание");
     assert(native.title == "eShop name");
     assert(native.publisher == "eShop publisher");
@@ -897,14 +833,14 @@ void testCatalogPresentationPrefersCatalogNativeText() {
     noDescription.description.clear();
     assert(resolveCatalogPresentation(
                noDescription, &metadata,
-               pipensx::TextPreference::CatalogNative).description ==
+               gamehubnx::TextPreference::CatalogNative).description ==
            "eShop description");
 
     GameMetadata introOnly;
     introOnly.intro = "eShop intro";
     assert(resolveCatalogPresentation(
                noDescription, &introOnly,
-               pipensx::TextPreference::CatalogNative).description ==
+               gamehubnx::TextPreference::CatalogNative).description ==
            "eShop intro");
 }
 
@@ -977,7 +913,7 @@ void testCatalogBrowseMatchFilterRequiresTitleIdMetadata() {
 }
 
 void testAsyncImageDiskCache() {
-    std::string root = "/tmp/pipensx-image-test-" +
+    std::string root = "/tmp/gamehubnx-image-test-" +
                        std::to_string(static_cast<long long>(getpid()));
     std::string catalog = root + "/catalog";
     std::string images = catalog + "/images";
@@ -1045,7 +981,7 @@ void testAsyncImageDiskCache() {
 // UI_PLAN F6: memory cache — synchronous hit after a load, prefetch warms
 // it without a callback, dropMemoryImageCache() invalidates it.
 void testImageMemoryCache() {
-    std::string root = "/tmp/pipensx-image-mem-test-" +
+    std::string root = "/tmp/gamehubnx-image-mem-test-" +
                        std::to_string(static_cast<long long>(getpid()));
     std::string catalog = root + "/catalog";
     std::string images = catalog + "/images";
@@ -1137,7 +1073,7 @@ void testImageSizeClassesCacheSeparately() {
     // Bundled 1280x720 JPEG — big enough that the card class must shrink it.
     const std::string source =
         std::string(cwd) + "/resources/2026071002004100.jpg";
-    const std::string root = "/tmp/pipensx-image-class-test-" +
+    const std::string root = "/tmp/gamehubnx-image-class-test-" +
                              std::to_string(static_cast<long long>(getpid()));
     {
         GameMetadataService service(root, root + "/missing-index.json");
@@ -1185,7 +1121,7 @@ void testImageSizeClassesCacheSeparately() {
 // A transfer throttles cover fetches, it does not stop them: the request has
 // to reach the network and come back on its own, with nothing to un-pause.
 void testImageNetworkThrottledDuringActiveTransfer() {
-    std::string root = "/tmp/pipensx-image-throttle-test-" +
+    std::string root = "/tmp/gamehubnx-image-throttle-test-" +
                        std::to_string(static_cast<long long>(getpid()));
     std::mutex mutex;
     std::condition_variable ready;
@@ -1268,7 +1204,7 @@ void testTrackerCancellation() {
 }
 
 void runLiveResolutionIfRequested() {
-    const char* magnet = std::getenv("PIPENSX_LIVE_MAGNET");
+    const char* magnet = std::getenv("GAMEHUBNX_LIVE_MAGNET");
     if (!magnet || !*magnet)
         return;
     assert(curl_global_init(CURL_GLOBAL_DEFAULT) == CURLE_OK);
@@ -1276,8 +1212,8 @@ void runLiveResolutionIfRequested() {
     std::string error;
     MagnetResolver resolver;
     bool ok = resolver.resolveToFile(
-        magnet, "/tmp/pipensx-live.torrent", cancelled,
-        [](const pipensx::MagnetProgress& progress) {
+        magnet, "/tmp/gamehubnx-live.torrent", cancelled,
+        [](const gamehubnx::MagnetProgress& progress) {
             std::printf("live stage=%d pieces=%u/%u peer=%u/%u\n",
                         static_cast<int>(progress.stage),
                         progress.completedPieces, progress.totalPieces,
@@ -1287,7 +1223,7 @@ void runLiveResolutionIfRequested() {
     if (!ok)
         std::fprintf(stderr, "live resolution failed: %s\n", error.c_str());
     assert(ok);
-    std::remove("/tmp/pipensx-live.torrent");
+    std::remove("/tmp/gamehubnx-live.torrent");
     curl_global_cleanup();
 }
 
@@ -1324,20 +1260,6 @@ void testTrustedSourceAllowlist() {
     assert(!CatalogService::isTrustedSource(
         "https://evil.example.com/repo/catalog.json", kCustom));
 
-    assert(GameMetadataService::isTrustedSource(
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/manifest.json"));
-    assert(GameMetadataService::isTrustedSource(
-        "https://github.com/i3sey/pipensx-metadata/releases/latest/"
-        "download/manifest.json"));
-    assert(!GameMetadataService::isTrustedSource(
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata.evil/"
-        "data/manifest.json"));
-    assert(GameMetadataService::isTrustedRedirect(
-        "https://release-assets.githubusercontent.com/github-production-"
-        "release-asset/file"));
-    assert(!GameMetadataService::isTrustedRedirect(
-        "https://release-assets.githubusercontent.com.evil.example/file"));
 }
 
 // The Langegen switch_games.json shape: magnet under "magnet", cover under
@@ -1425,7 +1347,7 @@ void testLangegenLanguageFields() {
 }
 
 void testBundledLangegenSnapshotLoadsWithoutNetwork() {
-    const std::string root = "/tmp/pipensx-bundled-catalog-" +
+    const std::string root = "/tmp/gamehubnx-bundled-catalog-" +
         std::to_string(static_cast<long long>(getpid()));
     mkdir(root.c_str(), 0755);
     {
@@ -1451,7 +1373,7 @@ void testBundledLangegenSnapshotLoadsWithoutNetwork() {
 }
 
 void testBundledMetadataSnapshotLoadsWithoutNetwork() {
-    const std::string root = "/tmp/pipensx-bundled-metadata-" +
+    const std::string root = "/tmp/gamehubnx-bundled-metadata-" +
         std::to_string(static_cast<long long>(getpid()));
     mkdir(root.c_str(), 0755);
     {
@@ -1492,7 +1414,6 @@ int main() {
     testMetadataSnapshotAcceptsVerifiedIndex();
     testMetadataSnapshotRejectsTamperedIndex();
     testMetadataLoadPrefersVerifiedRuntimeCache();
-    testMetadataFetchVerifiesBeforeAdoptAndFallsBackToCache();
     testMetadataLoadFallsBackWhenRuntimeCacheIsCorrupt();
     testModIndexTableParsing();
     testModIndexTitleIdNormalization();

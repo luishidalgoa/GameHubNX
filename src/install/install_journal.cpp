@@ -14,7 +14,7 @@ extern "C" {
 #include "../core/bencode.h"
 }
 
-namespace pipensx::install {
+namespace gamehubnx::install {
 
 namespace {
 
@@ -319,4 +319,4 @@ bool removeInstallJournal(const std::string& path) {
     return std::remove(path.c_str()) == 0 || errno == ENOENT;
 }
 
-} // namespace pipensx::install
+} // namespace gamehubnx::install

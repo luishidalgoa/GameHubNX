@@ -5,8 +5,8 @@
 #include <string>
 
 int main() {
-    using pipensx::formatTitleVersion;
-    using pipensx::titleVersionIsNewer;
+    using gamehubnx::formatTitleVersion;
+    using gamehubnx::titleVersionIsNewer;
 
     assert(formatTitleVersion("0") == "0.0.0");
     assert(formatTitleVersion("65536") == "1.0.0");

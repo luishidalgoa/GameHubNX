@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char *Root = "/tmp/pipensx-update-transaction";
+static const char *Root = "/tmp/gamehubnx-update-transaction";
 static const char *FailBackup = NULL;
 static const char *FailTarget = NULL;
 

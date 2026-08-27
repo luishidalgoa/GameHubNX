@@ -16,7 +16,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Multi-select chooser for "which of these packages is the update?" A
 // release bundle can carry several packages with the update's [vN] tag — a
@@ -47,7 +47,7 @@ public:
     // the user backs out. The caller owns the tmp torrent and unlinks it in
     // both callbacks.
     UpdateFileChooserActivity(
-        DownloadManager* manager, pipensx::TorrentPreview preview,
+        DownloadManager* manager, gamehubnx::TorrentPreview preview,
         std::vector<uint8_t> actions, std::vector<uint8_t> initialPeers,
         std::function<void(std::vector<uint8_t>, std::vector<uint8_t>)> onPick,
         std::function<void()> onCancel)
@@ -63,13 +63,13 @@ public:
 
         title_ = new brls::Label();
         title_->setFontSize(26);
-        title_->setText(tr("pipensx/installed/update_choose_file"));
+        title_->setText(tr("gamehubnx/installed/update_choose_file"));
         content->addView(title_);
 
         meter_ = new StorageMeter();
         meter_->setHeader(storageMeterHeader(
             manager_ ? manager_->installTarget()
-                     : pipensx::install::InstallStorageTarget::SdCard));
+                     : gamehubnx::install::InstallStorageTarget::SdCard));
         meter_->setLegendVisible(true);
         meter_->setMarginBottom(10);
         content->addView(meter_);
@@ -93,7 +93,7 @@ public:
         confirm_->setFontSize(18);
         confirm_->setHeight(46);
         confirm_->setGrow(1);
-        confirm_->setText(tr("pipensx/common/continue"));
+        confirm_->setText(tr("gamehubnx/common/continue"));
         confirm_->registerClickAction([this](brls::View*) {
             confirm();
             return true;
@@ -106,7 +106,7 @@ public:
         cancel->setHeight(46);
         cancel->setGrow(1);
         cancel->setMarginLeft(12);
-        cancel->setText(tr("pipensx/common/cancel"));
+        cancel->setText(tr("gamehubnx/common/cancel"));
         cancel->registerClickAction([this](brls::View*) {
             backOut();
             return true;
@@ -116,7 +116,7 @@ public:
 
         frame_ = new brls::AppletFrame(content);
         frame_->setTitle(preview_.name.empty()
-                             ? tr("pipensx/torrent/frame_title")
+                             ? tr("gamehubnx/torrent/frame_title")
                              : preview_.name);
 
         updateConfirm();
@@ -132,7 +132,7 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
-        registerAction(tr("pipensx/common/cancel"), brls::BUTTON_B,
+        registerAction(tr("gamehubnx/common/cancel"), brls::BUTTON_B,
                        [this](brls::View*) {
             backOut();
             return true;
@@ -176,7 +176,7 @@ private:
             }
         if (!any) {
             brls::Application::notify(
-                tr("pipensx/installed/update_nothing_selected"));
+                tr("gamehubnx/installed/update_nothing_selected"));
             return;
         }
         finished_ = true;
@@ -197,19 +197,19 @@ private:
         for (const uint8_t action : actions_)
             if (action == static_cast<uint8_t>(FileAction::Install))
                 ++installs;
-        const auto estimate = pipensx::estimateInstallSpace(
+        const auto estimate = gamehubnx::estimateInstallSpace(
             preview_, actions_, TransferMode::StreamInstall);
         const auto downloadStorage = manager_
-            ? pipensx::queryStorageSpace(manager_->rootPath())
+            ? gamehubnx::queryStorageSpace(manager_->rootPath())
             : StorageSpaceSnapshot{};
         const auto packageStorage = manager_
-            ? pipensx::queryInstallStorageSpace(manager_->installTarget(),
+            ? gamehubnx::queryInstallStorageSpace(manager_->installTarget(),
                                                  manager_->rootPath())
             : StorageSpaceSnapshot{};
-        const auto check = pipensx::assessTransferSpace(
+        const auto check = gamehubnx::assessTransferSpace(
             estimate, downloadStorage, packageStorage);
         const auto target = manager_ ? manager_->installTarget()
-            : pipensx::install::InstallStorageTarget::SdCard;
+            : gamehubnx::install::InstallStorageTarget::SdCard;
         meter_->setHeader(storageMeterHeader(target));
         if (packageStorage.available)
             meter_->setEstimate(
@@ -220,12 +220,12 @@ private:
         else
             meter_->setUnavailable();
         if (installs == 0) {
-            confirm_->setText(tr("pipensx/common/continue"));
+            confirm_->setText(tr("gamehubnx/common/continue"));
             confirm_->setState(brls::ButtonState::DISABLED);
             return;
         }
         confirm_->setText(tr(
-            "pipensx/torrent/cta_install", installs,
+            "gamehubnx/torrent/cta_install", installs,
             installDestinationLabel(target),
             formatBytes(estimate.requiredBytes)));
         confirm_->setState(
@@ -242,7 +242,7 @@ private:
         explicit ChooserDataSource(UpdateFileChooserActivity* owner)
             : owner_(owner) {}
 
-        void setPreview(const pipensx::TorrentPreview& preview,
+        void setPreview(const gamehubnx::TorrentPreview& preview,
                         const std::vector<uint8_t>& actions) {
             entries_.clear();
             fileIndex_.clear();
@@ -308,7 +308,7 @@ private:
     };
 
     DownloadManager* manager_ = nullptr;
-    pipensx::TorrentPreview preview_;
+    gamehubnx::TorrentPreview preview_;
     std::vector<uint8_t> actions_;
     std::vector<uint8_t> initialPeers_;
     std::function<void(std::vector<uint8_t>, std::vector<uint8_t>)> onPick_;
@@ -322,4 +322,4 @@ private:
     bool finished_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

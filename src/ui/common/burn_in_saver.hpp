@@ -7,7 +7,7 @@
 
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Full-screen OLED burn-in guard: pure black plus one slowly drifting dim
 // marker so static UI chrome (sidebars, progress bars) does not sit on the
@@ -61,4 +61,4 @@ inline bool burnInSaverIsTop() {
 // to sit idle, short enough to protect OLED panels that stay on a static UI.
 constexpr uint64_t kBurnInIdleMs = 5ull * 60ull * 1000ull;
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui

@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Refuse anything but HTTPS, on the request and on any redirect it follows.
 // Debrid endpoints carry the account's API key, so a redirect to plain HTTP
@@ -77,4 +77,4 @@ inline bool isSslCertificateErrorMessage(const std::string& error) {
            error.find("certificate verify failed") != std::string::npos;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

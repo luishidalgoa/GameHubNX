@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 int main() {
     auto script =

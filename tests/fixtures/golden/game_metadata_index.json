@@ -6,7 +6,7 @@
     "name": "Pipen Odyssey",
     "intro": "A deterministic fixture adventure across eight golden screens.",
     "description": "Pipen Odyssey is the reference fixture title used by the golden screenshot CI. Its description is intentionally long enough to exercise the Show more collapse on the detail screen, wrapping over several lines of body text without ever touching the network.",
-    "publisher": "Pipensx Fixtures",
+    "publisher": "Gamehubnx Fixtures",
     "releaseDate": "2023-11-14",
     "iconUrl": "https://example.invalid/pipen-odyssey/icon.jpg",
     "bannerUrl": "https://example.invalid/pipen-odyssey/banner.jpg",
@@ -25,7 +25,7 @@
     "titleId": "0100000000010000",
     "match": "Pipen Odyssey",
     "name": "Pipen Odyssey",
-    "publisher": "Pipensx Fixtures",
+    "publisher": "Gamehubnx Fixtures",
     "latestVersion": "196608"
   },
   {
@@ -35,7 +35,7 @@
     "name": "Kart Nova Deluxe",
     "intro": "Fixture racing title with a short blurb.",
     "description": "Second fixture entry keeps the catalog grid populated and deterministic.",
-    "publisher": "Pipensx Fixtures",
+    "publisher": "Gamehubnx Fixtures",
     "releaseDate": "2023-07-22",
     "categories": [
       "Racing"
@@ -47,7 +47,7 @@
     "titleId": "0100000000040000",
     "match": "Broken Versions",
     "name": "Broken Versions",
-    "publisher": "Pipensx Fixtures",
+    "publisher": "Gamehubnx Fixtures",
     "latestVersion": "196608"
   }
 ]

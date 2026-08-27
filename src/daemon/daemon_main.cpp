@@ -1,5 +1,5 @@
 /*
- * pipensx daemon — skeleton (docs/plans/SYSMODULE_PHASES.md phase 2, first
+ * gamehubnx daemon — skeleton (docs/plans/SYSMODULE_PHASES.md phase 2, first
  * half). A homebrew sysmodule that boots, brings up the network and answers
  * GET /api/info over HTTP. No engine yet: if the process refuses to start,
  * the suspects are the NPDM and the service list, and mixing curl, zstd, ncm
@@ -10,7 +10,7 @@
  *
  * Build:   make daemon
  * Install: copy build-switch/daemon/atmosphere/... to the SD root, then
- *          enable "pipensx" in ovlSysmodules (no reboot).
+ *          enable "gamehubnx" in ovlSysmodules (no reboot).
  * Check:   curl -s http://<switch-ip>:8080/api/info
  */
 
@@ -45,8 +45,8 @@ extern "C" {
  * (4 MiB bss, same card, same loader, DBI closed) started normally. bss is
  * the difference, and it is the pool that refuses it.
  */
-#ifndef PIPENSX_DAEMON_HEAP_MB
-#define PIPENSX_DAEMON_HEAP_MB 64
+#ifndef GAMEHUBNX_DAEMON_HEAP_MB
+#define GAMEHUBNX_DAEMON_HEAP_MB 64
 #endif
 
 /*
@@ -102,7 +102,7 @@ extern char* fake_heap_end;
 
 /* Read by /api/info; the first of these is set before any service is up, so
  * there is nowhere to log from and every failure has to be reportable later. */
-u64 g_heap_asked = (u64)PIPENSX_DAEMON_HEAP_MB * 1024 * 1024;
+u64 g_heap_asked = (u64)GAMEHUBNX_DAEMON_HEAP_MB * 1024 * 1024;
 u64 g_heap_granted = 0;
 
 /* Claim the largest heap the kernel will give, at most `want`, and publish it
@@ -324,7 +324,7 @@ std::string infoJson()
 
     char buf[1024];
     int n = snprintf(buf, sizeof(buf),
-        "{\"name\":\"pipensx-daemon\",\"version\":\"%s\","
+        "{\"name\":\"gamehubnx-daemon\",\"version\":\"%s\","
         "\"firmware\":\"%u.%u.%u\","
         "\"heapAskedBytes\":%llu,\"heapGrantedBytes\":%llu,"
         "\"memTotalBytes\":%llu,\"memUsedBytes\":%llu,"
@@ -334,7 +334,7 @@ std::string infoJson()
         "\"rc\":{\"setsys\":%u,\"fs\":%u,\"time\":%u,\"socket\":%u,"
         "\"csrng\":%u,\"nifm\":%u,\"nifmSubmit\":%u,"
         "\"memlet\":%u,\"memletMap\":%u}}",
-        PIPENSX_VERSION,
+        GAMEHUBNX_VERSION,
         g_hosMajor, g_hosMinor, g_hosMicro,
         (unsigned long long)g_heap_asked, (unsigned long long)g_heap_granted,
         (unsigned long long)memTotal, (unsigned long long)memUsed,
@@ -347,11 +347,11 @@ std::string infoJson()
     return std::string(buf, n > 0 ? (size_t)n : 0);
 }
 
-pipensx::HttpResponse route(const pipensx::HttpRequest& req)
+gamehubnx::HttpResponse route(const gamehubnx::HttpRequest& req)
 {
     if (req.path == "/api/info" && (req.method == "GET" || req.method == "HEAD"))
-        return pipensx::HttpResponse::text(200, infoJson());
-    return pipensx::HttpResponse::text(404, "{\"error\":\"not found\"}");
+        return gamehubnx::HttpResponse::text(200, infoJson());
+    return gamehubnx::HttpResponse::text(404, "{\"error\":\"not found\"}");
 }
 
 } // namespace
@@ -378,7 +378,7 @@ int main(int, char**)
 
     /* HttpServer re-binds the listener itself once a second when it is gone
      * (ensureListener), which is exactly what waking from sleep needs. */
-    pipensx::HttpServer server;
+    gamehubnx::HttpServer server;
     std::string error;
     if (!server.start(DAEMON_PORT, route, error))
         log_msg("[daemon] http start failed: %s\n", error.c_str());

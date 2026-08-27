@@ -25,7 +25,7 @@ extern "C" {
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // ── Proporcion de portada ────────────────────────────────────────────────────
 // Ancho/alto con que se pintan las cajas. El valor por defecto es el del
@@ -52,24 +52,24 @@ inline void setCoverAspect(float aspect) {
         detail_cover::gAspect = aspect;
 }
 
-inline pipensx::install::InstallStorageTarget installTargetFor(InstallLocation value) {
+inline gamehubnx::install::InstallStorageTarget installTargetFor(InstallLocation value) {
     return value == InstallLocation::SystemMemory
-               ? pipensx::install::InstallStorageTarget::Nand
-               : pipensx::install::InstallStorageTarget::SdCard;
+               ? gamehubnx::install::InstallStorageTarget::Nand
+               : gamehubnx::install::InstallStorageTarget::SdCard;
 }
 
 inline std::string installDestinationLabel(
-    pipensx::install::InstallStorageTarget target) {
-    return target == pipensx::install::InstallStorageTarget::Nand
-               ? tr("pipensx/settings/install_nand")
-               : tr("pipensx/settings/install_sd");
+    gamehubnx::install::InstallStorageTarget target) {
+    return target == gamehubnx::install::InstallStorageTarget::Nand
+               ? tr("gamehubnx/settings/install_nand")
+               : tr("gamehubnx/settings/install_sd");
 }
 
 inline std::string storageMeterHeader(
-    pipensx::install::InstallStorageTarget target) {
-    return target == pipensx::install::InstallStorageTarget::Nand
-               ? tr("pipensx/settings/install_nand")
-               : tr("pipensx/torrent/sd_card");
+    gamehubnx::install::InstallStorageTarget target) {
+    return target == gamehubnx::install::InstallStorageTarget::Nand
+               ? tr("gamehubnx/settings/install_nand")
+               : tr("gamehubnx/torrent/sd_card");
 }
 
 inline std::atomic<uint32_t> gCatalogTempSerial{0};
@@ -169,7 +169,7 @@ inline SystemSnapshot writeSystemSnapshot(DownloadManager* manager,
         "version=%s hos=%u.%u.%u operation_mode=%d telemetry=%d "
         "catalog=%zu metadata=%zu installed=%zu active=%zu errors=%zu "
         "sd_free_bytes=%llu",
-        PIPENSX_VERSION, HOSVER_MAJOR(snapshot.hos),
+        GAMEHUBNX_VERSION, HOSVER_MAJOR(snapshot.hos),
         HOSVER_MINOR(snapshot.hos), HOSVER_MICRO(snapshot.hos),
         snapshot.operationMode, snapshot.telemetry ? 1 : 0, snapshot.catalog,
         snapshot.metadata, snapshot.installed, snapshot.active,
@@ -186,10 +186,10 @@ inline bool isApplicationMode() {
 
 inline void showApplicationModeRequired() {
     consoleInit(nullptr);
-    std::printf("\npipensx requires application mode.\n\n");
+    std::printf("\ngamehubnx requires application mode.\n\n");
     std::printf("Press HOME for exit.\n");
     std::printf("After that, hold R while launching a game.\n");
-    std::printf("Keep holding R until hbmenu opens, then start pipensx.\n\n");
+    std::printf("Keep holding R until hbmenu opens, then start gamehubnx.\n\n");
     std::printf("Album applet mode does not provide enough memory and\n");
     std::printf("network sessions for the GUI torrent client.\n\n");
     consoleUpdate(nullptr);
@@ -321,17 +321,17 @@ inline std::string formatEtaSeconds(uint64_t seconds) {
     if (!seconds)
         return {};
     if (seconds < 60)
-        return tr("pipensx/downloads/eta_seconds", seconds);
+        return tr("gamehubnx/downloads/eta_seconds", seconds);
 
     uint64_t minutes = seconds / 60;
     if (minutes < 60)
-        return tr("pipensx/downloads/eta_minutes", minutes, seconds % 60);
+        return tr("gamehubnx/downloads/eta_minutes", minutes, seconds % 60);
 
     uint64_t hours = minutes / 60;
     if (hours < 24)
-        return tr("pipensx/downloads/eta_hours", hours, minutes % 60);
+        return tr("gamehubnx/downloads/eta_hours", hours, minutes % 60);
 
-    return tr("pipensx/downloads/eta_days", hours / 24, hours % 24);
+    return tr("gamehubnx/downloads/eta_days", hours / 24, hours % 24);
 }
 
 inline NVGcolor statusColor(DownloadStatus status) {
@@ -356,36 +356,36 @@ inline NVGcolor statusColor(DownloadStatus status) {
     return theme::accent();
 }
 
-// pipensx::statusName stays the English persistence/log name (it is written
+// gamehubnx::statusName stays the English persistence/log name (it is written
 // into queue.bencode); the screen reads from the locale catalog instead.
 inline std::string downloadStatusLabel(DownloadStatus status) {
     switch (status) {
         case DownloadStatus::Queued:
-            return tr("pipensx/downloads/status_queued");
+            return tr("gamehubnx/downloads/status_queued");
         case DownloadStatus::Checking:
-            return tr("pipensx/downloads/status_checking");
+            return tr("gamehubnx/downloads/status_checking");
         case DownloadStatus::Fetching:
-            return tr("pipensx/downloads/status_fetching");
+            return tr("gamehubnx/downloads/status_fetching");
         case DownloadStatus::Downloading:
-            return tr("pipensx/downloads/status_downloading");
+            return tr("gamehubnx/downloads/status_downloading");
         case DownloadStatus::Paused:
-            return tr("pipensx/downloads/status_paused");
+            return tr("gamehubnx/downloads/status_paused");
         case DownloadStatus::Verifying:
-            return tr("pipensx/downloads/status_verifying");
+            return tr("gamehubnx/downloads/status_verifying");
         case DownloadStatus::Completed:
-            return tr("pipensx/downloads/status_completed");
+            return tr("gamehubnx/downloads/status_completed");
         case DownloadStatus::Installing:
-            return tr("pipensx/downloads/status_installing");
+            return tr("gamehubnx/downloads/status_installing");
         case DownloadStatus::Committing:
-            return tr("pipensx/downloads/status_committing");
+            return tr("gamehubnx/downloads/status_committing");
         case DownloadStatus::Installed:
-            return tr("pipensx/downloads/status_installed");
+            return tr("gamehubnx/downloads/status_installed");
         case DownloadStatus::Error:
-            return tr("pipensx/downloads/status_error");
+            return tr("gamehubnx/downloads/status_error");
         case DownloadStatus::Removing:
-            return tr("pipensx/downloads/status_removing");
+            return tr("gamehubnx/downloads/status_removing");
     }
-    return tr("pipensx/common/unknown");
+    return tr("gamehubnx/common/unknown");
 }
 
 inline std::string taskStatusText(const DownloadTask& task) {
@@ -438,4 +438,4 @@ inline std::string placeholderLetter(const std::string& title) {
         letter[0] = static_cast<char>(std::toupper(lead));
     return letter;
 }
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

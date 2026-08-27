@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Ways a game can be played together, as published in the metadata index's
 // optional "modes" array. Bit flags so a whole snapshot can be OR-ed into one
@@ -91,25 +91,19 @@ public:
     static constexpr int kImageDimCard = 360;
     static constexpr int kImageDimFull = 1280;
 
-    using MetadataFetcher = std::function<bool(
-        const std::string&, size_t, std::vector<uint8_t>&, std::string&)>;
-
+    // Sin feed remoto: el indice viaja dentro de la NRO. Antes esto se
+    // descargaba de un repo de metadatos de upstream, que era la ultima atadura
+    // externa que le quedaba a la app.
     explicit GameMetadataService(std::string rootPath,
                                  std::string bundledPath =
                                      "romfs:/catalog/"
-                                     "game_metadata_index.json.zst",
-                                 std::string manifestUrl =
-                                     "https://github.com/i3sey/"
-                                     "pipensx-metadata/releases/latest/"
-                                     "download/manifest.json",
-                                 MetadataFetcher metadataFetcher = {});
+                                     "game_metadata_index.json.zst");
     ~GameMetadataService();
 
     GameMetadataService(const GameMetadataService&) = delete;
     GameMetadataService& operator=(const GameMetadataService&) = delete;
 
     bool load(std::string& error);
-    bool fetchLatest(MetadataSnapshot& snapshot, std::string& error) const;
     void adopt(MetadataSnapshot snapshot);
     const GameMetadata* findByInfoHash(const std::string& infoHash) const;
     // Appends every index entry matching titleId that carries a non-empty
@@ -169,8 +163,6 @@ public:
                                 const std::string& indexJson,
                                 MetadataSnapshot& snapshot,
                                 std::string& error);
-    static bool isTrustedSource(const std::string& url);
-    static bool isTrustedRedirect(const std::string& url);
 
 private:
     enum class ImageLoadResult {
@@ -210,8 +202,6 @@ private:
     std::string cacheRoot_;
     std::string imageRoot_;
     std::string bundledPath_;
-    std::string manifestUrl_;
-    MetadataFetcher metadataFetcher_;
     mutable std::mutex imageMutex_;
     mutable std::condition_variable imageReady_;
     mutable std::deque<ImageJob> imageQueue_;
@@ -238,4 +228,4 @@ private:
     bool localPlayerCounts_ = false;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

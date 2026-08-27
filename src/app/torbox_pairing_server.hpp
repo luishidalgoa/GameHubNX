@@ -8,7 +8,7 @@
 #include <mutex>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // One-page form on the LAN so a debrid API key can be pasted from a phone
 // instead of typed on the console keyboard. Its own HttpServer on its own
@@ -61,4 +61,4 @@ private:
 
 constexpr uint16_t kTorboxPairingPort = 8424;
 
-} // namespace pipensx
+} // namespace gamehubnx

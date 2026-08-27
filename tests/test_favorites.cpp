@@ -6,7 +6,7 @@
 #include <string>
 #include <unistd.h>
 
-using pipensx::FavoritesService;
+using gamehubnx::FavoritesService;
 
 namespace {
 

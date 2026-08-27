@@ -19,7 +19,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 using Json = nlohmann::json;
@@ -542,4 +542,4 @@ bool AppSettings::reset(std::string& error) {
     return update(AppSettingsData{}, error);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

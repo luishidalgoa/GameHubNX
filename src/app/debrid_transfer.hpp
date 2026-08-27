@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 std::string buildRichMagnet(const std::string& infoHashHex,
                             const std::string& name,
@@ -84,4 +84,4 @@ private:
     RangeFetcher fetcher_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

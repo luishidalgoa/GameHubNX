@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 

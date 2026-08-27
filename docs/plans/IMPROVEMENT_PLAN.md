@@ -1,4 +1,4 @@
-# IMPROVEMENT_PLAN — что улучшить в pipensx в целом
+# IMPROVEMENT_PLAN — что улучшить в gamehubnx в целом
 
 Дата: 2026-07-05. Обзорный план «поверх» существующих: не дублирует
 PERF_PLAN.md / UI_PLAN.md / RF_ACCESS_PLAN.md, а закрывает дыры между ними
@@ -32,14 +32,14 @@ PERF_PLAN.md / UI_PLAN.md / RF_ACCESS_PLAN.md, а закрывает дыры м
 Заодно убрать `tools/__pycache__/`.
 
 ### 1.2. Чистый корень репо (S)
-В корне: `pipensx.nro` 21.5M, `pipensx` 134K, три лога на ~900K суммарно
-(`pipensx.log`, `new_pipensx.log`, `new2pipensx.log`). Всё untracked, но
+В корне: `gamehubnx.nro` 21.5M, `gamehubnx` 134K, три лога на ~900K суммарно
+(`gamehubnx.log`, `new_gamehubnx.log`, `new2gamehubnx.log`). Всё untracked, но
 мешает. Публикацию NRO перенести в `dist/` (поправить `deploy-switch.sh` и
 шаг `cp` из инструкции сборки), логи — в `logs/` или удалить после разбора.
 
 ### 1.3. Одна система сборки (M)
 Сейчас три: CMakeLists.txt (Switch + golden), Makefile.pc, Makefile.switch
-(обёртка). Свести PC-сборку и тесты в CMake (цель `pipensx_pc`,
+(обёртка). Свести PC-сборку и тесты в CMake (цель `gamehubnx_pc`,
 `ctest`), Makefile.pc оставить тонкой обёрткой или удалить. Меньше дрейфа
 флагов между окружениями.
 
@@ -63,13 +63,13 @@ PC-сборка + прогон всех `tests/test_*` на push/PR. Это де
 парсящий данные из сети; UB здесь = эксплуатируемая дыра, а не «краш».
 
 ### 2.3. Кросс-сборка NRO (M)
-Джоб на образе `devkitpro/devkita64`: собирать `pipensx.nro` на каждый PR.
+Джоб на образе `devkitpro/devkita64`: собирать `gamehubnx.nro` на каждый PR.
 Сейчас сборка под Switch проверяется только вручную и только локально
 (cmake вообще не на PATH — см. память проекта).
 
 ### 2.4. Релизы по тегу (S)
-Тег `v*` → GitHub Release с `pipensx.nro` + changelog. Версия сейчас
-зашита как `pipensx/0.4` в User-Agent — вынести в один источник
+Тег `v*` → GitHub Release с `gamehubnx.nro` + changelog. Версия сейчас
+зашита как `gamehubnx/0.4` в User-Agent — вынести в один источник
 (CMake `project(VERSION)` → генерируемый заголовок), показывать в About.
 
 ### 2.5. Catalog health-check по расписанию (S) — ПX.1 из RF_ACCESS_PLAN

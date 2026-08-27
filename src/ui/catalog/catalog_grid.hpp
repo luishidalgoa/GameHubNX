@@ -14,7 +14,7 @@
 #include "ui/common/ui_helpers.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // ---------------------------------------------------------------------------
 // UI_PLAN F2 — eShop-style catalog: cover-art grid + horizontal shelves.
@@ -515,7 +515,7 @@ public:
         seeAll_->setPaddingLeft(12);
         seeAll_->setPaddingRight(12);
         seeAll_->setShrink(0.0f);
-        seeAll_->setText(tr("pipensx/catalog/see_all"));
+        seeAll_->setText(tr("gamehubnx/catalog/see_all"));
         seeAll_->registerClickAction([this](brls::View*) {
             if (seeAllAction_)
                 seeAllAction_();
@@ -590,7 +590,7 @@ public:
         kicker_ = new brls::Label();
         kicker_->setFontSize(theme::kFontCaption);
         kicker_->setTextColor(theme::accent());
-        kicker_->setText(tr("pipensx/catalog/featured"));
+        kicker_->setText(tr("gamehubnx/catalog/featured"));
         title_ = new brls::Label();
         title_->setSingleLine(true);
         title_->setAutoAnimate(false);
@@ -623,8 +623,8 @@ public:
         title_->setText(info.title);
         // The hero has no cover corner to hang the ModCD plate on, so the
         // kicker carries the marker instead.
-        kicker_->setText(info.hasMods ? tr("pipensx/catalog/featured_mods")
-                                      : tr("pipensx/catalog/featured"));
+        kicker_->setText(info.hasMods ? tr("gamehubnx/catalog/featured_mods")
+                                      : tr("gamehubnx/catalog/featured"));
         sub_->setText(info.sub);
         sub_->setTextColor(info.subIsBadge ? theme::accent()
                                            : theme::textTertiary());
@@ -678,4 +678,4 @@ private:
     HeroCard* hero_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

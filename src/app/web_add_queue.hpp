@@ -14,7 +14,7 @@
 #include "download_manager.hpp"
 #include "magnet_resolver.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Background add-jobs for the web companion: a POST returns immediately and
 // the magnet resolve (tracker → peers → ut_metadata, potentially minutes)
@@ -97,4 +97,4 @@ private:
     uint64_t serial_ = 0;
 };
 
-}  // namespace pipensx
+}  // namespace gamehubnx

@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Minimal HTTP/1.1 server: one background thread, poll() over the listener
 // plus a handful of keep-alive connections. Built for the Switch's tiny
@@ -123,4 +123,4 @@ private:
     uint64_t lastListenRetryMs_ = 0;
 };
 
-}  // namespace pipensx
+}  // namespace gamehubnx

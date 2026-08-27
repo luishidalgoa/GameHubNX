@@ -13,7 +13,7 @@
 #include <sys/statvfs.h>
 #endif
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 void addBytes(uint64_t& target, uint64_t value, bool& overflow) {
@@ -216,4 +216,4 @@ StorageSpaceSnapshot queryInstallStorageSpace(
     return result;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

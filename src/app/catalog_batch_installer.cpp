@@ -12,7 +12,7 @@
 #include <utility>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 std::atomic<uint64_t> gBatchTempSerial{1};
@@ -398,4 +398,4 @@ BatchEnqueueResult CatalogBatchInstaller::enqueueViaDebrid(
     return result;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

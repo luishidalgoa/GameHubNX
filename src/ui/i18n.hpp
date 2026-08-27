@@ -7,13 +7,13 @@
 
 #include "app/catalog_presentation.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
-// Translated UI string. Keys live in resources/i18n/<locale>/pipensx.json and
-// are addressed as "pipensx/<area>/<name>" — borealis maps a locale file's
+// Translated UI string. Keys live in resources/i18n/<locale>/gamehubnx.json and
+// are addressed as "gamehubnx/<area>/<name>" — borealis maps a locale file's
 // basename to the first path segment.
 //
-// A free function rather than the brls `_i18n` literal: no pipensx file pulls
+// A free function rather than the brls `_i18n` literal: no gamehubnx file pulls
 // in `using namespace brls`, and the literal would need that using-declaration
 // injected into every UI header.
 //
@@ -38,4 +38,4 @@ inline TextPreference catalogTextPreference() {
                                      : TextPreference::Metadata;
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

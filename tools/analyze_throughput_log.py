@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize pipensx schema=1 throughput telemetry."""
+"""Summarize gamehubnx schema=1 throughput telemetry."""
 
 from __future__ import annotations
 
@@ -339,7 +339,7 @@ def print_report(report: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Analyze pipensx stream-install throughput telemetry"
+        description="Analyze gamehubnx stream-install throughput telemetry"
     )
     parser.add_argument("log", type=Path)
     parser.add_argument("--json", action="store_true")

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // One row of ModCD's table.md: a moddable title and how many mods it carries.
 struct ModIndexEntry {
@@ -20,7 +20,7 @@ struct ModIndexSnapshot {
 };
 
 // ModCD (https://github.com/kawaii-flesh/ModCD) publishes every mod it knows
-// about as one markdown table. pipensx only wants the title-id column, so the
+// about as one markdown table. gamehubnx only wants the title-id column, so the
 // catalogue rides along with the catalog refresh, is cached on the SD card and
 // is then answered entirely from memory — never per card, never per detail page.
 class ModIndexService {
@@ -71,4 +71,4 @@ private:
     std::unordered_map<std::string, uint32_t> byBaseId_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

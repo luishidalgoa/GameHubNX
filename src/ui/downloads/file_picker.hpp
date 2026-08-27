@@ -15,7 +15,7 @@
 #include "ui/debrid_ui.hpp"
 #include "ui/i18n.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 struct FileEntry {
     std::string name;
@@ -51,7 +51,7 @@ public:
     }
     void setEntry(const FileEntry& entry) {
         label_->setText(entry.directory
-                            ? tr("pipensx/picker/folder", entry.name)
+                            ? tr("gamehubnx/picker/folder", entry.name)
                                         : entry.name);
     }
     void onFocusGained() override {
@@ -100,17 +100,17 @@ public:
             return;
         }
 
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         std::string error;
         if (!DownloadManager::previewTorrent(entry.path, preview, error)) {
             brls::Application::notify(error);
             return;
         }
-        std::string text = tr("pipensx/picker/preview", preview.name,
+        std::string text = tr("gamehubnx/picker/preview", preview.name,
                               formatBytes(preview.totalBytes),
                               preview.fileCount, preview.trackerCount);
         if (preview.packageCount)
-            text += tr("pipensx/picker/preview_packages",
+            text += tr("gamehubnx/picker/preview_packages",
                        preview.packageCount);
         auto* dialog = new brls::Dialog(text);
         auto add = [this, path = entry.path, preview](TransferMode mode) {
@@ -134,22 +134,22 @@ public:
                 imported = manager_->importTorrent(path, mode, id, error);
             }
             if (imported) {
-                brls::Application::notify(tr("pipensx/picker/added"));
+                brls::Application::notify(tr("gamehubnx/picker/added"));
                 brls::Application::popActivity();
             } else {
                 brls::Application::notify(error);
             }
         };
         if (preview.packageCount) {
-            dialog->addButton(tr("pipensx/picker/stream_install"),
+            dialog->addButton(tr("gamehubnx/picker/stream_install"),
                 [add] { add(TransferMode::StreamInstall); });
-            dialog->addButton(tr("pipensx/picker/download_only"),
+            dialog->addButton(tr("gamehubnx/picker/download_only"),
                 [add] { add(TransferMode::DownloadOnly); });
         } else {
-            dialog->addButton(tr("pipensx/picker/add_to_queue"),
+            dialog->addButton(tr("gamehubnx/picker/add_to_queue"),
                 [add] { add(TransferMode::DownloadOnly); });
         }
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -180,7 +180,7 @@ private:
         std::vector<FileEntry> files;
         DIR* dir = opendir(path.c_str());
         if (!dir) {
-            brls::Application::notify(tr("pipensx/picker/unable_to_open"));
+            brls::Application::notify(tr("gamehubnx/picker/unable_to_open"));
             return;
         }
         while (dirent* item = readdir(dir)) {
@@ -211,7 +211,7 @@ private:
         entries_.insert(entries_.end(), directories.begin(), directories.end());
         entries_.insert(entries_.end(), files.begin(), files.end());
         currentPath_ = path;
-        frame_->setTitle(tr("pipensx/picker/frame_title", currentPath_));
+        frame_->setTitle(tr("gamehubnx/picker/frame_title", currentPath_));
         reloadRecycler();
     }
 
@@ -242,4 +242,4 @@ private:
     friend class FileDataSource;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

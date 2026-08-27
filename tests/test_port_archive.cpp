@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace fs = std::filesystem;
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 
@@ -38,7 +38,7 @@ int main() {
     assert(portArchiveSolidFitsRam(0, 0));
     assert(!portArchiveSolidFitsRam(100, kPortArchiveSolidRamReserveBytes));
 
-    const fs::path root = "/tmp/pipensx-port-archive";
+    const fs::path root = "/tmp/gamehubnx-port-archive";
     fs::remove_all(root);
     fs::create_directories(root / "src/switch/game");
     fs::create_directories(root / "src/other");

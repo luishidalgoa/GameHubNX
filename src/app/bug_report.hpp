@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Error-correction level the UI should feed to qrcodegen for a mode's codes.
 // Kept as a tiny enum here so this header stays free of the qrcodegen include;
@@ -89,4 +89,4 @@ BugReport buildBugReport(const std::string& logTail,
 // other telemetry stages and every other borealis level) intact.
 std::string dropNoisyLogLines(const std::string& logTail);
 
-} // namespace pipensx
+} // namespace gamehubnx

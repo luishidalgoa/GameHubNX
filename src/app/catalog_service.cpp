@@ -9,6 +9,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
+#include <atomic>
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -22,7 +23,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 
 const char kDefaultCatalogSourceUrl[] =
     "https://raw.githubusercontent.com/Langegen/switch-games/"
@@ -158,7 +159,7 @@ bool httpGet(const std::string& url, std::string& body, std::string& error,
     headers = curl_slist_append(headers, "X-GitHub-Api-Version: 2022-11-28");
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
     /* Every handle here runs on a background thread; without this
@@ -656,9 +657,22 @@ bool CatalogService::isTrustedSource(const std::string& url,
     return !prefix.empty() && url.rfind(prefix, 0) == 0;
 }
 
+namespace {
+std::atomic<bool> gCatalogNetworkEnabled{true};
+} // namespace
+
+void CatalogService::setNetworkEnabled(bool enabled) {
+    gCatalogNetworkEnabled.store(enabled, std::memory_order_relaxed);
+}
+
 bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
                                  std::string& error,
                                  const std::string& sourceUrl) {
+    if (!gCatalogNetworkEnabled.load(std::memory_order_relaxed)) {
+        parsed = entries();
+        error.clear();
+        return true;
+    }
     // Network fetch + parse + cache write only, so it never touches entries_.
     // The cached catalogue in memory survives a failure — the caller keeps
     // showing it on error.
@@ -776,4 +790,4 @@ void CatalogService::adopt(std::vector<CatalogEntry> parsed,
         onAdopt_(entries_);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

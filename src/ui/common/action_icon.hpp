@@ -18,7 +18,7 @@
 
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 enum class ActionIconKind {
     Install,    // solid accent badge, arrow knocked out
@@ -27,6 +27,12 @@ enum class ActionIconKind {
     Checked,    // solid accent badge, checkmark knocked out
     Unchecked,  // thin hollow ring, dimmed
     Error,      // outline warning triangle
+    // Tipo de contenido, en la lista de "que instalar". Mismo sistema que los
+    // tres de arriba: se distinguen por PESO DE RELLENO, no por detalle, que a
+    // tamano de fila es lo unico que se lee sin fijarse.
+    Game,       // cartucho macizo: la pieza completa
+    Update,     // caja de contorno con flecha arriba: modifica algo que ya hay
+    Dlc,        // anillo fino con un mas: un anadido
 };
 
 class ActionIcon : public brls::View {
@@ -78,12 +84,79 @@ public:
             case ActionIconKind::Error:
                 drawWarning(vg, 0.0f, 0.0f, kGlyph, theme::error());
                 break;
+            case ActionIconKind::Game:
+                drawCartridge(vg, 0.0f, 0.0f, kGlyph);
+                break;
+            case ActionIconKind::Update:
+                drawUpdateBox(vg, 0.0f, 0.0f, kGlyph, theme::warning());
+                break;
+            case ActionIconKind::Dlc:
+                drawRingPlus(vg, 0.0f, 0.0f, kGlyph, theme::textSecondary());
+                break;
         }
         nvgRestore(vg);
     }
 
 private:
     static constexpr float kGlyph = 24.0f;  // authoring box for every path
+
+    // Cartucho MACIZO con la muesca troquelada: silueta llena para el juego
+    // base, que es la pieza completa.
+    static void drawCartridge(NVGcontext* vg, float gx, float gy, float s) {
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, gx + 6.0f, gy + 3.0f);
+        nvgLineTo(vg, gx + 15.0f, gy + 3.0f);
+        nvgLineTo(vg, gx + 18.0f, gy + 6.0f);
+        nvgLineTo(vg, gx + 18.0f, gy + s - 3.0f);
+        nvgLineTo(vg, gx + 6.0f, gy + s - 3.0f);
+        nvgClosePath(vg);
+        nvgFillColor(vg, theme::textPrimary());
+        nvgFill(vg);
+        // La ranura se troquela con el color del fondo, no con otro trazo: a
+        // tamano de fila un trazo mas solo ensucia la silueta.
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, gx + 9.0f, gy + 6.5f, 6.0f, 2.4f, 1.2f);
+        nvgFillColor(vg, theme::color(theme::Tok::Surface));
+        nvgFill(vg);
+    }
+
+    // Caja de CONTORNO con flecha arriba: peso intermedio.
+    static void drawUpdateBox(NVGcontext* vg, float gx, float gy, float s,
+                              NVGcolor color) {
+        nvgStrokeColor(vg, color);
+        nvgStrokeWidth(vg, 2.0f);
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, gx + 3.0f, gy + 3.0f, s - 6.0f, s - 6.0f, 5.0f);
+        nvgStroke(vg);
+        const float cx = gx + s / 2.0f;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, cx, gy + 16.5f);
+        nvgLineTo(vg, cx, gy + 8.0f);
+        nvgStroke(vg);
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, cx - 3.4f, gy + 11.4f);
+        nvgLineTo(vg, cx, gy + 8.0f);
+        nvgLineTo(vg, cx + 3.4f, gy + 11.4f);
+        nvgStroke(vg);
+    }
+
+    // Anillo FINO con un mas: el peso mas ligero de los tres.
+    static void drawRingPlus(NVGcontext* vg, float gx, float gy, float s,
+                             NVGcolor color) {
+        const float cx = gx + s / 2.0f;
+        const float cy = gy + s / 2.0f;
+        nvgStrokeColor(vg, color);
+        nvgStrokeWidth(vg, 1.6f);
+        nvgBeginPath(vg);
+        nvgCircle(vg, cx, cy, 9.0f);
+        nvgStroke(vg);
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, cx, cy - 3.8f);
+        nvgLineTo(vg, cx, cy + 3.8f);
+        nvgMoveTo(vg, cx - 3.8f, cy);
+        nvgLineTo(vg, cx + 3.8f, cy);
+        nvgStroke(vg);
+    }
 
     // Filled plate the knocked-out glyphs are cut into.
     static void drawBadge(NVGcontext* vg, float gx, float gy, float s,
@@ -183,4 +256,4 @@ private:
     ActionIconKind kind_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

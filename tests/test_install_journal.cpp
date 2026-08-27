@@ -7,8 +7,8 @@
 
 #include "install/install_journal.hpp"
 
-using pipensx::install::InstallJournal;
-using pipensx::install::PackageStreamState;
+using gamehubnx::install::InstallJournal;
+using gamehubnx::install::PackageStreamState;
 
 namespace {
 
@@ -177,22 +177,22 @@ void testRejectsMalformed() {
 }
 
 void testFileHelpers() {
-    const std::string path = "/tmp/pipensx_test_install_journal.bin";
+    const std::string path = "/tmp/gamehubnx_test_install_journal.bin";
     std::remove(path.c_str());
     InstallJournal journal = makeSample();
-    assert(pipensx::install::saveInstallJournal(path, journal));
+    assert(gamehubnx::install::saveInstallJournal(path, journal));
     InstallJournal loaded;
-    assert(pipensx::install::loadInstallJournal(path, loaded));
+    assert(gamehubnx::install::loadInstallJournal(path, loaded));
     expectEqual(journal, loaded);
     // Overwrite with different contents.
     journal.state.consumed += 1000;
     journal.packageId = "other";
-    assert(pipensx::install::saveInstallJournal(path, journal));
-    assert(pipensx::install::loadInstallJournal(path, loaded));
+    assert(gamehubnx::install::saveInstallJournal(path, journal));
+    assert(gamehubnx::install::loadInstallJournal(path, loaded));
     expectEqual(journal, loaded);
-    assert(pipensx::install::removeInstallJournal(path));
-    assert(!pipensx::install::loadInstallJournal(path, loaded));
-    assert(pipensx::install::removeInstallJournal(path));  // idempotent
+    assert(gamehubnx::install::removeInstallJournal(path));
+    assert(!gamehubnx::install::loadInstallJournal(path, loaded));
+    assert(gamehubnx::install::removeInstallJournal(path));  // idempotent
 }
 
 } // namespace

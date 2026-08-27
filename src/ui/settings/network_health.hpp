@@ -15,7 +15,7 @@ extern "C" {
 #include "../core/dht.h"
 }
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Compact diagnostics: connectivity, DHT and provider state. Rows are
 // built once; values refresh on appear and on a slow timer.
@@ -83,19 +83,19 @@ private:
 
     static std::string catalogAge(uint64_t wallSec) {
         if (wallSec == 0)
-            return tr("pipensx/diag/never");
+            return tr("gamehubnx/diag/never");
         const uint64_t now = static_cast<uint64_t>(std::time(nullptr));
         const uint64_t age = now > wallSec ? now - wallSec : 0;
         if (age < 3600)
-            return tr("pipensx/diag/updated_m", age / 60);
-        return tr("pipensx/diag/updated_h", age / 3600);
+            return tr("gamehubnx/diag/updated_m", age / 60);
+        return tr("gamehubnx/diag/updated_h", age / 3600);
     }
 
     void refresh() {
         const bool online = !ipAddress_.empty() && ipAddress_ != "-";
         setValue(internet_,
-                 online ? tr("pipensx/diag/connected")
-                        : tr("pipensx/diag/offline"),
+                 online ? tr("gamehubnx/diag/connected")
+                        : tr("gamehubnx/diag/offline"),
                  online ? theme::success() : theme::error());
 
         int dhtGood = 0;
@@ -104,15 +104,15 @@ private:
         if (dhtOn)
             dht_shared_nodes(&dhtGood, &dhtDubious);
         if (!dhtOn) {
-            setValue(dht_, tr("pipensx/diag/dht_off"), theme::textSecondary());
+            setValue(dht_, tr("gamehubnx/diag/dht_off"), theme::textSecondary());
         } else if (dhtGood > 0) {
-            setValue(dht_, tr("pipensx/diag/dht_nodes", dhtGood, dhtDubious),
+            setValue(dht_, tr("gamehubnx/diag/dht_nodes", dhtGood, dhtDubious),
                      theme::success());
         } else if (dhtDubious > 0) {
-            setValue(dht_, tr("pipensx/diag/dht_nodes", dhtGood, dhtDubious),
+            setValue(dht_, tr("gamehubnx/diag/dht_nodes", dhtGood, dhtDubious),
                      theme::warning());
         } else {
-            setValue(dht_, tr("pipensx/diag/dht_bootstrapping"),
+            setValue(dht_, tr("gamehubnx/diag/dht_bootstrapping"),
                      theme::warning());
         }
 
@@ -120,30 +120,30 @@ private:
         for (const DownloadTask& task : manager_->snapshot())
             if (task.status == DownloadStatus::Downloading)
                 peers += task.peers;
-        setValue(peers_, tr("pipensx/diag/peers_n", peers),
+        setValue(peers_, tr("gamehubnx/diag/peers_n", peers),
                  peers > 0 ? theme::success() : theme::textSecondary());
 
         const AppSettingsData values = settings_->get();
         setValue(torbox_,
-                 values.torboxApiKey.empty() ? tr("pipensx/diag/not_linked")
-                                             : tr("pipensx/diag/linked"),
+                 values.torboxApiKey.empty() ? tr("gamehubnx/diag/not_linked")
+                                             : tr("gamehubnx/diag/linked"),
                  values.torboxApiKey.empty() ? theme::textSecondary()
                                              : theme::success());
         setValue(torrserver_,
                  values.torrserverUrl.empty()
-                     ? tr("pipensx/diag/not_configured")
+                     ? tr("gamehubnx/diag/not_configured")
                      : values.torrserverUrl,
                  values.torrserverUrl.empty() ? theme::textSecondary()
                                               : theme::textPrimary());
         setValue(realdebrid_,
                  values.realdebridApiKey.empty()
-                     ? tr("pipensx/diag/not_linked")
-                     : tr("pipensx/diag/linked"),
+                     ? tr("gamehubnx/diag/not_linked")
+                     : tr("gamehubnx/diag/linked"),
                  values.realdebridApiKey.empty() ? theme::textSecondary()
                                                  : theme::success());
         setValue(proxy_,
-                 values.proxyUrl.empty() ? tr("pipensx/diag/disabled")
-                                         : tr("pipensx/diag/enabled"),
+                 values.proxyUrl.empty() ? tr("gamehubnx/diag/disabled")
+                                         : tr("gamehubnx/diag/enabled"),
                  values.proxyUrl.empty() ? theme::textSecondary()
                                          : theme::accent());
         setValue(catalog_, catalogAge(values.lastCatalogRefreshWallSec),
@@ -154,7 +154,7 @@ private:
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(24, 34, 24, 34);
 
-        internet_ = addRow(content, tr("pipensx/diag/internet"), true);
+        internet_ = addRow(content, tr("gamehubnx/diag/internet"), true);
         // DHT, pares, TorBox, TorrServer y Real-Debrid no se registran: son el
         // diagnostico de una descarga por torrent y de tres servicios de
         // terceros que este fork no usa. Aqui lo unico que importa es si hay
@@ -163,15 +163,15 @@ private:
         // Los punteros quedan a nullptr y refresh() los comprueba antes de
         // tocarlos, asi que el codigo de upstream que los actualiza sigue
         // compilando sin parchearlo.
-        proxy_ = addRow(content, tr("pipensx/diag/proxy"), false);
-        catalog_ = addRow(content, tr("pipensx/diag/catalog"), false);
+        proxy_ = addRow(content, tr("gamehubnx/diag/proxy"), false);
+        catalog_ = addRow(content, tr("gamehubnx/diag/catalog"), false);
         refresh();
 
         auto* scroll = new brls::ScrollingFrame();
         scroll->setGrow(1);
         scroll->setContentView(content);
         frame_ = new brls::AppletFrame(scroll);
-        frame_->setTitle(tr("pipensx/diag/title"));
+        frame_->setTitle(tr("gamehubnx/diag/title"));
         if (focusRow_)
             brls::Application::giveFocus(focusRow_);
     }
@@ -192,4 +192,4 @@ private:
     brls::Label* catalog_ = nullptr;
 };
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui

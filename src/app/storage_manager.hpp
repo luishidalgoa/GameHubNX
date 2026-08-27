@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
-// Space breakdown of the SD card, split into the directories pipensx manages
+// Space breakdown of the SD card, split into the directories gamehubnx manages
 // and a computed "other" bucket (installed games, system, other apps). Every
 // managed bucket is measured by walking the on-disk tree; a missing directory
 // counts as 0 bytes rather than failing the whole scan.
@@ -27,7 +27,7 @@ struct StorageBreakdown {
 // unchanged) when the path cannot be stat'd or any child cannot be measured.
 bool directorySize(const std::string& path, uint64_t& out);
 
-// Snapshot of every pipensx-managed directory under `rootPath`, plus the
+// Snapshot of every gamehubnx-managed directory under `rootPath`, plus the
 // storage total/free (via queryStorageSpace) and a computed "other" bucket.
 // Never fails: a missing directory counts as 0 bytes and an unavailable
 // storage query simply leaves `available` false.
@@ -55,4 +55,4 @@ uint64_t orphanTorrentBytes(
     const std::string& torrentRoot,
     const std::vector<std::string>& activeInfoHashes);
 
-} // namespace pipensx
+} // namespace gamehubnx

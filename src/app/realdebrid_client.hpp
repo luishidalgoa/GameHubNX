@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct RdFile {
     std::string id;
@@ -75,4 +75,4 @@ private:
     RdTransport transport_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

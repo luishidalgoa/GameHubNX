@@ -1,6 +1,6 @@
 /*
- * pipensx PC entry point.
- * Usage: ./pipensx <torrent_file> [outdir]
+ * gamehubnx PC entry point.
+ * Usage: ./gamehubnx <torrent_file> [outdir]
  */
 #include "core/metainfo.h"
 #include "core/torrent.h"
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     signal(SIGTERM, on_signal);
     signal(SIGPIPE, SIG_IGN);
 
-    log_init("pipensx.log");
+    log_init("gamehubnx.log");
     dht_engine_set_cache_path("dht.cache");
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -39,12 +39,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /* PIPENSX_WINDOW=N caps how many pieces may be open at once, which is what
+    /* GAMEHUBNX_WINDOW=N caps how many pieces may be open at once, which is what
        bounds engine RAM: without it every peer opens its own pieces and the
        buffers grow to the size of everything downloaded but not yet assembled.
        The app bounds this from C++ (request_gate); this is the same knob for
        the plain client, and how the sysmodule's 6 MiB budget gets measured. */
-    const char *window_env = getenv("PIPENSX_WINDOW");
+    const char *window_env = getenv("GAMEHUBNX_WINDOW");
     torrent_options_t opts;
     memset(&opts, 0, sizeof(opts));
     if (window_env && atoi(window_env) > 0) {

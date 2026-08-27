@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct ReleaseInfo {
     std::string version;
@@ -89,4 +89,4 @@ private:
     std::atomic<bool> checkCompleted_{false};
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

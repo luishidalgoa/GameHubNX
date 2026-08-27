@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr const char* kInstallTemp = "/install-temp";
@@ -243,4 +243,4 @@ uint64_t orphanTorrentBytes(
     return total;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

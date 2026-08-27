@@ -4,8 +4,8 @@
 #include <cstdio>
 #include <string>
 
-using pipensx::TorboxClient;
-using pipensx::TorboxTorrentInfo;
+using gamehubnx::TorboxClient;
+using gamehubnx::TorboxTorrentInfo;
 
 namespace {
 
@@ -90,10 +90,10 @@ void testRequestDownloadLinkSendsToken() {
     // HTTP 422 validation error ({"detail":[{"loc":["query","token"],...}]}),
     // which the client surfaces as the generic "TorBox request failed
     // (HTTP 422)". The request URL must carry token/torrent_id/file_id.
-    pipensx::TorboxHttpRequest seen;
-    pipensx::TorboxClient client("test-key",
-        [&seen](const pipensx::TorboxHttpRequest& request,
-                pipensx::TorboxHttpResponse& response, std::string&) {
+    gamehubnx::TorboxHttpRequest seen;
+    gamehubnx::TorboxClient client("test-key",
+        [&seen](const gamehubnx::TorboxHttpRequest& request,
+                gamehubnx::TorboxHttpResponse& response, std::string&) {
             seen = request;
             response.status = 200;
             response.body = kLinkOk;
@@ -110,10 +110,10 @@ void testRequestDownloadLinkSendsToken() {
 }
 
 void testTransportInjection() {
-    pipensx::TorboxHttpRequest seen;
-    pipensx::TorboxClient client("test-key",
-        [&seen](const pipensx::TorboxHttpRequest& request,
-                pipensx::TorboxHttpResponse& response, std::string&) {
+    gamehubnx::TorboxHttpRequest seen;
+    gamehubnx::TorboxClient client("test-key",
+        [&seen](const gamehubnx::TorboxHttpRequest& request,
+                gamehubnx::TorboxHttpResponse& response, std::string&) {
             seen = request;
             response.status = 200;
             response.body = kCreateOk;
@@ -129,9 +129,9 @@ void testTransportInjection() {
     assert(seen.apiKey == "test-key");
 
     // Test HTTP 401 auth failure
-    pipensx::TorboxClient authFailClient("bad-key",
-        [](const pipensx::TorboxHttpRequest&,
-           pipensx::TorboxHttpResponse& response, std::string&) {
+    gamehubnx::TorboxClient authFailClient("bad-key",
+        [](const gamehubnx::TorboxHttpRequest&,
+           gamehubnx::TorboxHttpResponse& response, std::string&) {
             response.status = 401;
             response.body = "";
             return true;
@@ -141,9 +141,9 @@ void testTransportInjection() {
     assert(error == "TorBox key rejected - relink in Settings.");
 
     // Test HTTP 500 with generic failure message gets status appended
-    pipensx::TorboxClient serverErrClient("test-key",
-        [](const pipensx::TorboxHttpRequest&,
-           pipensx::TorboxHttpResponse& response, std::string&) {
+    gamehubnx::TorboxClient serverErrClient("test-key",
+        [](const gamehubnx::TorboxHttpRequest&,
+           gamehubnx::TorboxHttpResponse& response, std::string&) {
             response.status = 500;
             response.body = R"({"success":false})";
             return true;

@@ -1,5 +1,5 @@
 /*
- * pipensx sysmodule probe.
+ * gamehubnx sysmodule probe.
  *
  * Answers, on real hardware and in one run, the hypotheses that the whole
  * "app becomes a catalog, engine becomes a daemon" plan rests on
@@ -20,7 +20,7 @@
  * sysmodule" with "the piece buffer does not fit" answers neither.
  *
  * Results are read over TCP (curl http://<switch>:8099/) and mirrored to
- * sdmc:/switch/pipensx/probe-report.txt.
+ * sdmc:/switch/gamehubnx/probe-report.txt.
  */
 #include "../app/app_paths.h"
 #include <arpa/inet.h>
@@ -295,7 +295,7 @@ static Result bgtc_enable_stay_half_awake(void)
  */
 static bool bgtc_setup(void)
 {
-    static const char *kName = "pipensx";
+    static const char *kName = "gamehubnx";
     u8 half = 0;
 
     if (!g_bgtc_task_ok)
@@ -523,7 +523,7 @@ static void net_thread_main(void *arg)
 
         snprintf(request, sizeof(request),
                  "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n"
-                 "User-Agent: pipensx-probe\r\n\r\n",
+                 "User-Agent: gamehubnx-probe\r\n\r\n",
                  g_cfg.path, g_cfg.host);
         if (send(fd, request, strlen(request), 0) < 0) {
             probe_logf("net[%d] send failed errno=%d", index, errno);

@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct TsHttpRequest {
     std::string method;            // "GET" or "POST"
@@ -73,4 +73,4 @@ private:
     TsTransport transport_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

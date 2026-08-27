@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -183,4 +183,4 @@ bool GameHubProvider::remove(const std::string& id, std::string& error) {
 
 const char* GameHubProvider::name() const { return gamehub::kSourceLabel; }
 
-} // namespace pipensx
+} // namespace gamehubnx

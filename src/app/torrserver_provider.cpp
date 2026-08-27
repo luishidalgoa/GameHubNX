@@ -9,7 +9,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 using Json = nlohmann::json;
@@ -54,7 +54,7 @@ bool curlTransport(const TsHttpRequest& request, TsHttpResponse& response,
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     if (headers)
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curlPinScheme(curl, request.url);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
@@ -263,4 +263,4 @@ bool TorrserverProvider::parseStatus(const std::string& json, DebridInfo& info,
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

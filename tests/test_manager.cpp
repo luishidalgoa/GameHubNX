@@ -16,11 +16,11 @@ extern "C" {
 #include <vector>
 #include <unistd.h>
 
-using pipensx::DownloadManager;
-using pipensx::DownloadStatus;
-using pipensx::DownloadTask;
-using pipensx::FileAction;
-using pipensx::TransferMode;
+using gamehubnx::DownloadManager;
+using gamehubnx::DownloadStatus;
+using gamehubnx::DownloadTask;
+using gamehubnx::FileAction;
+using gamehubnx::TransferMode;
 
 static std::string bstr(const std::string& value) {
     return std::to_string(value.size()) + ":" + value;
@@ -126,7 +126,7 @@ static void writeFile(const std::string& path, const std::string& content) {
 }
 
 static void testTorboxTaskPersistenceRoundTrip() {
-    const std::string root = "/tmp/pipensx-manager-torbox-test";
+    const std::string root = "/tmp/gamehubnx-manager-torbox-test";
     removeAll(root);
     makeDir(root);
     makeDir(root + "/downloads");
@@ -155,30 +155,30 @@ static void testTorboxTaskPersistenceRoundTrip() {
         "e";
     writeFile(root + "/queue.bencode", state);
 
-    pipensx::DownloadManager manager(root, false);
+    gamehubnx::DownloadManager manager(root, false);
     auto tasks = manager.snapshot();
     assert(tasks.size() == 1);
-    assert(tasks[0].source == pipensx::TaskSource::Debrid);
-    assert(tasks[0].debridProvider == pipensx::DebridProviderKind::TorBox);
+    assert(tasks[0].source == gamehubnx::TaskSource::Debrid);
+    assert(tasks[0].debridProvider == gamehubnx::DebridProviderKind::TorBox);
     assert(tasks[0].debridId == "297464");
-    assert(tasks[0].status == pipensx::DownloadStatus::Queued);
+    assert(tasks[0].status == gamehubnx::DownloadStatus::Queued);
     assert(tasks[0].metainfoPath.empty());
 
     // Round trip: save and reload
     std::string error;
     assert(manager.save(error));
-    pipensx::DownloadManager reloaded(root, false);
+    gamehubnx::DownloadManager reloaded(root, false);
     auto again = reloaded.snapshot();
     assert(again.size() == 1);
-    assert(again[0].source == pipensx::TaskSource::Debrid);
-    assert(again[0].debridProvider == pipensx::DebridProviderKind::TorBox);
+    assert(again[0].source == gamehubnx::TaskSource::Debrid);
+    assert(again[0].debridProvider == gamehubnx::DebridProviderKind::TorBox);
     assert(again[0].debridId == "297464");
 
     removeAll(root);
 }
 
 static void testLegacyQueueLoadsAsTorrentSource() {
-    const std::string root = "/tmp/pipensx-manager-legacy-test";
+    const std::string root = "/tmp/gamehubnx-manager-legacy-test";
     removeAll(root);
     makeDir(root);
     makeDir(root + "/torrents");
@@ -212,18 +212,18 @@ static void testLegacyQueueLoadsAsTorrentSource() {
         "e";
     writeFile(root + "/queue.bencode", state);
 
-    pipensx::DownloadManager manager(root, false);
+    gamehubnx::DownloadManager manager(root, false);
     auto tasks = manager.snapshot();
     assert(tasks.size() == 1);
-    assert(tasks[0].source == pipensx::TaskSource::Torrent);
+    assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
     assert(tasks[0].debridId.empty());
-    assert(tasks[0].status == pipensx::DownloadStatus::Queued);
+    assert(tasks[0].status == gamehubnx::DownloadStatus::Queued);
 
     removeAll(root);
 }
 
 static void testV4TorrentActionsRemainTriState() {
-    const std::string root = "/tmp/pipensx-manager-v4-actions-test";
+    const std::string root = "/tmp/gamehubnx-manager-v4-actions-test";
     removeAll(root);
     makeDir(root);
     makeDir(root + "/torrents");
@@ -232,7 +232,7 @@ static void testV4TorrentActionsRemainTriState() {
     const std::string torrentPath = makeTorrent(
         root + "/torrents", "package.nsp", "payload");
     const std::string selection(
-        1, static_cast<char>(pipensx::FileAction::Install));
+        1, static_cast<char>(gamehubnx::FileAction::Install));
     const std::string state =
         "d5:tasksl"
         "d"
@@ -254,19 +254,19 @@ static void testV4TorrentActionsRemainTriState() {
     writeFile(root + "/queue.bencode", state);
 
     {
-        pipensx::DownloadManager manager(root, false);
+        gamehubnx::DownloadManager manager(root, false);
         const auto tasks = manager.snapshot();
         assert(tasks.size() == 1);
-        assert(tasks[0].source == pipensx::TaskSource::Torrent);
+        assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
         assert(tasks[0].fileSelection.size() == 1);
         assert(tasks[0].fileSelection[0] ==
-               static_cast<uint8_t>(pipensx::FileAction::Install));
+               static_cast<uint8_t>(gamehubnx::FileAction::Install));
     }
     removeAll(root);
 }
 
 static void testTorrentTaskWithEmptyMetainfoStillErrors() {
-    const std::string root = "/tmp/pipensx-manager-empty-metainfo-test";
+    const std::string root = "/tmp/gamehubnx-manager-empty-metainfo-test";
     removeAll(root);
     makeDir(root);
     makeDir(root + "/downloads");
@@ -297,27 +297,27 @@ static void testTorrentTaskWithEmptyMetainfoStillErrors() {
         "e";
     writeFile(root + "/queue.bencode", state);
 
-    pipensx::DownloadManager manager(root, false);
+    gamehubnx::DownloadManager manager(root, false);
     auto tasks = manager.snapshot();
     assert(tasks.size() == 1);
-    assert(tasks[0].source == pipensx::TaskSource::Torrent);
-    assert(tasks[0].status == pipensx::DownloadStatus::Error);
+    assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
+    assert(tasks[0].status == gamehubnx::DownloadStatus::Error);
 
     removeAll(root);
 }
 
 static void testImportDebridCatalogTask() {
-    const std::string root = "/tmp/pipensx-manager-debrid-import";
+    const std::string root = "/tmp/gamehubnx-manager-debrid-import";
     removeAll(root);
 
-    pipensx::DownloadManager manager(root, false);
-    pipensx::DebridImport import;
+    gamehubnx::DownloadManager manager(root, false);
+    gamehubnx::DebridImport import;
     import.infoHash = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
     import.name = "Example Game";
     import.totalBytes = 1000000;
     import.debridId = "297464";
-    import.provider = pipensx::DebridProviderKind::TorBox;
-    import.mode = pipensx::TransferMode::StreamInstall;
+    import.provider = gamehubnx::DebridProviderKind::TorBox;
+    import.mode = gamehubnx::TransferMode::StreamInstall;
     import.fileSelection = {1, 0};
     import.packageCount = 1;
 
@@ -326,10 +326,10 @@ static void testImportDebridCatalogTask() {
     assert(taskId == import.infoHash);
     auto tasks = manager.snapshot();
     assert(tasks.size() == 1);
-    assert(tasks[0].source == pipensx::TaskSource::Debrid);
+    assert(tasks[0].source == gamehubnx::TaskSource::Debrid);
     assert(tasks[0].debridId == "297464");
     assert(tasks[0].metainfoPath.empty());
-    assert(tasks[0].status == pipensx::DownloadStatus::Queued);
+    assert(tasks[0].status == gamehubnx::DownloadStatus::Queued);
     assert(tasks[0].packageCount == 1);
 
     // Duplicate rejected by info hash.
@@ -340,16 +340,16 @@ static void testImportDebridCatalogTask() {
 }
 
 static void testImportDebridRejectsEmptySelection() {
-    const std::string root = "/tmp/pipensx-manager-debrid-empty-selection";
+    const std::string root = "/tmp/gamehubnx-manager-debrid-empty-selection";
     removeAll(root);
 
-    pipensx::DownloadManager manager(root, false);
-    pipensx::DebridImport import;
+    gamehubnx::DownloadManager manager(root, false);
+    gamehubnx::DebridImport import;
     import.infoHash = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
     import.name = "Example Game";
     import.fileSelection = {
-        static_cast<uint8_t>(pipensx::FileAction::Skip),
-        static_cast<uint8_t>(pipensx::FileAction::Skip),
+        static_cast<uint8_t>(gamehubnx::FileAction::Skip),
+        static_cast<uint8_t>(gamehubnx::FileAction::Skip),
     };
 
     std::string taskId, error;
@@ -361,7 +361,7 @@ static void testImportDebridRejectsEmptySelection() {
 }
 
 static void testImportDebridPickerCopiesTorrent() {
-    const std::string root = "/tmp/pipensx-manager-debrid-picker";
+    const std::string root = "/tmp/gamehubnx-manager-debrid-picker";
     removeAll(root);
     makeDir(root);
     makeDir(root + "/src");
@@ -370,20 +370,20 @@ static void testImportDebridPickerCopiesTorrent() {
         root + "/src", "example.bin", "payload");
 
     std::string error;
-    pipensx::TorrentPreview preview;
+    gamehubnx::TorrentPreview preview;
     assert(DownloadManager::previewTorrent(torrentPath, preview, error));
     assert(preview.infoHash.size() == 40);
 
     // DebridImport with torrentPath set, debridId empty.
-    pipensx::DownloadManager manager(root + "/app", false);
-    pipensx::DebridImport import;
+    gamehubnx::DownloadManager manager(root + "/app", false);
+    gamehubnx::DebridImport import;
     import.infoHash = preview.infoHash;
     import.name = preview.name;
     import.totalBytes = preview.totalBytes;
     import.debridId = "";
-    import.provider = pipensx::DebridProviderKind::TorBox;
+    import.provider = gamehubnx::DebridProviderKind::TorBox;
     import.torrentPath = torrentPath;
-    import.mode = pipensx::TransferMode::DownloadOnly;
+    import.mode = gamehubnx::TransferMode::DownloadOnly;
 
     std::string taskId;
     assert(manager.importDebrid(import, taskId, error));
@@ -409,56 +409,56 @@ static void testTaskEtaUsesFreshProgressDomain() {
     task.totalBytes = 3500;
     task.speedBytesPerSecond = 1000;
     task.downloadProgressUpdatedAtMs = 1000;
-    auto eta = pipensx::taskEtaSeconds(task, 1000);
+    auto eta = gamehubnx::taskEtaSeconds(task, 1000);
     assert(eta && *eta == 3);
 
-    assert(!pipensx::taskEtaSeconds(
-        task, 1001 + pipensx::kProgressRateStaleMs));
-    pipensx::updateTaskDownloadProgress(task, 1500, 5000);
-    eta = pipensx::taskEtaSeconds(task, 5000);
+    assert(!gamehubnx::taskEtaSeconds(
+        task, 1001 + gamehubnx::kProgressRateStaleMs));
+    gamehubnx::updateTaskDownloadProgress(task, 1500, 5000);
+    eta = gamehubnx::taskEtaSeconds(task, 5000);
     assert(eta && *eta == 2);
     // Payload activity keeps ETA fresh before the next piece completes.
-    pipensx::updateTaskDownloadProgress(task, 1500, 8000);
-    eta = pipensx::taskEtaSeconds(task, 8000);
+    gamehubnx::updateTaskDownloadProgress(task, 1500, 8000);
+    eta = gamehubnx::taskEtaSeconds(task, 8000);
     assert(eta && *eta == 2);
 
     task.speedBytesPerSecond = 0;
-    assert(!pipensx::taskEtaSeconds(task, 1000));
+    assert(!gamehubnx::taskEtaSeconds(task, 1000));
 
     task.status = DownloadStatus::Queued;
-    pipensx::updateTaskInstallProgress(
+    gamehubnx::updateTaskInstallProgress(
         task, 100, 2100, DownloadStatus::Installing, 1000);
-    assert(!pipensx::taskEtaSeconds(task, 1000));
+    assert(!gamehubnx::taskEtaSeconds(task, 1000));
 
     // A partial window is not enough to publish a noisy rate.
-    pipensx::updateTaskInstallProgress(
+    gamehubnx::updateTaskInstallProgress(
         task, 600, 2100, DownloadStatus::Installing, 1500);
-    assert(!pipensx::taskEtaSeconds(task, 1500));
+    assert(!gamehubnx::taskEtaSeconds(task, 1500));
 
-    pipensx::updateTaskInstallProgress(
+    gamehubnx::updateTaskInstallProgress(
         task, 1100, 2100, DownloadStatus::Installing, 2000);
-    assert(pipensx::currentInstallSpeed(task, 2000) == 1000);
-    eta = pipensx::taskEtaSeconds(task, 2000);
+    assert(gamehubnx::currentInstallSpeed(task, 2000) == 1000);
+    eta = gamehubnx::taskEtaSeconds(task, 2000);
     assert(eta && *eta == 1);
 
-    assert(pipensx::currentInstallSpeed(
-               task, 2000 + pipensx::kProgressRateStaleMs) == 1000);
-    assert(!pipensx::taskEtaSeconds(
-        task, 2001 + pipensx::kProgressRateStaleMs));
+    assert(gamehubnx::currentInstallSpeed(
+               task, 2000 + gamehubnx::kProgressRateStaleMs) == 1000);
+    assert(!gamehubnx::taskEtaSeconds(
+        task, 2001 + gamehubnx::kProgressRateStaleMs));
 
-    pipensx::updateTaskInstallProgress(
+    gamehubnx::updateTaskInstallProgress(
         task, 2100, 2100, DownloadStatus::Committing, 6000);
-    assert(!pipensx::taskEtaSeconds(task, 6000));
+    assert(!gamehubnx::taskEtaSeconds(task, 6000));
     assert(task.installSpeedBytesPerSecond == 0);
 
-    pipensx::updateTaskInstallProgress(
+    gamehubnx::updateTaskInstallProgress(
         task, 0, 0, DownloadStatus::Installing, 7000);
-    assert(!pipensx::taskEtaSeconds(task, 7000));
+    assert(!gamehubnx::taskEtaSeconds(task, 7000));
 }
 
 int main() {
     testTaskEtaUsesFreshProgressDomain();
-    char rootTemplate[] = "/tmp/pipensx-manager-XXXXXX";
+    char rootTemplate[] = "/tmp/gamehubnx-manager-XXXXXX";
     char* root = mkdtemp(rootTemplate);
     assert(root);
     std::string source = makeTorrent(root, "package.nsp", "test payload");
@@ -482,7 +482,7 @@ int main() {
     {
         DownloadManager manager(appRoot, false);
         assert(!manager.hasActiveTransfer());
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         assert(DownloadManager::previewTorrent(source, preview, error));
         assert(preview.name == "package.nsp");
         assert(preview.totalBytes == 12);
@@ -497,11 +497,11 @@ int main() {
         assert(tasks[0].status == DownloadStatus::Queued);
         assert(tasks[0].mode == TransferMode::StreamInstall);
         assert(tasks[0].packageCount == 1);
-        pipensx::TaskFileManifest manifest;
-        assert(pipensx::loadTaskFileManifest(appRoot, taskId, manifest, error));
+        gamehubnx::TaskFileManifest manifest;
+        assert(gamehubnx::loadTaskFileManifest(appRoot, taskId, manifest, error));
         assert(manifest.files.size() == 1);
         assert(manifest.files[0].action ==
-               pipensx::TaskFileAction::Install);
+               gamehubnx::TaskFileAction::Install);
         // Fresh import into an empty data directory arms an all-zero trusted
         // bitfield (12-byte payload = 1 piece = 1 byte).
         assert(tasks[0].resumeBitfield == std::vector<uint8_t>(1, 0));
@@ -610,7 +610,7 @@ int main() {
         {
             DownloadManager createDirs(legacyRoot, false);
         }
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         assert(DownloadManager::previewTorrent(source, preview, error));
         std::string metainfoPath =
             legacyRoot + "/torrents/" + preview.infoHash + ".torrent";
@@ -668,7 +668,7 @@ int main() {
         {
             DownloadManager createDirs(v5Root, false);
         }
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         assert(DownloadManager::previewTorrent(source, preview, error));
         std::string metainfoPath =
             v5Root + "/torrents/" + preview.infoHash + ".torrent";
@@ -778,7 +778,7 @@ int main() {
         {
             DownloadManager createDirs(progressRoot, false);
         }
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         assert(DownloadManager::previewTorrent(source, preview, error));
         makeDir(progressRoot + "/torrents");
         makeDir(progressRoot + "/downloads");
@@ -832,7 +832,7 @@ int main() {
         assert(tasks[0].piecesDone == 1);
         assert(tasks[0].piecesTotal == 1);
         assert((tasks[0].resumeBitfield == std::vector<uint8_t>{0x80}));
-        const auto progress = pipensx::downloadProgressBytes(tasks[0]);
+        const auto progress = gamehubnx::downloadProgressBytes(tasks[0]);
         assert(progress.first == 7 && progress.second == 12);
 
         // Round-trip through save so a later manager keeps the same bar.
@@ -903,17 +903,17 @@ int main() {
     {
         // The scheduler's claim rule: a download-only task passes a
         // stream-install task blocked on the install token.
-        pipensx::DownloadTask stream;
+        gamehubnx::DownloadTask stream;
         stream.status = DownloadStatus::Queued;
         stream.mode = TransferMode::StreamInstall;
-        assert(pipensx::taskClaimableUnderInstallToken(stream, false));
-        assert(!pipensx::taskClaimableUnderInstallToken(stream, true));
-        pipensx::DownloadTask plain = stream;
+        assert(gamehubnx::taskClaimableUnderInstallToken(stream, false));
+        assert(!gamehubnx::taskClaimableUnderInstallToken(stream, true));
+        gamehubnx::DownloadTask plain = stream;
         plain.mode = TransferMode::DownloadOnly;
-        assert(pipensx::taskClaimableUnderInstallToken(plain, true));
-        pipensx::DownloadTask finished = plain;
+        assert(gamehubnx::taskClaimableUnderInstallToken(plain, true));
+        gamehubnx::DownloadTask finished = plain;
         finished.status = DownloadStatus::Completed;
-        assert(!pipensx::taskClaimableUnderInstallToken(finished, false));
+        assert(!gamehubnx::taskClaimableUnderInstallToken(finished, false));
     }
 
     {
@@ -1052,7 +1052,7 @@ int main() {
 
     // --- Torrenting gate: a torrent task is refused while torrenting is off ---
     {
-        char gateTemplate[] = "/tmp/pipensx-gate-XXXXXX";
+        char gateTemplate[] = "/tmp/gamehubnx-gate-XXXXXX";
         char* gateRoot = mkdtemp(gateTemplate);
         assert(gateRoot);
 

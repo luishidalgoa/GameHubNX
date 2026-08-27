@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.13)
 
-# PIPENSX_GOLDEN=ON builds the PC golden-screenshot runner (SDL2 desktop,
+# GAMEHUBNX_GOLDEN=ON builds the PC golden-screenshot runner (SDL2 desktop,
 # docs/plans/UI_PLAN.md F4) instead of the Switch homebrew. Use a separate
 # build directory.
 # SDL2 (not GLFW): the vendored borealis GLFWInputManager misses the 5-arg
 # sendRumble override and does not compile; the SDL backend is complete.
-option(PIPENSX_GOLDEN
+option(GAMEHUBNX_GOLDEN
     "Build the PC golden-screenshot runner instead of the Switch app" OFF)
-set(PIPENSX_CATALOG_SNAPSHOT
+set(GAMEHUBNX_CATALOG_SNAPSHOT
     "${CMAKE_CURRENT_SOURCE_DIR}/resources/catalog/switch_games.json"
     CACHE FILEPATH "Bundled Langegen catalog snapshot for offline first launch")
-set(PIPENSX_METADATA_INDEX
+set(GAMEHUBNX_METADATA_INDEX
     "${CMAKE_CURRENT_SOURCE_DIR}/resources/catalog/game_metadata_index.json"
     CACHE FILEPATH "Bundled game metadata index snapshot for offline first launch")
 
 set(BOREALIS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/vendor/borealis/library)
-if (PIPENSX_GOLDEN)
+if (GAMEHUBNX_GOLDEN)
     set(PLATFORM_DESKTOP ON CACHE BOOL "" FORCE)
     set(PLATFORM_SWITCH OFF CACHE BOOL "" FORCE)
     set(USE_DEKO3D OFF CACHE BOOL "" FORCE)
@@ -42,8 +42,8 @@ set(BRLS_UNITY_BUILD OFF CACHE BOOL "" FORCE)
 include(${BOREALIS_LIBRARY}/cmake/commonOption.cmake)
 include(${BOREALIS_LIBRARY}/cmake/toolchain.cmake)
 
-set(PIPENSX_VERSION "1.0.0" CACHE STRING "pipensx release version")
-project(pipensx VERSION ${PIPENSX_VERSION} LANGUAGES C CXX)
+set(GAMEHUBNX_VERSION "1.0.0" CACHE STRING "gamehubnx release version")
+project(gamehubnx VERSION ${GAMEHUBNX_VERSION} LANGUAGES C CXX)
 
 # devkitA64 defaults Release to "-g -O2": the debug info balloons the ELF to
 # ~90 MB and slows every compile and link, while elf2nro strips it from the
@@ -55,21 +55,21 @@ project(pipensx VERSION ${PIPENSX_VERSION} LANGUAGES C CXX)
 # nada por ello --elf2nro sigue tirando la informacion al hacer el .nro-- y el
 # .elf que guarda el CI se vuelve util con addr2line.
 #
-# Se puede apagar con -DPIPENSX_SYMBOLS=OFF si alguna vez estorba.
-option(PIPENSX_SYMBOLS "Tablas de linea en el ELF de Switch (-g1)" ON)
+# Se puede apagar con -DGAMEHUBNX_SYMBOLS=OFF si alguna vez estorba.
+option(GAMEHUBNX_SYMBOLS "Tablas de linea en el ELF de Switch (-g1)" ON)
 # Build de desarrollo: comprueba si hay release nueva pero no se ofrece a
 # instalarla. Lo enciende el CI para sus artefactos, que se identifican con la
 # version por defecto y a los que cualquier release publicada les parece mas
 # nueva -- probar un build antes de publicarlo acababa con la app proponiendo
 # volver atras.
-option(PIPENSX_DEV_BUILD "Marcar el binario como build de desarrollo" OFF)
+option(GAMEHUBNX_DEV_BUILD "Marcar el binario como build de desarrollo" OFF)
 if (PLATFORM_SWITCH)
-    set(PIPENSX_DEBUG_FLAG "")
-    if (PIPENSX_SYMBOLS)
-        set(PIPENSX_DEBUG_FLAG " -g1")
+    set(GAMEHUBNX_DEBUG_FLAG "")
+    if (GAMEHUBNX_SYMBOLS)
+        set(GAMEHUBNX_DEBUG_FLAG " -g1")
     endif ()
-    set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG${PIPENSX_DEBUG_FLAG}")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG${PIPENSX_DEBUG_FLAG}")
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG${GAMEHUBNX_DEBUG_FLAG}")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG${GAMEHUBNX_DEBUG_FLAG}")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif ()
 
@@ -89,17 +89,17 @@ file(GLOB ZSTD_COMMON_SOURCES CONFIGURE_DEPENDS
 file(GLOB ZSTD_DECOMPRESS_SOURCES CONFIGURE_DEPENDS
     vendor/zstd/lib/decompress/*.c
 )
-add_library(pipensx_zstd STATIC
+add_library(gamehubnx_zstd STATIC
     ${ZSTD_COMMON_SOURCES}
     ${ZSTD_DECOMPRESS_SOURCES}
 )
-target_include_directories(pipensx_zstd PUBLIC
+target_include_directories(gamehubnx_zstd PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor/zstd/lib
 )
 # ZSTD_DISABLE_ASM: the source glob only picks up *.c, so the x86-64 BMI2
 # asm loops (huf_decompress_amd64.S) are never assembled; without this the
 # PC golden build fails to link. No effect on the aarch64 Switch build.
-target_compile_definitions(pipensx_zstd PRIVATE ZSTD_MULTITHREAD=0 ZSTD_DISABLE_ASM)
+target_compile_definitions(gamehubnx_zstd PRIVATE ZSTD_MULTITHREAD=0 ZSTD_DISABLE_ASM)
 
 # Public-domain 7z ANSI-C decoder (LZMA SDK) for port archive extraction.
 file(GLOB LZMA_7Z_SOURCES CONFIGURE_DEPENDS
@@ -123,18 +123,18 @@ file(GLOB LZMA_7Z_SOURCES CONFIGURE_DEPENDS
     vendor/lzma/Ppmd7.c
     vendor/lzma/Ppmd7Dec.c
 )
-add_library(pipensx_lzma STATIC ${LZMA_7Z_SOURCES})
-target_include_directories(pipensx_lzma PUBLIC
+add_library(gamehubnx_lzma STATIC ${LZMA_7Z_SOURCES})
+target_include_directories(gamehubnx_lzma PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor/lzma
 )
-target_compile_definitions(pipensx_lzma PRIVATE Z7_EXTRACT_ONLY Z7_PPMD_SUPPORT)
+target_compile_definitions(gamehubnx_lzma PRIVATE Z7_EXTRACT_ONLY Z7_PPMD_SUPPORT)
 
 # Vendored libutp (BitTorrent reference μTP/BEP-29). C++ with an extern "C"
 # API (utp.h), linked into the C core for the TCP→μTP dial fallback. Same
-# vendoring posture as pipensx_zstd and vendor/dht. POSIX selects the BSD
+# vendoring posture as gamehubnx_zstd and vendor/dht. POSIX selects the BSD
 # sockets + inet_ntop paths (correct for both Linux and libnx/aarch64);
 # -fno-exceptions/-fno-rtti/-fpermissive/-Wno-sign-compare mirror upstream.
-add_library(pipensx_utp STATIC
+add_library(gamehubnx_utp STATIC
     vendor/libutp/utp_internal.cpp
     vendor/libutp/utp_utils.cpp
     vendor/libutp/utp_hash.cpp
@@ -142,14 +142,14 @@ add_library(pipensx_utp STATIC
     vendor/libutp/utp_api.cpp
     vendor/libutp/utp_packedsockaddr.cpp
 )
-target_include_directories(pipensx_utp PUBLIC
+target_include_directories(gamehubnx_utp PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libutp
 )
 # NDEBUG: libutp guards internal invariants with assert(); a homebrew torrent
 # client must never abort on one. Combined with the registered UTP_GET_UDP_MTU
 # callback (torrent.c) this also sidesteps the mtu_reset ceiling assert.
-target_compile_definitions(pipensx_utp PRIVATE POSIX NDEBUG)
-target_compile_options(pipensx_utp PRIVATE
+target_compile_definitions(gamehubnx_utp PRIVATE POSIX NDEBUG)
+target_compile_options(gamehubnx_utp PRIVATE
     -fpermissive -fno-exceptions -fno-rtti -Wno-sign-compare
 )
 
@@ -226,16 +226,16 @@ set(UI_SOURCES
     src/ui/settings/bug_report_view.cpp
 )
 
-if (NOT PIPENSX_GOLDEN)
+if (NOT GAMEHUBNX_GOLDEN)
 
-program_target(pipensx_updater
+program_target(gamehubnx_updater
     "src/update_helper.c;src/app/update_transaction.c;src/core/sha256.c")
-set_target_properties(pipensx_updater PROPERTIES
+set_target_properties(gamehubnx_updater PROPERTIES
     C_STANDARD 11
 )
-target_include_directories(pipensx_updater PRIVATE src)
-target_compile_definitions(pipensx_updater PRIVATE __SWITCH__)
-target_compile_options(pipensx_updater PRIVATE
+target_include_directories(gamehubnx_updater PRIVATE src)
+target_compile_definitions(gamehubnx_updater PRIVATE __SWITCH__)
+target_compile_options(gamehubnx_updater PRIVATE
     -Wall
     -Wextra
     -ffunction-sections
@@ -246,14 +246,14 @@ target_compile_options(pipensx_updater PRIVATE
 # a daemon that answers the background-download and half-awake hypotheses on
 # hardware. It links neither borealis nor the torrent engine, so it needs its
 # own libnx init - see src/probe/probe_main.c __appInit.
-program_target(pipensx_probe
+program_target(gamehubnx_probe
     "src/probe/probe_main.c;src/probe/probe_report.c")
-set_target_properties(pipensx_probe PROPERTIES
+set_target_properties(gamehubnx_probe PROPERTIES
     C_STANDARD 11
 )
-target_include_directories(pipensx_probe PRIVATE src)
-target_compile_definitions(pipensx_probe PRIVATE __SWITCH__)
-target_compile_options(pipensx_probe PRIVATE
+target_include_directories(gamehubnx_probe PRIVATE src)
+target_compile_definitions(gamehubnx_probe PRIVATE __SWITCH__)
+target_compile_options(gamehubnx_probe PRIVATE
     -Wall
     -Wextra
     -ffunction-sections
@@ -264,22 +264,22 @@ target_compile_options(pipensx_probe PRIVATE
 # home. Skeleton for now - libnx init lifted from the probe plus the app's own
 # HttpServer as the control plane, no engine and no borealis. Kept at C++17
 # like Makefile.pc so the shared sources stay in the stricter dialect.
-set(PIPENSX_DAEMON_HEAP_MB 32 CACHE STRING
+set(GAMEHUBNX_DAEMON_HEAP_MB 32 CACHE STRING
     "Heap ceiling the daemon sysmodule asks the kernel for, in MiB")
-program_target(pipensx_daemon
+program_target(gamehubnx_daemon
     "src/daemon/daemon_main.cpp;src/app/http_server.cpp;src/core/net.c;src/core/util.c")
-set_target_properties(pipensx_daemon PROPERTIES
+set_target_properties(gamehubnx_daemon PROPERTIES
     C_STANDARD 11
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
-target_include_directories(pipensx_daemon PRIVATE src)
-target_compile_definitions(pipensx_daemon PRIVATE
+target_include_directories(gamehubnx_daemon PRIVATE src)
+target_compile_definitions(gamehubnx_daemon PRIVATE
     __SWITCH__
-    PIPENSX_VERSION="${PROJECT_VERSION}"
-    PIPENSX_DAEMON_HEAP_MB=${PIPENSX_DAEMON_HEAP_MB}
+    GAMEHUBNX_VERSION="${PROJECT_VERSION}"
+    GAMEHUBNX_DAEMON_HEAP_MB=${GAMEHUBNX_DAEMON_HEAP_MB}
 )
-target_compile_options(pipensx_daemon PRIVATE
+target_compile_options(gamehubnx_daemon PRIVATE
     -Wall
     -Wextra
     -ffunction-sections
@@ -287,12 +287,12 @@ target_compile_options(pipensx_daemon PRIVATE
 )
 
 # H8 client: a throwaway NRO launched from hbmenu while the probe runs.
-program_target(pipensx_probe_client "tools/probe_client.c")
-set_target_properties(pipensx_probe_client PROPERTIES
+program_target(gamehubnx_probe_client "tools/probe_client.c")
+set_target_properties(gamehubnx_probe_client PROPERTIES
     C_STANDARD 11
 )
-target_compile_definitions(pipensx_probe_client PRIVATE __SWITCH__)
-target_compile_options(pipensx_probe_client PRIVATE -Wall -Wextra)
+target_compile_definitions(gamehubnx_probe_client PRIVATE __SWITCH__)
+target_compile_options(gamehubnx_probe_client PRIVATE -Wall -Wextra)
 
 set(APP_SOURCES
     ${CORE_SOURCES}
@@ -308,13 +308,13 @@ set(APP_SOURCES
     ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c
 )
 
-program_target(pipensx "${APP_SOURCES}")
-set_target_properties(pipensx PROPERTIES
+program_target(gamehubnx "${APP_SOURCES}")
+set_target_properties(gamehubnx PROPERTIES
     C_STANDARD 11
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
-target_include_directories(pipensx PRIVATE
+target_include_directories(gamehubnx PRIVATE
     src
     src/core
     src/platform
@@ -325,24 +325,24 @@ target_include_directories(pipensx PRIVATE
     vendor/libnx-ext/libnx-ext/include
     vendor/libnx-ext/libnx-ipcext/include
 )
-target_compile_definitions(pipensx PRIVATE
+target_compile_definitions(gamehubnx PRIVATE
     __SWITCH__
     USE_MBEDTLS
-    PIPENSX_VERSION="${PROJECT_VERSION}"
-    $<$<BOOL:${PIPENSX_DEV_BUILD}>:PIPENSX_DEV_BUILD>
+    GAMEHUBNX_VERSION="${PROJECT_VERSION}"
+    $<$<BOOL:${GAMEHUBNX_DEV_BUILD}>:GAMEHUBNX_DEV_BUILD>
 )
-target_compile_options(pipensx PRIVATE
+target_compile_options(gamehubnx PRIVATE
     -Wall
     -Wextra
     -Wno-unused-parameter
     -ffunction-sections
     -fdata-sections
 )
-target_link_libraries(pipensx PRIVATE
+target_link_libraries(gamehubnx PRIVATE
     borealis
-    pipensx_zstd
-    pipensx_lzma
-    pipensx_utp
+    gamehubnx_zstd
+    gamehubnx_lzma
+    gamehubnx_utp
     curl
     mbedtls
     mbedx509
@@ -369,10 +369,10 @@ set(PROBE_EXEFS_DIR ${CMAKE_BINARY_DIR}/probe-exefs)
 set(PROBE_OUT_DIR
     ${CMAKE_BINARY_DIR}/probe/atmosphere/contents/${PROBE_TITLE_ID})
 
-add_custom_target(pipensx_probe_nsp ALL
+add_custom_target(gamehubnx_probe_nsp ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PROBE_EXEFS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PROBE_OUT_DIR}"
-    COMMAND ${NX_ELF2NSO_EXE} pipensx_probe.elf "${PROBE_EXEFS_DIR}/main"
+    COMMAND ${NX_ELF2NSO_EXE} gamehubnx_probe.elf "${PROBE_EXEFS_DIR}/main"
     COMMAND ${NX_NPDMTOOL_EXE}
         "${CMAKE_CURRENT_SOURCE_DIR}/src/probe/probe.json"
         "${PROBE_EXEFS_DIR}/main.npdm"
@@ -380,25 +380,25 @@ add_custom_target(pipensx_probe_nsp ALL
     COMMAND ${CMAKE_COMMAND} -E copy
         "${CMAKE_CURRENT_SOURCE_DIR}/src/probe/toolbox.json"
         "${PROBE_OUT_DIR}/toolbox.json"
-    DEPENDS pipensx_probe "${CMAKE_CURRENT_SOURCE_DIR}/src/probe/probe.json"
+    DEPENDS gamehubnx_probe "${CMAKE_CURRENT_SOURCE_DIR}/src/probe/probe.json"
     BYPRODUCTS "${PROBE_OUT_DIR}/exefs.nsp" "${PROBE_EXEFS_DIR}/main"
         "${PROBE_EXEFS_DIR}/main.npdm"
     VERBATIM
 )
 
-add_custom_target(pipensx_probe_client_nro ALL
+add_custom_target(gamehubnx_probe_client_nro ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/probe/switch"
     COMMAND ${NX_NACPTOOL_EXE}
-        --create "pipensx-probe-client" "${APP_AUTHOR}" "${PROJECT_VERSION}"
-        pipensx_probe_client.nacp
+        --create "gamehubnx-probe-client" "${APP_AUTHOR}" "${PROJECT_VERSION}"
+        gamehubnx_probe_client.nacp
     COMMAND ${NX_ELF2NRO_EXE}
-        pipensx_probe_client.elf
-        "${CMAKE_BINARY_DIR}/probe/switch/pipensx-probe-client.nro"
+        gamehubnx_probe_client.elf
+        "${CMAKE_BINARY_DIR}/probe/switch/gamehubnx-probe-client.nro"
         --icon=${APP_ICON}
-        --nacp=pipensx_probe_client.nacp
-    DEPENDS pipensx_probe_client
-    BYPRODUCTS "${CMAKE_BINARY_DIR}/probe/switch/pipensx-probe-client.nro"
-        pipensx_probe_client.nacp
+        --nacp=gamehubnx_probe_client.nacp
+    DEPENDS gamehubnx_probe_client
+    BYPRODUCTS "${CMAKE_BINARY_DIR}/probe/switch/gamehubnx-probe-client.nro"
+        gamehubnx_probe_client.nacp
     VERBATIM
 )
 
@@ -411,10 +411,10 @@ set(DAEMON_EXEFS_DIR ${CMAKE_BINARY_DIR}/daemon-exefs)
 set(DAEMON_OUT_DIR
     ${CMAKE_BINARY_DIR}/daemon/atmosphere/contents/${DAEMON_TITLE_ID})
 
-add_custom_target(pipensx_daemon_nsp
+add_custom_target(gamehubnx_daemon_nsp
     COMMAND ${CMAKE_COMMAND} -E make_directory "${DAEMON_EXEFS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${DAEMON_OUT_DIR}"
-    COMMAND ${NX_ELF2NSO_EXE} pipensx_daemon.elf "${DAEMON_EXEFS_DIR}/main"
+    COMMAND ${NX_ELF2NSO_EXE} gamehubnx_daemon.elf "${DAEMON_EXEFS_DIR}/main"
     COMMAND ${NX_NPDMTOOL_EXE}
         "${CMAKE_CURRENT_SOURCE_DIR}/src/daemon/daemon.json"
         "${DAEMON_EXEFS_DIR}/main.npdm"
@@ -422,7 +422,7 @@ add_custom_target(pipensx_daemon_nsp
     COMMAND ${CMAKE_COMMAND} -E copy
         "${CMAKE_CURRENT_SOURCE_DIR}/src/daemon/toolbox.json"
         "${DAEMON_OUT_DIR}/toolbox.json"
-    DEPENDS pipensx_daemon "${CMAKE_CURRENT_SOURCE_DIR}/src/daemon/daemon.json"
+    DEPENDS gamehubnx_daemon "${CMAKE_CURRENT_SOURCE_DIR}/src/daemon/daemon.json"
     BYPRODUCTS "${DAEMON_OUT_DIR}/exefs.nsp" "${DAEMON_EXEFS_DIR}/main"
         "${DAEMON_EXEFS_DIR}/main.npdm"
     VERBATIM
@@ -430,18 +430,18 @@ add_custom_target(pipensx_daemon_nsp
 
 file(MAKE_DIRECTORY ${ROMFS_DIR})
 # The helper is chain-loaded by hbloader via envSetNextLoad. hbloader (notably
-# in application-override mode, which pipensx forces) can reject an NRO that
+# in application-override mode, which gamehubnx forces) can reject an NRO that
 # lacks a NACP/asset section and abort with a User Break while loading it, so
 # the helper is built as a complete homebrew NRO with a NACP and icon, exactly
 # like the main app.
 #
 # OJO CON EL NOMBRE: UpdateService lo abre como "romfs:/gamehubnx-updater.nro"
 # (ver el valor por defecto de helperSourcePath en update_service.hpp). Se
-# llamo "pipensx-updater" hasta que el fork cambio de marca y el nombre se
+# llamo "gamehubnx-updater" hasta que el fork cambio de marca y el nombre se
 # quedo atras aqui, asi que el fichero que se empaquetaba no era el que se
 # buscaba: la actualizacion desde la propia app fallaba SIEMPRE con
 # "Unable to create update helper: No such file or directory". El objetivo de
-# enlace sigue siendo pipensx_updater --renombrarlo tocaria mas de lo que
+# enlace sigue siendo gamehubnx_updater --renombrarlo tocaria mas de lo que
 # aporta-- pero lo que acaba en la romfs lleva ya el nombre del fork.
 add_custom_target(sync_update_helper ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${ROMFS_DIR}"
@@ -449,10 +449,10 @@ add_custom_target(sync_update_helper ALL
         --create "gamehubnx-updater" "${APP_AUTHOR}" "${PROJECT_VERSION}"
         gamehubnx_updater.nacp
     COMMAND ${NX_ELF2NRO_EXE}
-        pipensx_updater.elf "${ROMFS_DIR}/gamehubnx-updater.nro"
+        gamehubnx_updater.elf "${ROMFS_DIR}/gamehubnx-updater.nro"
         --icon=${APP_ICON}
         --nacp=gamehubnx_updater.nacp
-    DEPENDS pipensx_updater
+    DEPENDS gamehubnx_updater
     BYPRODUCTS "${ROMFS_DIR}/gamehubnx-updater.nro" gamehubnx_updater.nacp
     VERBATIM
 )
@@ -468,7 +468,7 @@ file(COPY
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor/borealis/resources/i18n/en-US
     DESTINATION ${ROMFS_DIR}/i18n
 )
-# pipensx's own strings, plus a ru/hints.json overriding the borealis button
+# gamehubnx's own strings, plus a ru/hints.json overriding the borealis button
 # hints (the vendored ru locale nests them under the wrong JSON pointer for
 # this fork). A target rather than file(COPY) so editing a translation is
 # picked up by a plain rebuild instead of needing a fresh configure.
@@ -497,16 +497,16 @@ file(COPY
 # ship both the Langegen torrent catalog and the metadata index snapshots for
 # offline first launch.
 file(REMOVE_RECURSE ${ROMFS_DIR}/catalog)
-get_filename_component(PIPENSX_CATALOG_SNAPSHOT_ABS
-    "${PIPENSX_CATALOG_SNAPSHOT}" ABSOLUTE)
-if (NOT EXISTS "${PIPENSX_CATALOG_SNAPSHOT_ABS}")
+get_filename_component(GAMEHUBNX_CATALOG_SNAPSHOT_ABS
+    "${GAMEHUBNX_CATALOG_SNAPSHOT}" ABSOLUTE)
+if (NOT EXISTS "${GAMEHUBNX_CATALOG_SNAPSHOT_ABS}")
     message(FATAL_ERROR
-        "PIPENSX_CATALOG_SNAPSHOT does not exist: ${PIPENSX_CATALOG_SNAPSHOT_ABS}")
+        "GAMEHUBNX_CATALOG_SNAPSHOT does not exist: ${GAMEHUBNX_CATALOG_SNAPSHOT_ABS}")
 endif ()
-set(PIPENSX_NRO_DEPENDS pipensx)
-list(APPEND PIPENSX_NRO_DEPENDS sync_update_helper)
-list(APPEND PIPENSX_NRO_DEPENDS sync_i18n)
-list(APPEND PIPENSX_NRO_DEPENDS sync_web)
+set(GAMEHUBNX_NRO_DEPENDS gamehubnx)
+list(APPEND GAMEHUBNX_NRO_DEPENDS sync_update_helper)
+list(APPEND GAMEHUBNX_NRO_DEPENDS sync_i18n)
+list(APPEND GAMEHUBNX_NRO_DEPENDS sync_web)
 # The two JSON snapshots are ~19 MB — over 80% of the NRO uncompressed — and
 # JSON compresses ~5x, so they ship as zstd frames that the load path
 # decompresses (src/app/snapshot_zstd.cpp). Host zstd is required for the
@@ -523,20 +523,20 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E rm -f "${ROMFS_DIR}/catalog/switch_games.json"
     COMMAND ${ZSTD_EXE} -15 -q -f
         -o "${ROMFS_DIR}/catalog/switch_games.json.zst"
-        "${PIPENSX_CATALOG_SNAPSHOT_ABS}"
-    DEPENDS "${PIPENSX_CATALOG_SNAPSHOT_ABS}"
+        "${GAMEHUBNX_CATALOG_SNAPSHOT_ABS}"
+    DEPENDS "${GAMEHUBNX_CATALOG_SNAPSHOT_ABS}"
     VERBATIM
 )
 add_custom_target(sync_catalog_snapshot ALL
     DEPENDS "${ROMFS_DIR}/catalog/switch_games.json.zst"
 )
-list(APPEND PIPENSX_NRO_DEPENDS sync_catalog_snapshot)
-if (PIPENSX_METADATA_INDEX)
-    get_filename_component(PIPENSX_METADATA_INDEX_ABS
-        "${PIPENSX_METADATA_INDEX}" ABSOLUTE)
-    if (NOT EXISTS "${PIPENSX_METADATA_INDEX_ABS}")
+list(APPEND GAMEHUBNX_NRO_DEPENDS sync_catalog_snapshot)
+if (GAMEHUBNX_METADATA_INDEX)
+    get_filename_component(GAMEHUBNX_METADATA_INDEX_ABS
+        "${GAMEHUBNX_METADATA_INDEX}" ABSOLUTE)
+    if (NOT EXISTS "${GAMEHUBNX_METADATA_INDEX_ABS}")
         message(FATAL_ERROR
-            "PIPENSX_METADATA_INDEX does not exist: ${PIPENSX_METADATA_INDEX_ABS}")
+            "GAMEHUBNX_METADATA_INDEX does not exist: ${GAMEHUBNX_METADATA_INDEX_ABS}")
     endif ()
     add_custom_command(
         OUTPUT "${ROMFS_DIR}/catalog/game_metadata_index.json.zst"
@@ -545,27 +545,27 @@ if (PIPENSX_METADATA_INDEX)
             "${ROMFS_DIR}/catalog/game_metadata_index.json"
         COMMAND ${ZSTD_EXE} -15 -q -f
             -o "${ROMFS_DIR}/catalog/game_metadata_index.json.zst"
-            "${PIPENSX_METADATA_INDEX_ABS}"
-        DEPENDS "${PIPENSX_METADATA_INDEX_ABS}"
+            "${GAMEHUBNX_METADATA_INDEX_ABS}"
+        DEPENDS "${GAMEHUBNX_METADATA_INDEX_ABS}"
         VERBATIM
     )
     add_custom_target(sync_metadata_index ALL
         DEPENDS "${ROMFS_DIR}/catalog/game_metadata_index.json.zst"
     )
-    list(APPEND PIPENSX_NRO_DEPENDS sync_metadata_index)
+    list(APPEND GAMEHUBNX_NRO_DEPENDS sync_metadata_index)
 endif ()
 gen_dksh(${ROMFS_DIR}/shaders)
 
-# El objetivo de enlace sigue llamandose `pipensx` (renombrarlo tocaria decenas
+# El objetivo de enlace sigue llamandose `gamehubnx` (renombrarlo tocaria decenas
 # de target_* sin que se note nada), pero el .nro que sale y el titulo que ve el
 # usuario en el menu homebrew son ya los del fork.
 add_custom_target(gamehubnx.nro ALL
-    DEPENDS ${PIPENSX_NRO_DEPENDS}
+    DEPENDS ${GAMEHUBNX_NRO_DEPENDS}
     COMMAND ${NX_NACPTOOL_EXE}
         --create "${APP_TITLE}" "${APP_AUTHOR}" "${PROJECT_VERSION}"
         gamehubnx.nacp
     COMMAND ${NX_ELF2NRO_EXE}
-        pipensx.elf gamehubnx.nro
+        gamehubnx.elf gamehubnx.nro
         --icon=${APP_ICON}
         --nacp=gamehubnx.nacp
         --romfsdir=${ROMFS_DIR}
@@ -573,7 +573,7 @@ add_custom_target(gamehubnx.nro ALL
     VERBATIM
 )
 
-else () # PIPENSX_GOLDEN
+else () # GAMEHUBNX_GOLDEN
 
 find_package(CURL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -605,7 +605,7 @@ target_include_directories(golden_runner PRIVATE
 )
 target_compile_definitions(golden_runner PRIVATE
     _GNU_SOURCE
-    PIPENSX_VERSION="${PROJECT_VERSION}"
+    GAMEHUBNX_VERSION="${PROJECT_VERSION}"
 )
 target_compile_options(golden_runner PRIVATE
     -Wall
@@ -614,9 +614,9 @@ target_compile_options(golden_runner PRIVATE
 )
 target_link_libraries(golden_runner PRIVATE
     borealis
-    pipensx_zstd
-    pipensx_lzma
-    pipensx_utp
+    gamehubnx_zstd
+    gamehubnx_lzma
+    gamehubnx_utp
     CURL::libcurl
     ZLIB::ZLIB
     crypto
@@ -629,7 +629,7 @@ file(COPY
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor/borealis/resources
     DESTINATION ${CMAKE_BINARY_DIR}
 )
-# Layered on top: without en-US/pipensx.json the runner renders raw key names
+# Layered on top: without en-US/gamehubnx.json the runner renders raw key names
 # and every golden baseline diffs.
 add_custom_target(sync_i18n ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory

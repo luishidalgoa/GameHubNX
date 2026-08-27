@@ -63,7 +63,7 @@ void log_init(const char *path) {
     g_logfile = fopen(path, "a+");
     if (g_logfile) {
         setvbuf(g_logfile, NULL, _IOFBF, 64 * 1024);
-        fprintf(g_logfile, "=== pipensx log started ===\n");
+        fprintf(g_logfile, "=== gamehubnx log started ===\n");
         fflush(g_logfile);
         g_log_flush_ms = now_ms();
     }
@@ -116,7 +116,7 @@ int log_clear(void) {
     int ok = fflush(g_logfile) == 0 && fd >= 0 && ftruncate(fd, 0) == 0;
     if (ok) {
         rewind(g_logfile);
-        ok = fprintf(g_logfile, "=== pipensx log cleared ===\n") > 0 &&
+        ok = fprintf(g_logfile, "=== gamehubnx log cleared ===\n") > 0 &&
              fflush(g_logfile) == 0;
         g_log_flush_ms = now_ms();
     }

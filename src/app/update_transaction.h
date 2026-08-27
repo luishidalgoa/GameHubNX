@@ -1,5 +1,5 @@
-#ifndef PIPENSX_UPDATE_TRANSACTION_H
-#define PIPENSX_UPDATE_TRANSACTION_H
+#ifndef GAMEHUBNX_UPDATE_TRANSACTION_H
+#define GAMEHUBNX_UPDATE_TRANSACTION_H
 
 #include <stdbool.h>
 #include <stddef.h>

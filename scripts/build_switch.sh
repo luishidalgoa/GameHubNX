@@ -4,12 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-${ROOT}/build-switch}"
 CMAKE_BIN="${CMAKE_BIN:-cmake}"
-PIPENSX_METADATA_INDEX="${PIPENSX_METADATA_INDEX:-${ROOT}/resources/catalog/game_metadata_index.json}"
-PIPENSX_VERSION="${PIPENSX_VERSION:-0.0.0}"
+GAMEHUBNX_METADATA_INDEX="${GAMEHUBNX_METADATA_INDEX:-${ROOT}/resources/catalog/game_metadata_index.json}"
+GAMEHUBNX_VERSION="${GAMEHUBNX_VERSION:-0.0.0}"
 # ON marca el binario como build de desarrollo: comprueba si hay release nueva
 # pero no se ofrece a instalarla. Sin esto, un artefacto del CI se identifica
 # con la version por defecto de arriba y CUALQUIER release le parece mas nueva.
-PIPENSX_DEV_BUILD="${PIPENSX_DEV_BUILD:-OFF}"
+GAMEHUBNX_DEV_BUILD="${GAMEHUBNX_DEV_BUILD:-OFF}"
 
 if [[ -z "${DEVKITPRO:-}" ]]; then
     echo "DEVKITPRO is not set." >&2
@@ -40,9 +40,9 @@ done
 "${CMAKE_BIN}" -S "${ROOT}" -B "${BUILD_DIR}" \
     -DPLATFORM_SWITCH=ON \
     -DUSE_DEKO3D=ON \
-    "-DPIPENSX_VERSION=${PIPENSX_VERSION}" \
-    "-DPIPENSX_DEV_BUILD=${PIPENSX_DEV_BUILD}" \
-    "-DPIPENSX_METADATA_INDEX=${PIPENSX_METADATA_INDEX}" \
+    "-DGAMEHUBNX_VERSION=${GAMEHUBNX_VERSION}" \
+    "-DGAMEHUBNX_DEV_BUILD=${GAMEHUBNX_DEV_BUILD}" \
+    "-DGAMEHUBNX_METADATA_INDEX=${GAMEHUBNX_METADATA_INDEX}" \
     -DCMAKE_BUILD_TYPE=Release
 "${CMAKE_BIN}" --build "${BUILD_DIR}" --target gamehubnx.nro --parallel
 

@@ -30,6 +30,7 @@
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/busy_pulse.hpp"
+#include "ui/common/install_target_dialog.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
@@ -38,7 +39,7 @@
 #include "ui/downloads/details_activity.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // ---------------------------------------------------------------------------
 // Install/status button (O5)
@@ -153,7 +154,7 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
-        registerAction(tr("pipensx/common/cancel"), brls::BUTTON_Y,
+        registerAction(tr("gamehubnx/common/cancel"), brls::BUTTON_Y,
                        [this](brls::View*) {
             if (busy_)
                 cancelled_->store(true);
@@ -163,7 +164,7 @@ public:
         // square ★ button above — this page has room for it where the catalog
         // does not.
         if (favorites_) {
-            registerAction(tr("pipensx/catalog/action_favorite"),
+            registerAction(tr("gamehubnx/catalog/action_favorite"),
                            brls::BUTTON_RT, [this](brls::View*) {
                 onFavorite();
                 return true;
@@ -260,7 +261,7 @@ private:
         primary_->setFontSize(theme::kFontBody);
         primary_->setHeight(64);
         primary_->setMarginTop(16);
-        primary_->setText(tr("pipensx/common/install"));
+        primary_->setText(tr("gamehubnx/common/install"));
         primary_->registerClickAction([this](brls::View*) {
             onPrimary();
             return true;
@@ -276,7 +277,7 @@ private:
             addOns_button_->setFontSize(theme::kFontBody);
             addOns_button_->setHeight(52);
             addOns_button_->setMarginTop(10);
-            addOns_button_->setText(tr("pipensx/detail/addons_button",
+            addOns_button_->setText(tr("gamehubnx/detail/addons_button",
                                        (int)addOns_.size()));
             addOns_button_->registerClickAction([this](brls::View*) {
                 if (onAddOns_)
@@ -291,7 +292,7 @@ private:
         installContract_->setTextColor(theme::textTertiary());
         installContract_->setMarginTop(6);
         installContract_->setSingleLine(false);
-        installContract_->setText(tr("pipensx/detail/smart_install_contract"));
+        installContract_->setText(tr("gamehubnx/detail/smart_install_contract"));
         left->addView(installContract_);
 
         // File selection and the wishlist toggle share one row: a fourth full-width
@@ -305,7 +306,7 @@ private:
         secondary_->setFontSize(theme::kFontSmall);
         secondary_->setGrow(1);
         secondary_->setHeight(56);
-        secondary_->setText(tr("pipensx/common/choose_files"));
+        secondary_->setText(tr("gamehubnx/common/choose_files"));
         secondary_->registerClickAction([this](brls::View*) {
             onSecondary();
             return true;
@@ -343,7 +344,7 @@ private:
         statusLabel_->setFontSize(theme::kFontCaption);
         statusLabel_->setMarginTop(8);
         statusLabel_->setTextColor(theme::accent());
-        statusLabel_->setText(tr("pipensx/detail/install_hint"));
+        statusLabel_->setText(tr("gamehubnx/detail/install_hint"));
         left->addView(statusLabel_);
 
         content->addView(left);
@@ -364,7 +365,7 @@ private:
             shots->setMarginTop(24);
             shots->setMarginBottom(8);
             shots->setTextColor(theme::textSecondary());
-            shots->setText(tr("pipensx/detail/screenshots"));
+            shots->setText(tr("gamehubnx/detail/screenshots"));
             right->addView(shots);
 
             std::string viewerTitle = presentation_.title;
@@ -410,13 +411,13 @@ private:
 
         std::string warn;
         if (!lastFailure_.empty()) {
-            warn = tr("pipensx/detail/last_attempt", lastFailure_);
+            warn = tr("gamehubnx/detail/last_attempt", lastFailure_);
         } else {
             std::string health = badgeForCatalogHealth(entry_);
-            if (!health.empty() && health != tr("pipensx/health/fresh")) {
-                warn = tr("pipensx/detail/catalog_health", health);
+            if (!health.empty() && health != tr("gamehubnx/health/fresh")) {
+                warn = tr("gamehubnx/detail/catalog_health", health);
                 if (!entry_.healthReason.empty())
-                    warn = tr("pipensx/detail/catalog_health_reason", health,
+                    warn = tr("gamehubnx/detail/catalog_health_reason", health,
                               entry_.healthReason);
             }
         }
@@ -434,7 +435,7 @@ private:
         release->setFontSize(theme::kFontCaption);
         release->setMarginTop(16);
         release->setTextColor(theme::textTertiary());
-        release->setText(tr("pipensx/detail/release_line", entry_.title));
+        release->setText(tr("gamehubnx/detail/release_line", entry_.title));
         right->addView(release);
 
         auto* scroll = new brls::ScrollingFrame();
@@ -447,43 +448,43 @@ private:
     void buildFactsTable(brls::Box* right) {
         auto* table = new brls::Box(brls::Axis::COLUMN);
         table->setMarginTop(8);
-        addFactRow(table, tr("pipensx/detail/fact_install_state"),
+        addFactRow(table, tr("gamehubnx/detail/fact_install_state"),
                    installed_ && installed_->contains(titleId_)
-                       ? tr("pipensx/detail/install_state_installed")
-                       : tr("pipensx/detail/install_state_not_installed"));
-        addFactRow(table, tr("pipensx/detail/fact_installed_version"),
+                       ? tr("gamehubnx/detail/install_state_installed")
+                       : tr("gamehubnx/detail/install_state_not_installed"));
+        addFactRow(table, tr("gamehubnx/detail/fact_installed_version"),
                    factVersion(installedVersionForTitle()));
-        addFactRow(table, tr("pipensx/detail/fact_available_version"),
+        addFactRow(table, tr("gamehubnx/detail/fact_available_version"),
                    factVersion(latestVersionForEntry()));
-        addFactRow(table, tr("pipensx/detail/fact_developer"),
+        addFactRow(table, tr("gamehubnx/detail/fact_developer"),
                    presentation_.developer);
-        addFactRow(table, tr("pipensx/detail/fact_publisher"),
+        addFactRow(table, tr("gamehubnx/detail/fact_publisher"),
                    presentation_.publisher);
-        addFactRow(table, tr("pipensx/detail/fact_release"),
+        addFactRow(table, tr("gamehubnx/detail/fact_release"),
                    presentation_.releaseDate);
-        addFactRow(table, tr("pipensx/detail/fact_genre"), presentation_.genre);
+        addFactRow(table, tr("gamehubnx/detail/fact_genre"), presentation_.genre);
         // Region e idiomas solo llegan de la tienda GameHub; addFactRow ya se
         // salta las filas vacias, asi que para cualquier otro catalogo la tabla
         // sale igual que antes.
-        addFactRow(table, tr("pipensx/detail/fact_region"), presentation_.region);
-        addFactRow(table, tr("pipensx/detail/fact_languages"), presentation_.languages);
-        addFactRow(table, tr("pipensx/detail/fact_players"), playersFact_);
-        addFactRow(table, tr("pipensx/detail/fact_multiplayer"),
+        addFactRow(table, tr("gamehubnx/detail/fact_region"), presentation_.region);
+        addFactRow(table, tr("gamehubnx/detail/fact_languages"), presentation_.languages);
+        addFactRow(table, tr("gamehubnx/detail/fact_players"), playersFact_);
+        addFactRow(table, tr("gamehubnx/detail/fact_multiplayer"),
                    presentation_.multiplayer);
         if (preferCatalogNativeText()) {
-            addFactRow(table, tr("pipensx/detail/fact_interface_lang"),
+            addFactRow(table, tr("gamehubnx/detail/fact_interface_lang"),
                        entry_.interfaceLang);
-            addFactRow(table, tr("pipensx/detail/fact_voice_lang"),
+            addFactRow(table, tr("gamehubnx/detail/fact_voice_lang"),
                        entry_.voiceLang);
         }
-        addFactRow(table, tr("pipensx/detail/fact_performance"),
+        addFactRow(table, tr("gamehubnx/detail/fact_performance"),
                    presentation_.performance);
-        addFactRow(table, tr("pipensx/detail/fact_size"),
+        addFactRow(table, tr("gamehubnx/detail/fact_size"),
                    entry_.size ? formatBytes(entry_.size)
-                               : tr("pipensx/common/unknown"));
-        addFactRow(table, tr("pipensx/detail/fact_title_id"), titleId_);
-        addFactRow(table, tr("pipensx/detail/fact_dlc"), dlcFact());
-        addFactRow(table, tr("pipensx/detail/fact_mods"), modsFact());
+                               : tr("gamehubnx/common/unknown"));
+        addFactRow(table, tr("gamehubnx/detail/fact_title_id"), titleId_);
+        addFactRow(table, tr("gamehubnx/detail/fact_dlc"), dlcFact());
+        addFactRow(table, tr("gamehubnx/detail/fact_mods"), modsFact());
         right->addView(table);
     }
 
@@ -502,7 +503,7 @@ private:
     /// salio, sin actualizar. Se dice con palabras.
     static std::string factVersion(const std::string& decimal) {
         const std::string text = formatTitleVersion(decimal);
-        return text == "0.0.0" ? tr("pipensx/detail/version_base") : text;
+        return text == "0.0.0" ? tr("gamehubnx/detail/version_base") : text;
     }
 
     std::string dlcFact() const {
@@ -522,16 +523,16 @@ private:
 
         if (disponibles == 0) {
             if (puesto)
-                return tr("pipensx/detail/dlc_installed", instalados);
+                return tr("gamehubnx/detail/dlc_installed", instalados);
             // Con el catalogo completo delante, cero DLC es un dato: se dice.
             // Sin el, callarse es lo honesto -- la fila desaparece, que es como
             // se comportaba antes de saber distinguir los dos casos.
-            return catalogKnowsAddOns_ ? tr("pipensx/detail/dlc_none")
+            return catalogKnowsAddOns_ ? tr("gamehubnx/detail/dlc_none")
                                        : std::string();
         }
         if (!puesto)
-            return tr("pipensx/detail/dlc_available", (int)disponibles);
-        return tr("pipensx/detail/dlc_available_installed",
+            return tr("gamehubnx/detail/dlc_available", (int)disponibles);
+        return tr("gamehubnx/detail/dlc_available_installed",
                   (int)disponibles, instalados);
     }
 
@@ -542,8 +543,8 @@ private:
             return std::string();
         const uint32_t count = mods_->modCount(titleId_);
         if (count == 0)
-            return tr("pipensx/detail/mods_available");
-        return tr("pipensx/detail/mods_count", count);
+            return tr("gamehubnx/detail/mods_available");
+        return tr("gamehubnx/detail/mods_count", count);
     }
 
     void addFactRow(brls::Box* table, const std::string& name,
@@ -574,7 +575,7 @@ private:
             auto* missing = new brls::Label();
             missing->setFontSize(theme::kFontSmall);
             missing->setMarginTop(24);
-            missing->setText(tr("pipensx/detail/no_description"));
+            missing->setText(tr("gamehubnx/detail/no_description"));
             right->addView(missing);
             return;
         }
@@ -590,7 +591,7 @@ private:
             more->setFontSize(theme::kFontSmall);
             more->setTextColor(theme::accent());
             more->setMarginTop(4);
-            more->setText(tr("pipensx/detail/show_more"));
+            more->setText(tr("gamehubnx/detail/show_more"));
             more->registerClickAction([this, desc, more,
                                        text = std::move(text)](brls::View*) {
                 desc->setText(text);
@@ -616,44 +617,44 @@ private:
     static std::string installButtonLabel(const DownloadTask& task) {
         switch (task.status) {
             case DownloadStatus::Queued:
-                return tr("pipensx/detail/status_queued");
+                return tr("gamehubnx/detail/status_queued");
             case DownloadStatus::Fetching:
-                return tr("pipensx/detail/status_fetching",
+                return tr("gamehubnx/detail/status_fetching",
                           percentOf(static_cast<float>(task.fetchProgress)));
             case DownloadStatus::Checking:
-                return tr("pipensx/downloads/status_checking");
+                return tr("gamehubnx/downloads/status_checking");
             case DownloadStatus::Downloading: {
-                return tr("pipensx/detail/status_downloading",
+                return tr("gamehubnx/detail/status_downloading",
                           percentOf(progressOf(task)));
             }
             case DownloadStatus::Installing:
             case DownloadStatus::Committing: {
-                return tr("pipensx/detail/status_installing",
+                return tr("gamehubnx/detail/status_installing",
                           percentOf(installProgressOf(task)));
             }
             case DownloadStatus::Verifying:
-                return tr("pipensx/detail/status_verifying",
+                return tr("gamehubnx/detail/status_verifying",
                           percentOf(progressOf(task)));
             case DownloadStatus::Paused: {
                 int pct = percentOf(progressOf(task));
                 return pct > 0
-                    ? tr("pipensx/detail/status_paused_percent", pct)
-                    : tr("pipensx/detail/status_paused");
+                    ? tr("gamehubnx/detail/status_paused_percent", pct)
+                    : tr("gamehubnx/detail/status_paused");
             }
             case DownloadStatus::Completed:
-                return tr("pipensx/detail/status_downloaded");
+                return tr("gamehubnx/detail/status_downloaded");
             case DownloadStatus::Installed:
-                return tr("pipensx/detail/status_installed");
+                return tr("gamehubnx/detail/status_installed");
             case DownloadStatus::Error: {
                 int pct = percentOf(progressOf(task));
                 return pct > 0
-                    ? tr("pipensx/detail/status_error_percent", pct)
-                    : tr("pipensx/detail/status_error");
+                    ? tr("gamehubnx/detail/status_error_percent", pct)
+                    : tr("gamehubnx/detail/status_error");
             }
             case DownloadStatus::Removing:
-                return tr("pipensx/detail/status_removing");
+                return tr("gamehubnx/detail/status_removing");
         }
-        return tr("pipensx/common/install");
+        return tr("gamehubnx/common/install");
     }
 
     // Fill fraction the status button paints while a task is live: install
@@ -686,8 +687,8 @@ private:
             ? installTargetFor(settings_->get().installLocation)
             : manager_->installTarget();
         sizeMeter_->setHeader(storageMeterHeader(target));
-        const pipensx::StorageSpaceSnapshot storage =
-            pipensx::queryInstallStorageSpace(target, manager_->rootPath());
+        const gamehubnx::StorageSpaceSnapshot storage =
+            gamehubnx::queryInstallStorageSpace(target, manager_->rootPath());
         if (!storage.available) {
             sizeMeter_->setUnavailable();
             return;
@@ -719,7 +720,7 @@ private:
         if (!starred &&
             favorites_->items().size() >= FavoritesService::kMaxFavorites) {
             brls::Application::notify(
-                tr("pipensx/catalog/favorites_full",
+                tr("gamehubnx/catalog/favorites_full",
                    FavoritesService::kMaxFavorites));
             return;
         }
@@ -727,7 +728,7 @@ private:
         favorites_->toggle(entry_.infoHash, presentation_.title, error);
         if (!error.empty()) {
             brls::Application::notify(
-                tr("pipensx/catalog/favorites_failed", error));
+                tr("gamehubnx/catalog/favorites_failed", error));
             return;
         }
         refreshFavoriteButton();
@@ -764,24 +765,24 @@ private:
             bool actionable = task->status == DownloadStatus::Paused ||
                               task->status == DownloadStatus::Error;
             if (actionable) {
-                setTextIfChanged(primary_, tr("pipensx/common/resume"));
+                setTextIfChanged(primary_, tr("gamehubnx/common/resume"));
                 primary_->setProgress(-1.0f);
             } else {
                 setTextIfChanged(primary_, installButtonLabel(*task));
                 primary_->setProgress(progressForButton(*task));
             }
             primary_->setState(brls::ButtonState::ENABLED);
-            setTextIfChanged(secondary_, tr("pipensx/detail/view_download"));
+            setTextIfChanged(secondary_, tr("gamehubnx/detail/view_download"));
             secondary_->setState(brls::ButtonState::ENABLED);
             if (installContract_)
                 installContract_->setVisibility(brls::Visibility::GONE);
             if (task->status == DownloadStatus::Error && !task->error.empty())
                 setTextIfChanged(statusLabel_, task->error);
         } else {
-            setTextIfChanged(primary_, tr("pipensx/common/install"));
+            setTextIfChanged(primary_, tr("gamehubnx/common/install"));
             primary_->setProgress(-1.0f);
             primary_->setState(brls::ButtonState::ENABLED);
-            setTextIfChanged(secondary_, tr("pipensx/detail/install_options"));
+            setTextIfChanged(secondary_, tr("gamehubnx/detail/install_options"));
             secondary_->setState(brls::ButtonState::ENABLED);
             if (installContract_)
                 installContract_->setVisibility(brls::Visibility::VISIBLE);
@@ -795,13 +796,13 @@ private:
                                         installedVersionForTitle()))
                     setTextIfChanged(
                         statusLabel_,
-                        tr("pipensx/detail/update_available_hint", latestXyz));
+                        tr("gamehubnx/detail/update_available_hint", latestXyz));
                 else
                     setTextIfChanged(statusLabel_,
-                                     tr("pipensx/detail/installed_hint"));
+                                     tr("gamehubnx/detail/installed_hint"));
             } else
                 setTextIfChanged(statusLabel_,
-                                 tr("pipensx/detail/install_hint"));
+                                 tr("gamehubnx/detail/install_hint"));
         }
     }
 
@@ -860,9 +861,9 @@ private:
         cancelled_->store(false);
         primary_->setState(brls::ButtonState::DISABLED);
         secondary_->setState(brls::ButtonState::DISABLED);
-        primary_->setText(tr("pipensx/detail/resolving"));
-        statusLabel_->setText(tr("pipensx/detail/finding_peers") +
-                              tr("pipensx/detail/cancel_hint"));
+        primary_->setText(tr("gamehubnx/detail/resolving"));
+        statusLabel_->setText(tr("gamehubnx/detail/finding_peers") +
+                              tr("gamehubnx/detail/cancel_hint"));
 
         auto alive = alive_;
         auto cancelled = cancelled_;
@@ -879,22 +880,22 @@ private:
             std::string err;
             MagnetResolver resolver;
             auto progress = [this, alive, last = std::string()](
-                                const pipensx::MagnetProgress& p) mutable {
+                                const gamehubnx::MagnetProgress& p) mutable {
                 std::string text;
                 switch (p.stage) {
-                    case pipensx::MagnetProgress::Stage::FindingPeers:
-                        text = tr("pipensx/detail/finding_peers");
+                    case gamehubnx::MagnetProgress::Stage::FindingPeers:
+                        text = tr("gamehubnx/detail/finding_peers");
                         break;
-                    case pipensx::MagnetProgress::Stage::Connecting:
-                        text = tr("pipensx/detail/contacting_peer",
+                    case gamehubnx::MagnetProgress::Stage::Connecting:
+                        text = tr("gamehubnx/detail/contacting_peer",
                                   p.peerIndex, p.peerCount);
                         break;
-                    case pipensx::MagnetProgress::Stage::FetchingMetadata:
-                        text = tr("pipensx/detail/fetching_metadata",
+                    case gamehubnx::MagnetProgress::Stage::FetchingMetadata:
+                        text = tr("gamehubnx/detail/fetching_metadata",
                                   p.completedPieces, p.totalPieces);
                         break;
-                    case pipensx::MagnetProgress::Stage::Validating:
-                        text = tr("pipensx/detail/validating");
+                    case gamehubnx::MagnetProgress::Stage::Validating:
+                        text = tr("gamehubnx/detail/validating");
                         break;
                 }
                 if (text == last)
@@ -902,7 +903,7 @@ private:
                 last = text;
                 brls::sync([this, alive, text] {
                     if (alive->load() && busy_)
-                        statusLabel_->setText(text + tr("pipensx/detail/cancel_hint"));
+                        statusLabel_->setText(text + tr("gamehubnx/detail/cancel_hint"));
                 });
             };
             std::vector<uint8_t> initialPeers;
@@ -951,13 +952,25 @@ private:
     // este fork ya no existe, y por ahi se pedia vincular una cuenta ajena para
     // bajar un fichero del servidor de casa.
     void startShopInstall(TransferMode mode, bool forcePicker) {
+        auto alive = alive_;
+        askInstallTarget(manager_->rootPath(),
+                         [this, alive, mode,
+                          forcePicker](install::InstallStorageTarget target) {
+            if (!alive->load())
+                return;
+            installTarget_ = target;
+            beginShopInstall(mode, forcePicker);
+        });
+    }
+
+    void beginShopInstall(TransferMode mode, bool forcePicker) {
         setBusy(true);
         operationMessage_.clear();
         cancelled_->store(false);
         primary_->setState(brls::ButtonState::DISABLED);
         secondary_->setState(brls::ButtonState::DISABLED);
-        primary_->setText(tr("pipensx/detail/resolving"));
-        statusLabel_->setText(tr("pipensx/detail/shop_preparing"));
+        primary_->setText(tr("gamehubnx/detail/resolving"));
+        statusLabel_->setText(tr("gamehubnx/detail/shop_preparing"));
 
         auto alive = alive_;
         auto cancelled = cancelled_;
@@ -984,7 +997,7 @@ private:
                 }
                 if (!ok || info.files.empty()) {
                     operationMessage_ = error.empty()
-                        ? tr("pipensx/detail/shop_unavailable") : error;
+                        ? tr("gamehubnx/detail/shop_unavailable") : error;
                     refreshButtons();
                     brls::Application::notify(operationMessage_);
                     return;
@@ -1020,6 +1033,8 @@ private:
         import.fileSelection = {static_cast<uint8_t>(
             package ? FileAction::Install : FileAction::Download)};
         import.packageCount = package ? 1u : 0u;
+        import.hasInstallTarget = true;
+        import.installTarget = installTarget_;
 
         if (forcePicker) {
             TorrentPreview preview;
@@ -1037,7 +1052,7 @@ private:
             brls::Application::pushActivity(new TorrentSelectionActivity(
                 manager_, "", std::move(preview), import.mode,
                 settings_->get().streamSelection, {}, import,
-                {}, "pipensx/torrent/title_shop"));
+                {}, "gamehubnx/torrent/title_shop"));
             return;
         }
 
@@ -1050,7 +1065,7 @@ private:
             // Clave propia: la de debrid promete que "los metadatos pueden
             // seguir obteniendose", y en una descarga directa no queda nada
             // pendiente -- el nombre y el tamano se supieron antes de encolar.
-            statusLabel_->setText(tr("pipensx/detail/shop_queued"));
+            statusLabel_->setText(tr("gamehubnx/detail/shop_queued"));
             if (onChange_)
                 onChange_();
         }
@@ -1064,8 +1079,8 @@ private:
         cancelled_->store(false);
         primary_->setState(brls::ButtonState::DISABLED);
         secondary_->setState(brls::ButtonState::DISABLED);
-        primary_->setText(tr("pipensx/debrid/submitting"));
-        statusLabel_->setText(tr("pipensx/debrid/sending_magnet"));
+        primary_->setText(tr("gamehubnx/debrid/submitting"));
+        statusLabel_->setText(tr("gamehubnx/debrid/sending_magnet"));
 
         auto alive = alive_;
         auto cancelled = cancelled_;
@@ -1122,7 +1137,7 @@ private:
                     if (!debridId.empty())
                         removeDebridTransferAsync(providerKind, key, debridId);
                     operationMessage_ = error.empty()
-                        ? tr("pipensx/debrid/magnet_rejected") : error;
+                        ? tr("gamehubnx/debrid/magnet_rejected") : error;
                     refreshButtons();
                     brls::Application::notify(operationMessage_);
                     return;
@@ -1180,7 +1195,7 @@ private:
                             ++import.packageCount;
                     }
                     if (import.packageCount == 0) {
-                        operationMessage_ = tr("pipensx/detail/smart_open_options");
+                        operationMessage_ = tr("gamehubnx/detail/smart_open_options");
                         refreshButtons();
                         brls::Application::notify(operationMessage_);
                         brls::Application::pushActivity(new TorrentSelectionActivity(
@@ -1200,7 +1215,7 @@ private:
                     operationMessage_ = importError;
                     brls::Application::notify(importError);
                 } else {
-                    statusLabel_->setText(tr("pipensx/debrid/queued"));
+                    statusLabel_->setText(tr("gamehubnx/debrid/queued"));
                     if (onChange_)
                         onChange_();
                 }
@@ -1211,7 +1226,7 @@ private:
 
     void finishImport(const std::string& path, bool forcePicker,
                       std::vector<uint8_t> initialPeers) {
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         std::string error;
         if (!DownloadManager::previewTorrent(path, preview, error)) {
             diagnostic_error("catalog", "preview", "error=%s",
@@ -1224,7 +1239,7 @@ private:
         }
 
         std::vector<uint8_t> actions = smartInstallMask(preview);
-        const auto sized = pipensx::estimateInstallSpace(
+        const auto sized = gamehubnx::estimateInstallSpace(
             preview, actions, TransferMode::StreamInstall);
         if (!preview.files.empty() && !sized.overflow) {
             installBytes_ = sized.requiredBytes;
@@ -1243,8 +1258,8 @@ private:
         // mode so the user is not left at a dead end.
         if (preview.packageCount == 0) {
             operationMessage_ = preview.cartridgeCount > 0
-                ? tr("pipensx/detail/cartridge_only")
-                : tr("pipensx/detail/no_installable");
+                ? tr("gamehubnx/detail/cartridge_only")
+                : tr("gamehubnx/detail/no_installable");
             refreshButtons();
             brls::Application::notify(operationMessage_);
             openSelection(path, std::move(preview), std::move(initialPeers),
@@ -1263,8 +1278,8 @@ private:
         }
         if (!hasInstall) {
             operationMessage_ = titleInstalled
-                ? tr("pipensx/detail/smart_open_options")
-                : tr("pipensx/detail/no_installable");
+                ? tr("gamehubnx/detail/smart_open_options")
+                : tr("gamehubnx/detail/no_installable");
             refreshButtons();
             brls::Application::notify(operationMessage_);
             openSelection(path, std::move(preview), std::move(initialPeers));
@@ -1280,20 +1295,20 @@ private:
             log_msg("[catalog] imported torrent %s\n", id.c_str());
             if (titleInstalled) {
                 statusLabel_->setText(
-                    tr("pipensx/detail/smart_installing_update", destination));
+                    tr("gamehubnx/detail/smart_installing_update", destination));
                 brls::Application::notify(
-                    tr("pipensx/detail/smart_installing_update", destination));
+                    tr("gamehubnx/detail/smart_installing_update", destination));
             } else {
                 statusLabel_->setText(
-                    tr("pipensx/detail/smart_installing_base", destination));
+                    tr("gamehubnx/detail/smart_installing_base", destination));
                 brls::Application::notify(
-                    tr("pipensx/detail/smart_installing_base", destination));
+                    tr("gamehubnx/detail/smart_installing_base", destination));
             }
             if (onChange_)
                 onChange_();
         } else if (catalogLower(err).find("already in the download manager") !=
                    std::string::npos) {
-            statusLabel_->setText(tr("pipensx/detail/already_in_downloads"));
+            statusLabel_->setText(tr("gamehubnx/detail/already_in_downloads"));
             if (onChange_)
                 onChange_();
         } else {
@@ -1309,7 +1324,7 @@ private:
     }
 
     void openSelection(const std::string& path,
-                       pipensx::TorrentPreview preview,
+                       gamehubnx::TorrentPreview preview,
                        std::vector<uint8_t> initialPeers,
                        TransferMode preferred = TransferMode::StreamInstall) {
         StreamSelection selection = settings_
@@ -1374,6 +1389,9 @@ private:
     ChangeCallback onChange_;
     CloseCallback onClose_;
     std::shared_ptr<std::atomic<bool>> alive_;
+    // Destino elegido en el modal, consumido al construir el DebridImport.
+    install::InstallStorageTarget installTarget_ =
+        install::InstallStorageTarget::SdCard;
     std::shared_ptr<std::atomic<bool>> cancelled_;
     brls::AppletFrame* frame_ = nullptr;
     InstallButton* primary_ = nullptr;
@@ -1391,4 +1409,4 @@ private:
     bool busy_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

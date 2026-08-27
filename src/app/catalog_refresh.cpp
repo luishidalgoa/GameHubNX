@@ -1,6 +1,6 @@
 #include "catalog_refresh.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 CatalogRefreshAdoption adoptCatalogRefresh(
     CatalogService& catalog, GameMetadataService& metadata,
@@ -23,4 +23,4 @@ CatalogRefreshAdoption adoptCatalogRefresh(
     return result;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -30,7 +30,7 @@
 #include "ui/settings/storage_manager.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class SettingsView : public brls::Box {
 public:
@@ -45,16 +45,16 @@ public:
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(24, 34, 24, 34);
 
-        addSection(content, tr("pipensx/settings/section_general"));
+        addSection(content, tr("gamehubnx/settings/section_general"));
         language_ = new brls::SelectorCell();
-        language_->init(tr("pipensx/settings/language"),
-            {tr("pipensx/settings/language_auto"),
-             tr("pipensx/settings/language_en"),
-             tr("pipensx/settings/language_ru"),
-             tr("pipensx/settings/language_pt_br"),
-             tr("pipensx/settings/language_fr"),
-             tr("pipensx/settings/language_es"),
-             tr("pipensx/settings/language_zh")},
+        language_->init(tr("gamehubnx/settings/language"),
+            {tr("gamehubnx/settings/language_auto"),
+             tr("gamehubnx/settings/language_en"),
+             tr("gamehubnx/settings/language_ru"),
+             tr("gamehubnx/settings/language_pt_br"),
+             tr("gamehubnx/settings/language_fr"),
+             tr("gamehubnx/settings/language_es"),
+             tr("gamehubnx/settings/language_zh")},
             languageIndex(settings_->get().language),
             [this](int selected) {
                 AppSettingsData values = settings_->get();
@@ -66,12 +66,12 @@ public:
                 }
                 // Borealis loads translations once, inside Application::init().
                 brls::Application::notify(
-                    tr("pipensx/settings/language_restart"));
+                    tr("gamehubnx/settings/language_restart"));
             });
         content->addView(language_);
 
         checkForUpdates_ = new brls::BooleanCell();
-        checkForUpdates_->init(tr("pipensx/settings/check_updates"),
+        checkForUpdates_->init(tr("gamehubnx/settings/check_updates"),
             settings_->get().checkForUpdatesOnLaunch,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
@@ -81,18 +81,18 @@ public:
                     checkForUpdates_->setOn(previous, false);
             });
         content->addView(checkForUpdates_);
-        updateAction_ = actionCell(tr("pipensx/settings/check_update_now"),
-            tr("pipensx/settings/check_update_detail", PIPENSX_VERSION),
+        updateAction_ = actionCell(tr("gamehubnx/settings/check_update_now"),
+            tr("gamehubnx/settings/check_update_detail", GAMEHUBNX_VERSION),
             [this] { checkForUpdateNow(); });
         if (updater_ && updater_->checkCompleted())
             markUpdateChecked();
         content->addView(updateAction_);
 
-        addSection(content, tr("pipensx/settings/section_catalog"));
+        addSection(content, tr("gamehubnx/settings/section_catalog"));
         catalogFilter_ = new brls::SelectorCell();
-        catalogFilter_->init(tr("pipensx/settings/visible_releases"),
-            {tr("pipensx/settings/filter_all"),
-             tr("pipensx/settings/filter_games")},
+        catalogFilter_->init(tr("gamehubnx/settings/visible_releases"),
+            {tr("gamehubnx/settings/filter_all"),
+             tr("gamehubnx/settings/filter_games")},
             settings_->get().catalogFilter == CatalogFilter::Games ? 1 : 0,
             [this](int selected) {
                 AppSettingsData values = settings_->get();
@@ -106,7 +106,7 @@ public:
         content->addView(catalogFilter_);
 
         refreshCatalog_ = new brls::BooleanCell();
-        refreshCatalog_->init(tr("pipensx/settings/auto_refresh"),
+        refreshCatalog_->init(tr("gamehubnx/settings/auto_refresh"),
             settings_->get().refreshCatalogOnLaunch,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
@@ -117,20 +117,20 @@ public:
             });
         content->addView(refreshCatalog_);
 
-        catalogSource_ = actionCell(tr("pipensx/settings/catalog_source"), "",
+        catalogSource_ = actionCell(tr("gamehubnx/settings/catalog_source"), "",
             [this] { editCatalogSource(); });
         content->addView(catalogSource_);
         refreshCatalogSourceDetail();
 
-        content->addView(actionCell(tr("pipensx/settings/update_now"),
-            tr("pipensx/settings/update_now_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/update_now"),
+            tr("gamehubnx/settings/update_now_detail"),
             [this] { updateAllNow(); }));
 
-        addSection(content, tr("pipensx/settings/section_downloads"));
+        addSection(content, tr("gamehubnx/settings/section_downloads"));
         streamSelection_ = new brls::SelectorCell();
-        streamSelection_->init(tr("pipensx/settings/stream_selection"),
-            {tr("pipensx/settings/stream_all"),
-             tr("pipensx/settings/stream_packages")},
+        streamSelection_->init(tr("gamehubnx/settings/stream_selection"),
+            {tr("gamehubnx/settings/stream_all"),
+             tr("gamehubnx/settings/stream_packages")},
             settings_->get().streamSelection == StreamSelection::PackagesOnly
                 ? 1 : 0,
             [this](int selected) {
@@ -151,9 +151,9 @@ public:
         content->addView(streamSelection_);
 
         installLocation_ = new brls::SelectorCell();
-        installLocation_->init(tr("pipensx/settings/install_location"),
-            {tr("pipensx/settings/install_sd"),
-             tr("pipensx/settings/install_nand")},
+        installLocation_->init(tr("gamehubnx/settings/install_location"),
+            {tr("gamehubnx/settings/install_sd"),
+             tr("gamehubnx/settings/install_nand")},
             settings_->get().installLocation == InstallLocation::SystemMemory
                 ? 1 : 0,
             [this](int selected) {
@@ -175,14 +175,14 @@ public:
         content->addView(installLocation_);
 
         maxActiveDownloads_ = new brls::SelectorCell();
-        maxActiveDownloads_->init(tr("pipensx/settings/max_active_downloads"),
+        maxActiveDownloads_->init(tr("gamehubnx/settings/max_active_downloads"),
             {"1", "2", "3", "4"},
             static_cast<int>(settings_->get().maxActiveDownloads) - 1,
             [this](int selected) {
                 AppSettingsData values = settings_->get();
                 uint32_t previous = values.maxActiveDownloads;
                 values.maxActiveDownloads =
-                    pipensx::clampMaxActiveDownloads(
+                    gamehubnx::clampMaxActiveDownloads(
                         static_cast<uint64_t>(selected) + 1);
                 if (!persist(values, "max_active_downloads")) {
                     maxActiveDownloads_->setSelection(
@@ -196,7 +196,7 @@ public:
         content->addView(maxActiveDownloads_);
 
         showCompleted_ = new brls::BooleanCell();
-        showCompleted_->init(tr("pipensx/settings/show_completed"),
+        showCompleted_->init(tr("gamehubnx/settings/show_completed"),
             settings_->get().showCompletedDownloads,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
@@ -218,9 +218,9 @@ public:
         // compilando sin parchearlo entero.
         refreshDebridLinkDetail();
 
-        addSection(content, tr("pipensx/settings/section_web"));
+        addSection(content, tr("gamehubnx/settings/section_web"));
         webToggle_ = new brls::BooleanCell();
-        webToggle_->init(tr("pipensx/settings/web_toggle"),
+        webToggle_->init(tr("gamehubnx/settings/web_toggle"),
             settings_->get().webServerEnabled,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
@@ -234,7 +234,7 @@ public:
                     if (enabled) {
                         if (!webServer_->start())
                             brls::Application::notify(
-                                tr("pipensx/settings/web_start_failed"));
+                                tr("gamehubnx/settings/web_start_failed"));
                     } else {
                         webServer_->stop();
                     }
@@ -242,24 +242,24 @@ public:
                 updateWebCells();
             });
         content->addView(webToggle_);
-        webAddress_ = actionCell(tr("pipensx/settings/web_address"),
+        webAddress_ = actionCell(tr("gamehubnx/settings/web_address"),
             "", [this] { showWebQr(); });
         content->addView(webAddress_);
-        webPin_ = actionCell(tr("pipensx/settings/web_pin"),
+        webPin_ = actionCell(tr("gamehubnx/settings/web_pin"),
             "", [this] { editWebPin(); });
         content->addView(webPin_);
         updateWebCells();
 
-        content->addView(actionCell(tr("pipensx/settings/advanced"),
-            tr("pipensx/settings/advanced_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/advanced"),
+            tr("gamehubnx/settings/advanced_detail"),
             [this] { openAdvanced(); }));
 
-        content->addView(actionCell(tr("pipensx/settings/storage"),
-            tr("pipensx/settings/storage_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/storage"),
+            tr("gamehubnx/settings/storage_detail"),
             [this] { openStorage(); }));
 
-        content->addView(actionCell(tr("pipensx/settings/network_health"),
-            tr("pipensx/settings/network_health_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/network_health"),
+            tr("gamehubnx/settings/network_health_detail"),
             [this] { openNetworkHealth(); }));
 
         auto* scroll = new brls::ScrollingFrame();
@@ -291,9 +291,9 @@ private:
 
     std::string webAddressText() const {
         if (!settings_->get().webServerEnabled)
-            return tr("pipensx/settings/web_disabled");
+            return tr("gamehubnx/settings/web_disabled");
         std::string url = webCompanionUrl(webServer_, true);
-        return url.empty() ? tr("pipensx/settings/web_address_none") : url;
+        return url.empty() ? tr("gamehubnx/settings/web_address_none") : url;
     }
 
     void updateWebCells() {
@@ -316,9 +316,9 @@ private:
     void editWebPin() {
         brls::Application::getImeManager()->openForText(
             [this](std::string text) {
-                if (!pipensx::isValidWebPin(text)) {
+                if (!gamehubnx::isValidWebPin(text)) {
                     brls::Application::notify(
-                        tr("pipensx/settings/web_pin_invalid"));
+                        tr("gamehubnx/settings/web_pin_invalid"));
                     return;
                 }
                 AppSettingsData values = settings_->get();
@@ -329,8 +329,8 @@ private:
                     webServer_->setPin(settings_->get().webServerPin);
                 updateWebCells();
             },
-            tr("pipensx/settings/web_pin"),
-            tr("pipensx/settings/web_pin_detail"), 8,
+            tr("gamehubnx/settings/web_pin"),
+            tr("gamehubnx/settings/web_pin_detail"), 8,
             settings_->get().webServerPin, brls::KEYBOARD_DISABLE_NONE);
     }
 
@@ -386,16 +386,16 @@ private:
     void updateAllNow() {
         if (refreshInFlight_)
             return;
-        refreshCatalogNow([this] {
-            refreshMetadataNow([this] { refreshModsNow(); });
-        });
+        // Los metadatos ya no se descargan: viajan dentro de la NRO. La
+        // cadena salta ese paso y va del catalogo a los mods.
+        refreshCatalogNow([this] { refreshModsNow(); });
     }
 
     void refreshCatalogNow(std::function<void()> onDone = {}) {
         if (refreshInFlight_)
             return;
         refreshInFlight_ = true;
-        brls::Application::notify(tr("pipensx/catalog/updating_catalog"));
+        brls::Application::notify(tr("gamehubnx/catalog/updating_catalog"));
         auto alive = alive_;
         CatalogService* catalog = catalog_;
         const std::string catalogSourceUrl =
@@ -420,43 +420,8 @@ private:
                 catalog_->adopt(std::move(entries), catalogSourceUrl);
                 recordRefreshTime(true, false);
                 brls::Application::notify(
-                    tr("pipensx/catalog/updated_catalog",
+                    tr("gamehubnx/catalog/updated_catalog",
                        catalog_->entries().size()));
-                if (onDone)
-                    onDone();
-            });
-        });
-    }
-
-    void refreshMetadataNow(std::function<void()> onDone = {}) {
-        if (refreshInFlight_ || !metadata_)
-            return;
-        refreshInFlight_ = true;
-        brls::Application::notify(tr("pipensx/catalog/updating_artwork"));
-        auto alive = alive_;
-        GameMetadataService* metadata = metadata_;
-        brls::async([this, alive, metadata, onDone = std::move(onDone)]()
-                        mutable {
-            MetadataSnapshot snapshot;
-            std::string error;
-            bool ok = metadata->fetchLatest(snapshot, error);
-            brls::sync([this, alive, ok, snapshot = std::move(snapshot),
-                        error = std::move(error),
-                        onDone = std::move(onDone)]() mutable {
-                if (!alive->load())
-                    return;
-                refreshInFlight_ = false;
-                if (!ok) {
-                    diagnostic_error("metadata", "settings_refresh",
-                                     "error=%s", error.c_str());
-                    brls::Application::notify(error);
-                    return;
-                }
-                metadata_->adopt(std::move(snapshot));
-                metadata_->dropMemoryImageCache();
-                recordRefreshTime(false, true);
-                brls::Application::notify(
-                    tr("pipensx/catalog/updated_artwork", metadata_->size()));
                 if (onDone)
                     onDone();
             });
@@ -467,7 +432,7 @@ private:
         if (refreshInFlight_ || !mods_)
             return;
         refreshInFlight_ = true;
-        brls::Application::notify(tr("pipensx/settings/updating_mods"));
+        brls::Application::notify(tr("gamehubnx/settings/updating_mods"));
         auto alive = alive_;
         ModIndexService* mods = mods_;
         brls::async([this, alive, mods, onDone = std::move(onDone)]() mutable {
@@ -489,7 +454,7 @@ private:
                 mods_->adopt(std::move(snapshot));
                 recordRefreshTime(false, false, true);
                 brls::Application::notify(
-                    tr("pipensx/settings/updated_mods", mods_->size()));
+                    tr("gamehubnx/settings/updated_mods", mods_->size()));
                 if (onDone)
                     onDone();
             });
@@ -500,7 +465,7 @@ private:
         if (updateInFlight_ || !updater_)
             return;
         updateInFlight_ = true;
-        updateAction_->setDetailText(tr("pipensx/settings/checking"));
+        updateAction_->setDetailText(tr("gamehubnx/settings/checking"));
         auto alive = alive_;
         UpdateService* updater = updater_;
         updater->checkAsync([this, alive](UpdateCheckResult result) {
@@ -511,7 +476,7 @@ private:
                 markUpdateChecked();
                 if (!result.ok) {
                     updateAction_->setDetailText(
-                        tr("pipensx/settings/check_failed"));
+                        tr("gamehubnx/settings/check_failed"));
                     diagnostic_error("update", "check", "error=%s",
                                      result.error.c_str());
                     brls::Application::notify(result.error);
@@ -519,13 +484,13 @@ private:
                 }
                 if (!result.updateAvailable) {
                     updateAction_->setDetailText(
-                        tr("pipensx/settings/up_to_date"));
+                        tr("gamehubnx/settings/up_to_date"));
                     brls::Application::notify(
-                        tr("pipensx/settings/up_to_date_notify"));
+                        tr("gamehubnx/settings/up_to_date_notify"));
                     return;
                 }
                 updateAction_->setDetailText(
-                    tr("pipensx/settings/version_detail", result.release.version));
+                    tr("gamehubnx/settings/version_detail", result.release.version));
                 confirmInstallUpdate(std::move(result.release));
             });
         });
@@ -533,12 +498,12 @@ private:
 
     void confirmInstallUpdate(ReleaseInfo release) {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/settings/update_available", release.version));
-        dialog->addButton(tr("pipensx/settings/install_and_restart"),
+            tr("gamehubnx/settings/update_available", release.version));
+        dialog->addButton(tr("gamehubnx/settings/install_and_restart"),
                           [this, release = std::move(release)] {
             installUpdate(release);
         });
-        dialog->addButton(tr("pipensx/common/later"), [] {});
+        dialog->addButton(tr("gamehubnx/common/later"), [] {});
         dialog->open();
     }
 
@@ -551,7 +516,7 @@ private:
         if (updateInFlight_ || !updater_)
             return;
         updateInFlight_ = true;
-        updateAction_->setDetailText(tr("pipensx/settings/downloading"));
+        updateAction_->setDetailText(tr("gamehubnx/settings/downloading"));
         auto alive = alive_;
         UpdateService* updater = updater_;
         auto lastPercent = std::make_shared<std::atomic<int>>(-1);
@@ -564,7 +529,7 @@ private:
                     if (!alive->load())
                         return;
                     updateAction_->setDetailText(
-                        tr("pipensx/settings/downloading_percent", percent));
+                        tr("gamehubnx/settings/downloading_percent", percent));
                 });
             });
         updater->installAsync(release, [this, alive](bool installed,
@@ -575,17 +540,17 @@ private:
                 updateInFlight_ = false;
                 if (!installed) {
                     updateAction_->setDetailText(
-                        tr("pipensx/settings/install_failed"));
+                        tr("gamehubnx/settings/install_failed"));
                     diagnostic_error("update", "install", "error=%s",
                                      error.c_str());
                     brls::Application::notify(error);
                     return;
                 }
-                updateAction_->setDetailText(tr("pipensx/settings/restart_required"));
+                updateAction_->setDetailText(tr("gamehubnx/settings/restart_required"));
 #ifdef __SWITCH__
                 if (!envHasNextLoad()) {
                     brls::Application::notify(
-                        tr("pipensx/settings/update_no_restart"));
+                        tr("gamehubnx/settings/update_no_restart"));
                     return;
                 }
                 const std::string helper = updater_->helperPath();
@@ -597,7 +562,7 @@ private:
                     diagnostic_error("update", "restart", "result=0x%08x",
                                      result);
                     brls::Application::notify(
-                        tr("pipensx/settings/update_restart_failed"));
+                        tr("gamehubnx/settings/update_restart_failed"));
                     return;
                 }
 #endif
@@ -606,9 +571,9 @@ private:
                 // app crashes). Gate the quit behind an acknowledged dialog so
                 // the close reads as intentional rather than a crash.
                 auto* dialog = new brls::Dialog(
-                    tr("pipensx/settings/update_close_body"));
+                    tr("gamehubnx/settings/update_close_body"));
                 dialog->setCancelable(false);
-                dialog->addButton(tr("pipensx/settings/update_close_button"),
+                dialog->addButton(tr("gamehubnx/settings/update_close_button"),
                                   [] { brls::Application::quit(); });
                 dialog->open();
             });
@@ -627,8 +592,8 @@ private:
         if (enabled && !previous) {
             torrenting_->setOn(false, false);
             auto* dialog = new brls::Dialog(
-                tr("pipensx/settings/torrenting_warning"));
-            dialog->addButton(tr("pipensx/settings/torrenting_enable"),
+                tr("gamehubnx/settings/torrenting_warning"));
+            dialog->addButton(tr("gamehubnx/settings/torrenting_enable"),
                 [this] {
                     AppSettingsData values = settings_->get();
                     values.torrentingEnabled = true;
@@ -637,7 +602,7 @@ private:
                         torrenting_->setOn(true, false);
                     }
                 });
-            dialog->addButton(tr("pipensx/common/cancel"), [] {});
+            dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
             dialog->open();
             return;
         }
@@ -653,15 +618,15 @@ private:
     void refreshCatalogSourceDetail() {
         const std::string& url = settings_->get().catalogSourceUrl;
         catalogSource_->setDetailText(
-            url.empty() ? tr("pipensx/settings/catalog_source_default") : url);
+            url.empty() ? tr("gamehubnx/settings/catalog_source_default") : url);
     }
 
     void editCatalogSource() {
         brls::Application::getImeManager()->openForText(
             [this](std::string text) {
-                if (!pipensx::isValidCatalogSourceUrl(text)) {
+                if (!gamehubnx::isValidCatalogSourceUrl(text)) {
                     brls::Application::notify(
-                        tr("pipensx/settings/catalog_source_invalid"));
+                        tr("gamehubnx/settings/catalog_source_invalid"));
                     return;
                 }
                 AppSettingsData values = settings_->get();
@@ -670,8 +635,8 @@ private:
                     return;
                 refreshCatalogSourceDetail();
             },
-            tr("pipensx/settings/catalog_source"),
-            tr("pipensx/settings/catalog_source_detail"), 512,
+            tr("gamehubnx/settings/catalog_source"),
+            tr("gamehubnx/settings/catalog_source_detail"), 512,
             settings_->get().catalogSourceUrl, brls::KEYBOARD_DISABLE_NONE);
     }
 
@@ -684,8 +649,8 @@ private:
         // checker only sees keys that appear as a literal first argument.
         debridLink_->setDetailText(
             activeDebridKey(values).empty()
-                ? tr("pipensx/settings/debrid_not_linked", provider)
-                : tr("pipensx/settings/debrid_linked", provider));
+                ? tr("gamehubnx/settings/debrid_not_linked", provider)
+                : tr("gamehubnx/settings/debrid_linked", provider));
     }
 
     // Re-sync the main-list cells. Called after a factory reset performed on the
@@ -759,4 +724,4 @@ private:
     bool updateInFlight_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

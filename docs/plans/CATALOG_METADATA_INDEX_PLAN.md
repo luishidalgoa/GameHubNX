@@ -1,17 +1,17 @@
 # План: eShop-иконки через game_metadata_index.json (без NLib)
 
 Цель — вернуть красивые квадратные eShop-иконки и ENG-описание в каталог
-pipensx, не задерживая актуальные записи Langegen. `game_metadata_index.json`
+gamehubnx, не задерживая актуальные записи Langegen. `game_metadata_index.json`
 строится отдельным GitHub Actions-пайплайном и обновляется приложением в
 runtime; romfs остаётся необязательным offline-фолбэком. **Без NLib.**
 
 Статус 2026-07-09: runtime-клиент и генератор реализованы; отдельный локальный
-репозиторий подготовлен в `/home/sa05/pipensx-metadata`.
+репозиторий подготовлен в `/home/sa05/gamehubnx-metadata`.
 
 ## Что показал гит и код
 
 - "Раньше прекрасно работало" = индекс **бандлился** через
-  `make switch PIPENSX_METADATA_INDEX=/abs/game_metadata_index.json`
+  `make switch GAMEHUBNX_METADATA_INDEX=/abs/game_metadata_index.json`
   (`BUILD.md`, `CMakeLists.txt:189`). Public build намеренно без него
   (`game_metadata_service.cpp:447 load()` → `byHash_` пуст → grid плитки
   без иконок).
@@ -23,7 +23,7 @@ runtime; romfs остаётся необязательным offline-фолбэ�
 
 ## Механизм приложения
 
-- `CMakeLists.txt:189-201` — `PIPENSX_METADATA_INDEX` копируется в
+- `CMakeLists.txt:189-201` — `GAMEHUBNX_METADATA_INDEX` копируется в
   `romfs:/catalog/game_metadata_index.json`. `resources/catalog/` в
   `.gitignore` (датасет не коммитится).
 - `GameMetadataService(rootPath, bundledPath="romfs:/catalog/game_metadata_index.json")`
@@ -53,7 +53,7 @@ runtime; romfs остаётся необязательным offline-фолбэ�
   доступен).
 
 → Вывод: чтобы вернуть иконки, надо **сгенерировать и забандлить индекс**.
-Парсер, relay, UI — всё готово. Менять код pipensx не требуется.
+Парсер, relay, UI — всё готово. Менять код gamehubnx не требуется.
 
 ## Источник: blawar/titledb (без NLib)
 
@@ -120,7 +120,7 @@ size          15479078912
 ## Пайплайн генерации (отдельный репозиторий)
 
 ```
-repo: i3sey/pipensx-metadata
+repo: i3sey/gamehubnx-metadata
 .github/workflows/build-index.yml  # cron + dispatch
 build_index.py   # fetch titledb + match + emit game_metadata_index.json
 ```
@@ -162,7 +162,7 @@ spaces) → 2572/4082 совпадают с titledb `name` 1-в-1. Копать:
    названия). Также `RU.ru.json` titledb содержит русские имена eShop —
    матч ru↔ru.
 5. **Title ID прямо в контенте** (точный матч, без fuzzy): локальный
-   rutracker XML-дамп `~/pipensx-local-data/rutracker-20260530.xml.xz` (4.1 ГБ)
+   rutracker XML-дамп `~/gamehubnx-local-data/rutracker-20260530.xml.xz` (4.1 ГБ)
    в `content` BBCode иногда содержит Title ID (`0100...`). Копать: извлечь
    регексом `\b0100[0-9A-F]{9}000\b` из `content` темы → точный `topic_id
    → titleId`. Это лучший сигнал, если есть.
@@ -176,7 +176,7 @@ spaces) → 2572/4082 совпадают с titledb `name` 1-в-1. Копать:
    отдельные fuzzy-предложения на каждом прогоне; fuzzy не публикуется
    автоматически. Алерт при падении покрытия более чем на 2 п.п.
 
-## Встраивание в pipensx
+## Встраивание в gamehubnx
 
 - Refresh Langegen и metadata запускаются параллельно и принимаются независимо:
   свежий каталог не блокируется ошибкой индекса, старый валидный индекс не
@@ -208,5 +208,5 @@ spaces) → 2572/4082 совпадают с titledb `name` 1-в-1. Копать:
       первым для `img-eshop.cdn.nintendo.net` (лог `[metadata] image relay
       active`).
 - [x] Live-срез: 2954/4108 deterministic matches (71.9%), индекс 6.8 МБ.
-- [ ] Создать и запушить GitHub-репозиторий `i3sey/pipensx-metadata`, затем
+- [ ] Создать и запушить GitHub-репозиторий `i3sey/gamehubnx-metadata`, затем
       выполнить первый workflow publish.

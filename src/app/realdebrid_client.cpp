@@ -12,7 +12,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 using Json = nlohmann::json;
@@ -42,7 +42,7 @@ bool curlTransport(const RdHttpRequest& request,
     headers = curl_slist_append(headers, auth.c_str());
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curlPinHttpsOnly(curl);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
@@ -395,4 +395,4 @@ bool RdClient::remove(const std::string& torrentId, std::string& error) {
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

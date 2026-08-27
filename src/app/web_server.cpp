@@ -14,7 +14,7 @@ extern "C" {
 #include <cstdio>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 
 using Json = nlohmann::json;
 
@@ -233,7 +233,7 @@ bool WebServer::authorized(const HttpRequest& req) const {
     if (pin_.empty()) return false;
     // Header only: a PIN in the query string lands in browser history and
     // logs, and would let a plain cross-site link carry it.
-    std::string provided = req.header("x-pipensx-pin");
+    std::string provided = req.header("x-gamehubnx-pin");
     if (provided.size() != pin_.size()) return false;
     // constant-time compare; a LAN PIN hardly merits it but it costs nothing
     unsigned char diff = 0;
@@ -368,7 +368,7 @@ HttpResponse WebServer::routeApi(const HttpRequest& req) {
     if (req.method == "GET" || req.method == "HEAD") {
         if (parts[0] == "info" && parts.size() == 1) {
             Json j;
-            j["name"] = "pipensx";
+            j["name"] = "gamehubnx";
             j["version"] = version_;
             {
                 std::lock_guard<std::mutex> lock(configMutex_);
@@ -681,4 +681,4 @@ HttpResponse WebServer::handleAddTorrent(const HttpRequest& req) {
     return HttpResponse::text(200, dumpJson(j));
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

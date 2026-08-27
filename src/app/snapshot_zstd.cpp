@@ -2,7 +2,7 @@
 
 #include <zstd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 
 bool isZstdPath(const std::string& path) {
     static const char kSuffix[] = ".zst";
@@ -64,4 +64,4 @@ bool decompressZstd(std::vector<uint8_t>& data, size_t maxBytes,
     return true;
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

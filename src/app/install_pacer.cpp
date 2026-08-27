@@ -7,7 +7,7 @@
 #include <thread>
 #include <utility>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 uint64_t systemNowMs() {
@@ -317,4 +317,4 @@ InstallPacer::State InstallPacer::state() const {
     return state_;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

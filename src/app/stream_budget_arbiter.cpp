@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace pipensx {
+namespace gamehubnx {
 
 StreamBudgetArbiter::StreamBudgetArbiter(DetectFn detect,
                                          uint64_t engineSlotOverheadBytes)
@@ -98,4 +98,4 @@ void StreamBudgetArbiter::release(uint64_t leaseId) {
     notifyLocked();
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

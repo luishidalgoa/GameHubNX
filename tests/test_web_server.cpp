@@ -26,7 +26,7 @@ extern "C" {
 #include <string>
 #include <thread>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 
@@ -123,7 +123,7 @@ bool waitFor(const std::function<bool()>& pred, int timeoutMs = 5000) {
 int main() {
     signal(SIGPIPE, SIG_IGN);
 
-    char rootTemplate[] = "/tmp/pipensx-web-XXXXXX";
+    char rootTemplate[] = "/tmp/gamehubnx-web-XXXXXX";
     char* root = mkdtemp(rootTemplate);
     assert(root);
     std::string rootStr = root;
@@ -131,7 +131,7 @@ int main() {
     mkdir(webRoot.c_str(), 0755);
     {
         std::ofstream out(webRoot + "/index.html");
-        out << "<html>pipensx web</html>";
+        out << "<html>gamehubnx web</html>";
     }
 
     gTorrentBytes = makeTorrentBytes("package.nsp", "test payload");
@@ -186,7 +186,7 @@ int main() {
         });
     assert(server.start(0));
     uint16_t port = server.boundPort();
-    const std::string pinHeader = "X-Pipensx-Pin: 1234\r\n";
+    const std::string pinHeader = "X-Gamehubnx-Pin: 1234\r\n";
 
     // info + static + storage — mutations always require a PIN
     {
@@ -196,7 +196,7 @@ int main() {
         assert(resp.find("test-1.0") != std::string::npos);
 
         resp = request(port, "GET", "/");
-        assert(resp.find("pipensx web") != std::string::npos);
+        assert(resp.find("gamehubnx web") != std::string::npos);
         resp = request(port, "GET", "/secret.txt");
         assert(resp.find("404") != std::string::npos);
 

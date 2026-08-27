@@ -5,7 +5,7 @@
 
 #include "debrid_provider.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // GameHub as a DebridProvider.
 //
@@ -61,4 +61,4 @@ private:
     SizeProbe probe_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -11,29 +11,29 @@
 #include <string>
 #include <unistd.h>
 
-using pipensx::AppSettings;
-using pipensx::AppSettingsData;
-using pipensx::CatalogFilter;
-using pipensx::DebridProviderKind;
-using pipensx::StreamSelection;
-using pipensx::InstallLocation;
-using pipensx::dailyRefreshDue;
-using pipensx::isLocalToday;
-using pipensx::isValidProxyUrl;
-using pipensx::isValidCatalogSourceUrl;
-using pipensx::effectiveCatalogSourceUrl;
-using pipensx::applyProxySetting;
-using pipensx::applyCompanionSettingsPatch;
-using pipensx::companionSettingsJson;
+using gamehubnx::AppSettings;
+using gamehubnx::AppSettingsData;
+using gamehubnx::CatalogFilter;
+using gamehubnx::DebridProviderKind;
+using gamehubnx::StreamSelection;
+using gamehubnx::InstallLocation;
+using gamehubnx::dailyRefreshDue;
+using gamehubnx::isLocalToday;
+using gamehubnx::isValidProxyUrl;
+using gamehubnx::isValidCatalogSourceUrl;
+using gamehubnx::effectiveCatalogSourceUrl;
+using gamehubnx::applyProxySetting;
+using gamehubnx::applyCompanionSettingsPatch;
+using gamehubnx::companionSettingsJson;
 
 namespace {
 
-const char* SettingsPath = "/tmp/pipensx-settings-test.json";
-const char* LegacyPath = "/tmp/pipensx-settings-test.enabled";
+const char* SettingsPath = "/tmp/gamehubnx-settings-test.json";
+const char* LegacyPath = "/tmp/gamehubnx-settings-test.enabled";
 
 void cleanup() {
     unlink(SettingsPath);
-    unlink("/tmp/pipensx-settings-test.json.tmp");
+    unlink("/tmp/gamehubnx-settings-test.json.tmp");
     unlink(LegacyPath);
 }
 
@@ -97,7 +97,7 @@ void testMissingFileUsesSafeDefaults() {
     assert(!values.firstRunCompleted);
     // Fresh install gets a random companion PIN so mutations are never open.
     assert(values.webServerPin.size() == 6);
-    assert(pipensx::isValidWebPin(values.webServerPin));
+    assert(gamehubnx::isValidWebPin(values.webServerPin));
     assert(!values.webServerPin.empty());
     assert(access(SettingsPath, F_OK) == 0);
 }
@@ -193,9 +193,9 @@ void testUnknownLanguageIsRejected() {
     assert(!error.empty());
     assert(settings.get() == AppSettingsData{});
 
-    for (const char* supported : pipensx::kLanguageValues)
-        assert(pipensx::isSupportedLanguage(supported));
-    assert(!pipensx::isSupportedLanguage("klingon"));
+    for (const char* supported : gamehubnx::kLanguageValues)
+        assert(gamehubnx::isSupportedLanguage(supported));
+    assert(!gamehubnx::isSupportedLanguage("klingon"));
 }
 
 void testLegacyTelemetryFlagMigratesOnce() {
@@ -225,19 +225,19 @@ void testInvalidWebPinIsCleared() {
     std::string error;
     assert(settings.load(error));
     assert(settings.get().webServerPin.size() == 6);
-    assert(pipensx::isValidWebPin(settings.get().webServerPin));
+    assert(gamehubnx::isValidWebPin(settings.get().webServerPin));
     assert(settings.get().webServerEnabled);
 
-    assert(pipensx::isValidWebPin(""));
-    assert(pipensx::isValidWebPin("1234"));
-    assert(pipensx::isValidWebPin("12345678"));
-    assert(!pipensx::isValidWebPin("123"));
-    assert(!pipensx::isValidWebPin("123456789"));
-    assert(!pipensx::isValidWebPin("12a4"));
+    assert(gamehubnx::isValidWebPin(""));
+    assert(gamehubnx::isValidWebPin("1234"));
+    assert(gamehubnx::isValidWebPin("12345678"));
+    assert(!gamehubnx::isValidWebPin("123"));
+    assert(!gamehubnx::isValidWebPin("123456789"));
+    assert(!gamehubnx::isValidWebPin("12a4"));
 
-    const std::string generated = pipensx::generateWebPin();
+    const std::string generated = gamehubnx::generateWebPin();
     assert(generated.size() == 6);
-    assert(pipensx::isValidWebPin(generated));
+    assert(gamehubnx::isValidWebPin(generated));
 }
 
 // Clearing the PIN via update() regenerates one instead of storing empty.
@@ -251,7 +251,7 @@ void testUpdateEmptyPinRegenerates() {
     values.webServerPin.clear();
     assert(settings.update(values, error));
     assert(settings.get().webServerPin.size() == 6);
-    assert(pipensx::isValidWebPin(settings.get().webServerPin));
+    assert(gamehubnx::isValidWebPin(settings.get().webServerPin));
     (void)previous;
 }
 
@@ -266,13 +266,13 @@ void testMaxActiveDownloadsClamped() {
     AppSettings settings(SettingsPath, LegacyPath);
     std::string error;
     assert(settings.load(error));
-    assert(settings.get().maxActiveDownloads == pipensx::kMaxActiveDownloads);
+    assert(settings.get().maxActiveDownloads == gamehubnx::kMaxActiveDownloads);
 
-    assert(pipensx::clampMaxActiveDownloads(0) == 1);
-    assert(pipensx::clampMaxActiveDownloads(1) == 1);
-    assert(pipensx::clampMaxActiveDownloads(4) == 4);
-    assert(pipensx::clampMaxActiveDownloads(5) == 4);
-    assert(pipensx::clampMaxActiveDownloads(UINT64_MAX) == 4);
+    assert(gamehubnx::clampMaxActiveDownloads(0) == 1);
+    assert(gamehubnx::clampMaxActiveDownloads(1) == 1);
+    assert(gamehubnx::clampMaxActiveDownloads(4) == 4);
+    assert(gamehubnx::clampMaxActiveDownloads(5) == 4);
+    assert(gamehubnx::clampMaxActiveDownloads(UINT64_MAX) == 4);
 }
 
 // v1 -> v2: every stored download count goes back to the serial queue, and
@@ -448,9 +448,9 @@ void testCatalogSourceUrlValidation() {
     // catalogo de torrents pese al cambio de defecto -- fue exactamente lo que
     // le paso al usuario. Al fusionar con upstream, la resolucion correcta es
     // conservar estas dos lineas.
-    assert(effectiveCatalogSourceUrl("") == pipensx::gamehub::kCatalogUrl);
+    assert(effectiveCatalogSourceUrl("") == gamehubnx::gamehub::kCatalogUrl);
     assert(effectiveCatalogSourceUrl("https://cdn.example.com/x.json") ==
-           pipensx::gamehub::kCatalogUrl);
+           gamehubnx::gamehub::kCatalogUrl);
 }
 
 void testProxySettingReachesEnvironment() {

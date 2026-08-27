@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 
-using pipensx::isSslCertificateErrorMessage;
+using gamehubnx::isSslCertificateErrorMessage;
 
 static std::string readFile(const char* path) {
     std::ifstream in(path, std::ios::binary);

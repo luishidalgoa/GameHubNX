@@ -8,7 +8,7 @@
 
 #include "stream_ram_budget.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Splits the stream-install RAM budget between concurrent download slots.
 // calculateStreamRamBudget is written as "one consumer takes all free RAM";
@@ -78,4 +78,4 @@ private:
     uint64_t nextLeaseId_ = 1;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -21,7 +21,7 @@
 #include "ui/installed/update_file_chooser.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class InstalledCell : public brls::RecyclerCell {
 public:
@@ -82,7 +82,7 @@ public:
         addGestureRecognizer(new brls::TapGestureRecognizer(this));
 
         if (allowUninstall) {
-            registerAction(tr("pipensx/installed/uninstall_action"),
+            registerAction(tr("gamehubnx/installed/uninstall_action"),
                            brls::BUTTON_X, [this](brls::View*) {
                 if (!titleId_.empty() && onUninstallOne_)
                     onUninstallOne_(storedTitle_);
@@ -120,29 +120,29 @@ public:
         updateActionHint(
             brls::BUTTON_A,
             state == GameUpdateState::UpdateAvailable
-                ? tr("pipensx/common/install")
-                : tr("pipensx/installed/action_check"));
+                ? tr("gamehubnx/common/install")
+                : tr("gamehubnx/installed/action_check"));
         switch (state) {
         case GameUpdateState::UpdateAvailable:
-            chip_->setText(tr("pipensx/installed/update_chip_available"));
+            chip_->setText(tr("gamehubnx/installed/update_chip_available"));
             chip_->setTextColor(theme::warning());
             break;
         case GameUpdateState::UpToDate:
-            chip_->setText(tr("pipensx/installed/update_chip_latest"));
+            chip_->setText(tr("gamehubnx/installed/update_chip_latest"));
             chip_->setTextColor(theme::success());
             break;
         case GameUpdateState::CheckError:
-            chip_->setText(tr("pipensx/installed/update_chip_error"));
+            chip_->setText(tr("gamehubnx/installed/update_chip_error"));
             chip_->setTextColor(theme::error());
             break;
         case GameUpdateState::SourceUnknown:
-            chip_->setText(tr("pipensx/installed/update_chip_no_source"));
+            chip_->setText(tr("gamehubnx/installed/update_chip_no_source"));
             chip_->setTextColor(theme::textTertiary());
             break;
         case GameUpdateState::NotChecked:
         case GameUpdateState::Checking:
         default:
-            chip_->setText(tr("pipensx/installed/update_chip_not_checked"));
+            chip_->setText(tr("gamehubnx/installed/update_chip_not_checked"));
             chip_->setTextColor(theme::textTertiary());
             break;
         }
@@ -299,13 +299,13 @@ public:
         if (checkOnEntry_ && !installed_->titles().empty())
             checkAllTitles();
 
-        registerAction(tr("pipensx/installed/update_check_all"),
+        registerAction(tr("gamehubnx/installed/update_check_all"),
                        brls::BUTTON_LB, [this](brls::View*) {
             checkAllTitles();
             return true;
         });
         if (mode_ == Mode::Updates) {
-            registerAction(tr("pipensx/updates/update_all"),
+            registerAction(tr("gamehubnx/updates/update_all"),
                            brls::BUTTON_X, [this](brls::View*) {
                 queueAllUpdates();
                 return true;
@@ -328,15 +328,15 @@ private:
         emptyState_ = new EmptyStateView();
         if (mode_ == Mode::Updates) {
             emptyState_->setContent(
-                tr("pipensx/updates/empty_title"),
-                tr("pipensx/updates/empty_body"),
-                tr("pipensx/installed/update_check_all"),
+                tr("gamehubnx/updates/empty_title"),
+                tr("gamehubnx/updates/empty_body"),
+                tr("gamehubnx/installed/update_check_all"),
                 [this] { checkAllTitles(); });
         } else {
             emptyState_->setContent(
-                tr("pipensx/installed/empty_title"),
-                tr("pipensx/installed/empty_body"),
-                tr("pipensx/installed/refresh_action"),
+                tr("gamehubnx/installed/empty_title"),
+                tr("gamehubnx/installed/empty_body"),
+                tr("gamehubnx/installed/refresh_action"),
                 [this] { refresh(); });
         }
         addView(emptyState_);
@@ -392,7 +392,7 @@ private:
         std::vector<const GameMetadata*> entries;
         if (!metadata_ || !metadata_->findByTitleId(titleId, entries)) {
             brls::Application::notify(
-                tr("pipensx/installed/update_no_bundle"));
+                tr("gamehubnx/installed/update_no_bundle"));
             return;
         }
         if (entries.size() == 1) {
@@ -417,12 +417,12 @@ private:
         for (const InstalledTitle& title : dataSource_->titles())
             pendingUpdateAll_.push_back(title.titleId);
         if (pendingUpdateAll_.empty()) {
-            brls::Application::notify(tr("pipensx/updates/update_all_empty"));
+            brls::Application::notify(tr("gamehubnx/updates/update_all_empty"));
             return;
         }
         updateAllAutoImport_ = true;
         brls::Application::notify(
-            tr("pipensx/updates/update_all_started",
+            tr("gamehubnx/updates/update_all_started",
                pendingUpdateAll_.size()));
         pumpUpdateAll();
     }
@@ -437,7 +437,7 @@ private:
             if (!metadata_ || !metadata_->findByTitleId(titleId, entries) ||
                 entries.empty()) {
                 brls::Application::notify(
-                    tr("pipensx/installed/update_no_bundle"));
+                    tr("gamehubnx/installed/update_no_bundle"));
                 continue;
             }
             beginUpdateInstall(GameMetadata(*entries.front()));
@@ -451,16 +451,16 @@ private:
         if (refreshing_ || updateInFlight_ || uninstallInFlight_)
             return;
         if (hasActiveStreamInstall()) {
-            brls::Application::notify(tr("pipensx/installed/busy"));
+            brls::Application::notify(tr("gamehubnx/installed/busy"));
             return;
         }
         auto* dialog = new brls::Dialog(
-            tr("pipensx/installed/uninstall_confirm", title.name));
-        dialog->addButton(tr("pipensx/installed/uninstall_action"),
+            tr("gamehubnx/installed/uninstall_confirm", title.name));
+        dialog->addButton(tr("gamehubnx/installed/uninstall_action"),
                           [this, title = std::move(title)] {
             beginUninstall(title);
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -468,7 +468,7 @@ private:
         if (uninstallInFlight_)
             return;
         uninstallInFlight_ = true;
-        status_->setText(tr("pipensx/installed/uninstalling", title.name));
+        status_->setText(tr("gamehubnx/installed/uninstalling", title.name));
         auto alive = alive_;
         InstalledTitleService* installed = installed_;
         const std::string titleId = title.titleId;
@@ -486,7 +486,7 @@ private:
                     return;
                 }
                 brls::Application::notify(
-                    tr("pipensx/installed/uninstall_done"));
+                    tr("gamehubnx/installed/uninstall_done"));
                 if (!refreshError.empty()) {
                     status_->setText(refreshError);
                     brls::Application::notify(refreshError);
@@ -504,7 +504,7 @@ private:
     // newest-first, so the first candidate is the newest release.
     void chooseBundle(std::vector<GameMetadata> bundles, size_t start) {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/installed/update_choose_bundle"));
+            tr("gamehubnx/installed/update_choose_bundle"));
         if (start < bundles.size()) {
             const GameMetadata& candidate = bundles[start];
             // Two bundles of the same title can share a version (different
@@ -525,12 +525,12 @@ private:
         const size_t remaining = bundles.size() - start - 1;
         if (remaining > 0)
             dialog->addButton(
-                tr("pipensx/installed/update_choose_more", remaining),
+                tr("gamehubnx/installed/update_choose_more", remaining),
                 [this, bundles = std::move(bundles), start = start + 1] {
                     chooseBundle(std::move(bundles), start);
                 });
         else
-            dialog->addButton(tr("pipensx/common/later"), [] {});
+            dialog->addButton(tr("gamehubnx/common/later"), [] {});
         dialog->open();
     }
 
@@ -552,13 +552,13 @@ private:
         const std::string foundVersion =
             entry.latestVersion.empty() ? std::string("?") : entry.latestVersion;
         auto* dialog = new brls::Dialog(tr(
-            "pipensx/installed/update_install_confirm", entry.name,
+            "gamehubnx/installed/update_install_confirm", entry.name,
             foundVersion));
-        dialog->addButton(tr("pipensx/installed/update_download"),
+        dialog->addButton(tr("gamehubnx/installed/update_download"),
                           [this, entry = std::move(entry)] {
             beginUpdateInstall(entry);
         });
-        dialog->addButton(tr("pipensx/common/later"), [] {});
+        dialog->addButton(tr("gamehubnx/common/later"), [] {});
         dialog->open();
     }
 
@@ -569,14 +569,14 @@ private:
             return;
         updateInFlight_ = true;
         cancelled_->store(false);
-        status_->setText(tr("pipensx/installed/update_resolving"));
+        status_->setText(tr("gamehubnx/installed/update_resolving"));
         // While the resolve is in flight no other action can start, so Y is
         // the cancel: it flips the flag the resolver polls, and the
         // completion path unlinks the tmp torrent and says so in a toast.
         // Re-registering in a later beginUpdateInstall replaces the action;
         // unregistering on completion removes the hint from the bar.
         updateCancelAction_ = registerAction(
-            tr("pipensx/installed/update_cancel"), brls::BUTTON_Y,
+            tr("gamehubnx/installed/update_cancel"), brls::BUTTON_Y,
             [this](brls::View*) {
                 cancelled_->store(true);
                 return true;
@@ -599,22 +599,22 @@ private:
                      infoDict = std::move(infoDict), latestVersion, titleId] {
             std::string err;
             MagnetResolver resolver;
-            auto progress = [this, alive](const pipensx::MagnetProgress& p) {
+            auto progress = [this, alive](const gamehubnx::MagnetProgress& p) {
                 std::string text;
                 switch (p.stage) {
-                    case pipensx::MagnetProgress::Stage::FindingPeers:
-                        text = tr("pipensx/detail/finding_peers");
+                    case gamehubnx::MagnetProgress::Stage::FindingPeers:
+                        text = tr("gamehubnx/detail/finding_peers");
                         break;
-                    case pipensx::MagnetProgress::Stage::Connecting:
-                        text = tr("pipensx/detail/contacting_peer",
+                    case gamehubnx::MagnetProgress::Stage::Connecting:
+                        text = tr("gamehubnx/detail/contacting_peer",
                                   p.peerIndex, p.peerCount);
                         break;
-                    case pipensx::MagnetProgress::Stage::FetchingMetadata:
-                        text = tr("pipensx/detail/fetching_metadata",
+                    case gamehubnx::MagnetProgress::Stage::FetchingMetadata:
+                        text = tr("gamehubnx/detail/fetching_metadata",
                                   p.completedPieces, p.totalPieces);
                         break;
-                    case pipensx::MagnetProgress::Stage::Validating:
-                        text = tr("pipensx/detail/validating");
+                    case gamehubnx::MagnetProgress::Stage::Validating:
+                        text = tr("gamehubnx/detail/validating");
                         break;
                 }
                 brls::sync([this, alive, text] {
@@ -648,7 +648,7 @@ private:
                         pendingUpdateAll_.clear();
                         updateAllAutoImport_ = false;
                         brls::Application::notify(
-                            tr("pipensx/installed/update_cancelled"));
+                            tr("gamehubnx/installed/update_cancelled"));
                         return;
                     }
                     diagnostic_error("game_updates", "resolve",
@@ -672,13 +672,13 @@ private:
             return err.find(needle) != std::string::npos;
         };
         if (has("not registered anymore"))
-            return tr("pipensx/installed/update_error_unregistered");
+            return tr("gamehubnx/installed/update_error_unregistered");
         if (has("no usable peers") || has("could not connect to any of them") ||
             has("none returned"))
-            return tr("pipensx/installed/update_error_no_peers");
+            return tr("gamehubnx/installed/update_error_no_peers");
         if (has("rejected"))
-            return tr("pipensx/installed/update_error_rejected");
-        return tr("pipensx/installed/update_error_failed");
+            return tr("gamehubnx/installed/update_error_rejected");
+        return tr("gamehubnx/installed/update_error_failed");
     }
 
     void finishUpdateImport(const std::string& path,
@@ -692,7 +692,7 @@ private:
             diagnostic_error("game_updates", "preview", "error=%s",
                              err.c_str());
             brls::Application::notify(
-                tr("pipensx/installed/update_error_preview"));
+                tr("gamehubnx/installed/update_error_preview"));
             reload();
             pumpUpdateAll();
             return;
@@ -766,7 +766,7 @@ private:
                                            initialPeers)) {
             log_msg("[game_updates] imported update torrent %s\n", id.c_str());
             brls::Application::notify(
-                tr("pipensx/installed/update_added"));
+                tr("gamehubnx/installed/update_added"));
             // Once the task settles (installed, failed or removed) refresh
             // the installed list and re-check, so the row flips to Latest
             // without another manual press.
@@ -775,12 +775,12 @@ private:
         } else if (err.find("already in the download manager") !=
                    std::string::npos) {
             brls::Application::notify(
-                tr("pipensx/detail/already_in_downloads"));
+                tr("gamehubnx/detail/already_in_downloads"));
         } else {
             diagnostic_error("game_updates", "import", "error=%s",
                              err.c_str());
             brls::Application::notify(
-                tr("pipensx/installed/update_error_import"));
+                tr("gamehubnx/installed/update_error_import"));
         }
         ::unlink(path.c_str());
         reload();
@@ -817,7 +817,7 @@ private:
     // install is active and no other refresh is in flight.
     void recheckAfterInstall() {
         refreshing_ = true;
-        status_->setText(tr("pipensx/installed/refreshing"));
+        status_->setText(tr("gamehubnx/installed/refreshing"));
         auto alive = alive_;
         InstalledTitleService* installed = installed_;
         brls::async([this, alive, installed] {
@@ -867,11 +867,11 @@ private:
         recyclerHost_->setVisibility(empty ? brls::Visibility::GONE
                                            : brls::Visibility::VISIBLE);
         std::string text = mode_ == Mode::Updates
-            ? tr("pipensx/updates/count", count)
-            : tr("pipensx/installed/count", count);
+            ? tr("gamehubnx/updates/count", count)
+            : tr("gamehubnx/installed/count", count);
         if (updates_->stale(installed_->generation(),
                             settings_->get().lastMetadataRefreshMs))
-            text += "   " + tr("pipensx/installed/update_stale");
+            text += "   " + tr("gamehubnx/installed/update_stale");
         status_->setText(text);
     }
 
@@ -880,11 +880,11 @@ private:
             return;
         if (hasActiveStreamInstall()) {
             brls::Application::notify(
-                tr("pipensx/installed/busy"));
+                tr("gamehubnx/installed/busy"));
             return;
         }
         refreshing_ = true;
-        status_->setText(tr("pipensx/installed/refreshing"));
+        status_->setText(tr("gamehubnx/installed/refreshing"));
         auto alive = alive_;
         InstalledTitleService* installed = installed_;
         brls::async([this, alive, installed] {
@@ -931,4 +931,4 @@ private:
     brls::ActionIdentifier updateCancelAction_ = ACTION_NONE;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

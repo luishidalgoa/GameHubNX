@@ -7,6 +7,7 @@
 #include <borealis.hpp>
 
 #include "app/download_manager.hpp"
+#include "ui/common/install_target_dialog.hpp"
 #include "ui/common/progress_bar.hpp"
 #include "ui/common/speed_graph.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -14,7 +15,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // UI_PLAN O8 — download details as eShop-style cards (Progress / Speed /
 // Network) with on-screen Pause/Verify/Remove buttons instead of blind X/Y
@@ -38,7 +39,7 @@ public:
         status_->setMarginBottom(12);
         left->addView(status_);
 
-        auto* progressCard = addCard(left, tr("pipensx/downloads/card_progress"));
+        auto* progressCard = addCard(left, tr("gamehubnx/downloads/card_progress"));
         progressBar_ = new ProgressBar();
         progressBar_->setHeight(14);
         progressBar_->setMarginBottom(8);
@@ -52,7 +53,7 @@ public:
         eta_ = addLine(progressCard, theme::kFontSmall);
         eta_->setTextColor(theme::textSecondary());
 
-        auto* speedCard = addCard(left, tr("pipensx/downloads/card_speed"));
+        auto* speedCard = addCard(left, tr("gamehubnx/downloads/card_speed"));
         auto* speedLegend = new brls::Box(brls::Axis::ROW);
         speedLegend->setAlignItems(brls::AlignItems::CENTER);
         speedLegend->setMarginBottom(6);
@@ -64,12 +65,12 @@ public:
         speedGraph_->setHeight(64);
         speedCard->addView(speedGraph_);
 
-        auto* networkCard = addCard(left, tr("pipensx/downloads/card_network"));
+        auto* networkCard = addCard(left, tr("gamehubnx/downloads/card_network"));
         peers_ = addLine(networkCard, theme::kFontBody);
         pieces_ = addLine(networkCard, theme::kFontBody);
         health_ = addLine(networkCard, theme::kFontBody);
 
-        auto* filesCard = addCard(left, tr("pipensx/files/card"));
+        auto* filesCard = addCard(left, tr("gamehubnx/files/card"));
         filesSummary_ = addLine(filesCard, theme::kFontSmall);
         filesSummary_->setTextColor(theme::textSecondary());
         deployPhase_ = addLine(filesCard, theme::kFontBody);
@@ -97,20 +98,26 @@ public:
         sidebar->setPadding(16, 16, 16, 16);
         sidebar->setAlignItems(brls::AlignItems::STRETCH);
 
-        pauseButton_ = addActionButton(sidebar, tr("pipensx/common/pause"),
+        pauseButton_ = addActionButton(sidebar, tr("gamehubnx/common/pause"),
                                        &brls::BUTTONSTYLE_PRIMARY);
-        verifyButton_ = addActionButton(sidebar, tr("pipensx/common/verify"),
+        verifyButton_ = addActionButton(sidebar, tr("gamehubnx/common/verify"),
                                         &brls::BUTTONSTYLE_DEFAULT);
-        removeButton_ = addActionButton(sidebar, tr("pipensx/common/remove"),
+        removeButton_ = addActionButton(sidebar, tr("gamehubnx/common/remove"),
+                                        &brls::BUTTONSTYLE_DEFAULT);
+        // Cambiar de memoria con la descarga ya en marcha: el destino va por
+        // tarea y no se consume hasta que el runner la coge, asi que se puede
+        // bajar ahora y decidir donde instalar despues.
+        targetButton_ = addActionButton(sidebar,
+                                        tr("gamehubnx/install_target/change"),
                                         &brls::BUTTONSTYLE_DEFAULT);
 
         auto* gap = new brls::Box();
         gap->setHeight(12);
         sidebar->addView(gap);
 
-        filesButton_ = addActionButton(sidebar, tr("pipensx/files/open"),
+        filesButton_ = addActionButton(sidebar, tr("gamehubnx/files/open"),
                                        &brls::BUTTONSTYLE_DEFAULT);
-        copyButton_ = addActionButton(sidebar, tr("pipensx/deploy/copy"),
+        copyButton_ = addActionButton(sidebar, tr("gamehubnx/deploy/copy"),
                                       &brls::BUTTONSTYLE_PRIMARY);
 
         pauseButton_->registerClickAction([this](brls::View*) {
@@ -124,6 +131,23 @@ public:
         });
         removeButton_->registerClickAction([this](brls::View*) {
             openRemoveDialog();
+            return true;
+        });
+        targetButton_->registerClickAction([this](brls::View*) {
+            const std::string taskId = taskId_;
+            DownloadManager* manager = manager_;
+            askInstallTarget(manager->rootPath(),
+                             [manager, taskId](
+                                 install::InstallStorageTarget target) {
+                // Puede fallar si entre la pregunta y la respuesta la tarea ha
+                // empezado a instalar; en ese caso el destino ya esta en uso y
+                // se avisa en vez de mentir diciendo que cambio.
+                brls::Application::notify(
+                    manager->setTaskInstallTarget(taskId, target)
+                        ? tr("gamehubnx/install_target/changed",
+                             installDestinationLabel(target))
+                        : tr("gamehubnx/install_target/too_late"));
+            });
             return true;
         });
         filesButton_->registerClickAction([this](brls::View*) {
@@ -227,15 +251,15 @@ private:
     // de descarga --es velocidad y progreso-- pero llamarla "salud del torrent"
     // en una descarga directa del servidor del usuario no significa nada.
     static std::string healthText(TorrentHealth health, bool torrent) {
-        const char* line = torrent ? "pipensx/downloads/health_line"
-                                   : "pipensx/downloads/health_line_direct";
+        const char* line = torrent ? "gamehubnx/downloads/health_line"
+                                   : "gamehubnx/downloads/health_line_direct";
         switch (health) {
         case TorrentHealth::Excellent:
-            return tr(line, tr("pipensx/downloads/health_excellent"));
+            return tr(line, tr("gamehubnx/downloads/health_excellent"));
         case TorrentHealth::Slow:
-            return tr(line, tr("pipensx/downloads/health_slow"));
+            return tr(line, tr("gamehubnx/downloads/health_slow"));
         case TorrentHealth::Poor:
-            return tr(line, tr("pipensx/downloads/health_poor"));
+            return tr(line, tr("gamehubnx/downloads/health_poor"));
         case TorrentHealth::NotActive:
             return {};
         }
@@ -280,7 +304,7 @@ private:
         if (!task || !taskReadyForSwitchDeploy(*task))
             return;
         availabilityLoading_ = true;
-        filesSummary_->setText(tr("pipensx/files/loading"));
+        filesSummary_->setText(tr("gamehubnx/files/loading"));
         auto alive = alive_;
         const std::string taskId = taskId_;
         SwitchDeployService* deploy = deploy_;
@@ -293,7 +317,7 @@ private:
                 availabilityLoading_ = false;
                 availabilityLoaded_ = true;
                 filesSummary_->setText(tr(
-                    "pipensx/files/summary", inspection.inventory.files.size(),
+                    "gamehubnx/files/summary", inspection.inventory.files.size(),
                     formatBytes(inspection.inventory.presentBytes)));
                 copyAvailable_ = inspection.problem == SwitchDeployProblem::None ||
                     inspection.problem == SwitchDeployProblem::Conflict ||
@@ -337,16 +361,16 @@ private:
     void showReceiptState() {
         if (!receiptChecked_) {
             loadReceiptState();
-            setTextIfChanged(deployPhase_, tr("pipensx/deploy/preparing"));
+            setTextIfChanged(deployPhase_, tr("gamehubnx/deploy/preparing"));
             setTextIfChanged(deployStatus_, "");
         } else if (receiptState_ == SwitchDeployReceiptState::Valid) {
             deployProgress_->setProgress(1.0f);
-            setTextIfChanged(deployPhase_, tr("pipensx/deploy/receipt_valid"));
+            setTextIfChanged(deployPhase_, tr("gamehubnx/deploy/receipt_valid"));
             setTextIfChanged(deployStatus_, "");
         } else if (receiptState_ == SwitchDeployReceiptState::Modified) {
             deployProgress_->setProgress(0.0f);
             setTextIfChanged(deployPhase_,
-                             tr("pipensx/deploy/receipt_modified"));
+                             tr("gamehubnx/deploy/receipt_modified"));
             setTextIfChanged(deployStatus_, "");
         }
     }
@@ -359,9 +383,9 @@ private:
             if (state.taskId == taskId_) {
                 deploy_->cancel();
                 brls::Application::notify(
-                    tr("pipensx/deploy/cancel_requested"));
+                    tr("gamehubnx/deploy/cancel_requested"));
             } else {
-                brls::Application::notify(tr("pipensx/deploy/problem_busy"));
+                brls::Application::notify(tr("gamehubnx/deploy/problem_busy"));
             }
             return;
         }
@@ -369,7 +393,7 @@ private:
         const std::string taskId = taskId_;
         SwitchDeployService* deploy = deploy_;
         copyButton_->setState(brls::ButtonState::DISABLED);
-        setTextIfChanged(deployPhase_, tr("pipensx/deploy/preparing"));
+        setTextIfChanged(deployPhase_, tr("gamehubnx/deploy/preparing"));
         setTextIfChanged(deployStatus_, "");
         brls::async([this, alive, taskId, deploy] {
             SwitchDeployInspection inspection = deploy->inspect(taskId);
@@ -397,7 +421,7 @@ private:
 
     void refreshDeploy(const DownloadTask& task) {
         if (!deploy_) {
-            filesSummary_->setText(tr("pipensx/files/unavailable"));
+            filesSummary_->setText(tr("gamehubnx/files/unavailable"));
             return;
         }
         const SwitchDeploySnapshot state = deploy_->snapshot();
@@ -408,25 +432,25 @@ private:
                       static_cast<float>(state.totalBytes)
                 : 0.0f;
             deployProgress_->setProgress(fraction);
-            copyButton_->setText(tr("pipensx/deploy/cancel"));
+            copyButton_->setText(tr("gamehubnx/deploy/cancel"));
             const char* phaseKey =
                 state.phase == SwitchDeployPhase::Preparing
-                    ? "pipensx/deploy/phase_preparing"
+                    ? "gamehubnx/deploy/phase_preparing"
                     : state.phase == SwitchDeployPhase::Extracting
-                          ? "pipensx/deploy/phase_extracting"
-                          : "pipensx/deploy/phase_copying";
+                          ? "gamehubnx/deploy/phase_extracting"
+                          : "gamehubnx/deploy/phase_copying";
             setTextIfChanged(deployPhase_, tr(phaseKey));
             deployPhase_->setTextColor(theme::accent());
             setTextIfChanged(
                 deployStatus_,
-                tr("pipensx/deploy/progress",
+                tr("gamehubnx/deploy/progress",
                    percentOf(fraction), state.filesCopied, state.totalFiles,
                    formatBytes(state.bytesCopied),
                    formatBytes(state.totalBytes), state.currentPath));
             deployStatus_->setTextColor(theme::accent());
             return;
         }
-        copyButton_->setText(tr("pipensx/deploy/copy"));
+        copyButton_->setText(tr("gamehubnx/deploy/copy"));
         deployPhase_->setTextColor(theme::textSecondary());
         deployStatus_->setTextColor(theme::textSecondary());
         if (state.taskId == taskId_) {
@@ -436,7 +460,7 @@ private:
                 else {
                     setTextIfChanged(
                         deployPhase_,
-                        tr("pipensx/deploy/completed_warning", state.detail));
+                        tr("gamehubnx/deploy/completed_warning", state.detail));
                     setTextIfChanged(deployStatus_, "");
                 }
             } else if (state.phase == SwitchDeployPhase::Failed) {
@@ -447,7 +471,7 @@ private:
                 setTextIfChanged(deployStatus_, "");
             } else if (state.phase == SwitchDeployPhase::Cancelled) {
                 setTextIfChanged(deployPhase_,
-                                 tr("pipensx/deploy/cancelled"));
+                                 tr("gamehubnx/deploy/cancelled"));
                 setTextIfChanged(deployStatus_, "");
             }
         } else {
@@ -468,7 +492,7 @@ private:
             frameTitle_ = task->name;
             frame_->setTitle(frameTitle_);
         }
-        setTextIfChanged(status_, tr("pipensx/downloads/status_line",
+        setTextIfChanged(status_, tr("gamehubnx/downloads/status_line",
                                      downloadStatusLabel(task->status)));
         status_->setTextColor(statusColor(task->status));
 
@@ -485,7 +509,7 @@ private:
             installing ? task->installedBytes : wanted.first;
         const uint64_t totalBytes =
             installing ? task->installTotalBytes : wanted.second;
-        setTextIfChanged(progress_, tr("pipensx/downloads/progress_line",
+        setTextIfChanged(progress_, tr("gamehubnx/downloads/progress_line",
                                        percentOf(progress),
                                        formatBytes(doneBytes),
                                        formatBytes(totalBytes)));
@@ -496,7 +520,7 @@ private:
             eta = formatEtaSeconds(*seconds);
         setTextIfChanged(eta_, eta.empty()
                                    ? std::string()
-                                   : tr("pipensx/downloads/eta_line", eta));
+                                   : tr("gamehubnx/downloads/eta_line", eta));
 
         if (task->mode == TransferMode::StreamInstall && task->packageCount) {
             const bool hasCurrent = !task->currentPackage.empty() &&
@@ -504,12 +528,12 @@ private:
             if (hasCurrent) {
                 setTextIfChanged(
                     package_,
-                    tr("pipensx/downloads/package_of",
+                    tr("gamehubnx/downloads/package_of",
                        task->packagesInstalled + 1, task->packageCount));
             } else {
                 setTextIfChanged(
                     package_,
-                    tr("pipensx/downloads/packages_installed",
+                    tr("gamehubnx/downloads/packages_installed",
                        task->packagesInstalled, task->packageCount));
             }
             setTextIfChanged(currentPackage_, task->currentPackage);
@@ -520,13 +544,13 @@ private:
 
         recordSpeedSample(*task, now);
         setTextIfChanged(downloadSpeed_,
-                          tr("pipensx/downloads/speed_download",
+                          tr("gamehubnx/downloads/speed_download",
                              formatSpeed(task->speedBytesPerSecond)));
         const uint64_t installSpeed = currentInstallSpeed(*task, now);
         if (task->mode == TransferMode::StreamInstall) {
             installSpeedItem_->setVisibility(brls::Visibility::VISIBLE);
             setTextIfChanged(installSpeed_,
-                             tr("pipensx/downloads/speed_install",
+                             tr("gamehubnx/downloads/speed_install",
                                 formatSpeed(installSpeed)));
         } else {
             installSpeedItem_->setVisibility(brls::Visibility::GONE);
@@ -541,11 +565,11 @@ private:
         pieces_->setVisibility(torrent ? brls::Visibility::VISIBLE
                                        : brls::Visibility::GONE);
         if (torrent) {
-            setTextIfChanged(peers_, tr("pipensx/downloads/peers_line",
+            setTextIfChanged(peers_, tr("gamehubnx/downloads/peers_line",
                                         task->peers, task->dhtGood,
                                         task->dhtDubious));
             setTextIfChanged(pieces_,
-                             tr("pipensx/downloads/pieces_line",
+                             tr("gamehubnx/downloads/pieces_line",
                                 task->piecesDone, task->piecesTotal,
                                 task->piecesVerified));
         }
@@ -555,7 +579,7 @@ private:
         setTextIfChanged(error_,
                          task->error.empty()
                              ? std::string()
-                              : tr("pipensx/downloads/error_line", task->error));
+                              : tr("gamehubnx/downloads/error_line", task->error));
 
         refreshDeploy(*task);
 
@@ -575,8 +599,8 @@ private:
                       task.status == DownloadStatus::Installing ||
                       task.status == DownloadStatus::Committing ||
                       task.status == DownloadStatus::Verifying;
-        setTextIfChanged(pauseButton_, paused ? tr("pipensx/common/resume")
-                                              : tr("pipensx/common/pause"));
+        setTextIfChanged(pauseButton_, paused ? tr("gamehubnx/common/resume")
+                                              : tr("gamehubnx/common/pause"));
         setButtonAvailable(pauseButton_, !leased && (paused || active));
 
         bool canVerify = task.status == DownloadStatus::Paused ||
@@ -586,6 +610,16 @@ private:
         setButtonAvailable(verifyButton_, !leased && canVerify);
         setButtonAvailable(removeButton_,
                            !leased && task.status != DownloadStatus::Removing);
+        // Solo mientras no haya empezado a escribir en una memoria: es la
+        // misma condicion que aplica setTaskInstallTarget.
+        const bool canRetarget =
+            !leased && task.mode == TransferMode::StreamInstall &&
+            (task.status == DownloadStatus::Queued ||
+             task.status == DownloadStatus::Checking ||
+             task.status == DownloadStatus::Fetching ||
+             task.status == DownloadStatus::Downloading ||
+             task.status == DownloadStatus::Paused);
+        setButtonAvailable(targetButton_, canRetarget);
         setButtonAvailable(filesButton_, deploy_ != nullptr);
         const bool busyElsewhere = deploy.active() && deploy.taskId != taskId_;
         const bool packageBusy =
@@ -599,15 +633,15 @@ private:
         if (deploy_ && !leased && !copyAvailable_ && availabilityLoaded_ &&
             !availabilityLoading_) {
             // Keep the label informative when Copy cannot start yet.
-            copyButton_->setText(tr("pipensx/deploy/copy"));
+            copyButton_->setText(tr("gamehubnx/deploy/copy"));
         } else if (busyElsewhere) {
-            copyButton_->setText(tr("pipensx/deploy/problem_busy"));
+            copyButton_->setText(tr("gamehubnx/deploy/problem_busy"));
         } else if (packageBusy) {
-            copyButton_->setText(tr("pipensx/deploy/problem_busy"));
+            copyButton_->setText(tr("gamehubnx/deploy/problem_busy"));
         } else if (leased) {
-            copyButton_->setText(tr("pipensx/deploy/cancel"));
+            copyButton_->setText(tr("gamehubnx/deploy/cancel"));
         } else {
-            copyButton_->setText(tr("pipensx/deploy/copy"));
+            copyButton_->setText(tr("gamehubnx/deploy/copy"));
         }
     }
 
@@ -640,15 +674,15 @@ private:
 
     void openRemoveDialog() {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/downloads/remove_question"));
-        dialog->addButton(tr("pipensx/downloads/remove_keep"), [this] {
+            tr("gamehubnx/downloads/remove_question"));
+        dialog->addButton(tr("gamehubnx/downloads/remove_keep"), [this] {
             std::string error;
             if (!manager_->remove(taskId_, false, error))
                 brls::Application::notify(error);
             else
                 brls::Application::popActivity();
         });
-        dialog->addButton(tr("pipensx/downloads/remove_delete"), [this] {
+        dialog->addButton(tr("gamehubnx/downloads/remove_delete"), [this] {
             auto alive = alive_;
             DownloadManager* manager = manager_;
             const std::string taskId = taskId_;
@@ -665,7 +699,7 @@ private:
                 });
             });
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -678,6 +712,7 @@ private:
     brls::Label* status_;
     brls::Button* pauseButton_;
     brls::Button* verifyButton_;
+    brls::Button* targetButton_;
     brls::Button* removeButton_;
     ProgressBar* progressBar_;
     brls::Label* progress_;
@@ -710,4 +745,4 @@ private:
     std::vector<uint64_t> installSpeedSamples_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

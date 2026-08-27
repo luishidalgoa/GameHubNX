@@ -5,7 +5,7 @@
 
 #include "catalog_service.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // The built-in GameHub section.
 //
@@ -100,4 +100,4 @@ bool isTrustedUrl(const std::string& url);
 
 } // namespace gamehub
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -58,7 +58,7 @@ static void test_large_piece_and_short_last_piece(void) {
     const int64_t piece_length = 1024 * 1024;
     const size_t tail_length = 12345;
     const size_t total_length = (size_t)piece_length + tail_length;
-    char outdir[] = "/tmp/pipensx-piece-large-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-large-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -115,7 +115,7 @@ static void test_large_piece_and_short_last_piece(void) {
 
 static void test_hash_mismatch_resets_all_blocks(void) {
     const size_t piece_length = 4 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-reset-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-reset-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -168,7 +168,7 @@ static void test_hash_mismatch_resets_all_blocks(void) {
 
 static void test_final_verify_requeues_disk_corruption(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-disk-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-disk-XXXXXX";
     char path[512];
     assert(mkdtemp(outdir));
 
@@ -220,7 +220,7 @@ static void test_final_verify_requeues_disk_corruption(void) {
 
 static void test_existing_piece_scan_restores_progress(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-resume-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-resume-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -267,7 +267,7 @@ static void test_existing_piece_scan_restores_progress(void) {
 static void test_preset_have_marks_done_without_hashing(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
     const size_t tail_length = BLOCK_SIZE + 123;
-    char outdir[] = "/tmp/pipensx-piece-preset-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-preset-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -330,7 +330,7 @@ static void test_preset_have_marks_done_without_hashing(void) {
 
 static void test_preset_have_respects_storage_modes(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-preset-mode-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-preset-mode-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -393,7 +393,7 @@ static int capture_sink(void *user, uint32_t file_index, int64_t file_offset,
 
 static void test_stream_sink_piece_is_verified_without_disk_readback(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-sink-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-sink-XXXXXX";
     char path[512];
     assert(mkdtemp(outdir));
 
@@ -456,7 +456,7 @@ static void init_long_disk_path_metainfo(metainfo_t *mi) {
 }
 
 static void test_long_disk_path_uses_short_fallback(void) {
-    char outdir[] = "/tmp/pipensx-long-path-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-long-path-XXXXXX";
     char path[512];
     uint8_t value = 0x5a;
     uint8_t actual = 0;
@@ -616,7 +616,7 @@ static void test_metainfo_web_seeds_parse(void) {
 
 static void test_async_hash_defers_completion_until_drain(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -661,7 +661,7 @@ static void test_async_hash_defers_completion_until_drain(void) {
 
 static void test_async_hash_mismatch_resets_and_redownloads(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-bad-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-bad-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -708,7 +708,7 @@ static void test_async_hash_mismatch_resets_and_redownloads(void) {
 
 static void test_duplicate_block_while_hashing_is_ignored(void) {
     const size_t piece_length = 2 * BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-dup-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-dup-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -758,7 +758,7 @@ static void test_async_backpressure_preserves_write_order(void) {
     const uint32_t num_pieces = 8;
     const size_t piece_length = BLOCK_SIZE;
     const size_t total_length = num_pieces * piece_length;
-    char outdir[] = "/tmp/pipensx-piece-async-order-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-order-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -813,7 +813,7 @@ static void log_hash_result(void *user, uint32_t idx, int status) {
 
 static void test_hash_result_callback_reports_in_order(void) {
     const size_t piece_length = BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-cb-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-cb-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -854,7 +854,7 @@ static void test_hash_result_callback_reports_in_order(void) {
 
 static void test_destroy_flushes_inflight_hashes(void) {
     const size_t piece_length = BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-dtor-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-dtor-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;
@@ -889,7 +889,7 @@ static void test_destroy_flushes_inflight_hashes(void) {
 
 static void test_pick_skips_hashing_piece(void) {
     const size_t piece_length = BLOCK_SIZE;
-    char outdir[] = "/tmp/pipensx-piece-async-pick-XXXXXX";
+    char outdir[] = "/tmp/gamehubnx-piece-async-pick-XXXXXX";
     assert(mkdtemp(outdir));
 
     metainfo_t mi;

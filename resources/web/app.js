@@ -1,4 +1,4 @@
-/* pipensx web companion SPA. Vanilla JS, no build step.
+/* gamehubnx web companion SPA. Vanilla JS, no build step.
    Talks to the REST/SSE API served by src/app/web_server.cpp. */
 "use strict";
 
@@ -10,20 +10,20 @@ const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const pin = params.get("pin");
   if (pin) {
-    localStorage.setItem("pipensxPin", pin);
+    localStorage.setItem("gamehubnxPin", pin);
     history.replaceState(null, "", location.pathname + location.hash);
   }
 }
-const getPin = () => localStorage.getItem("pipensxPin") || "";
+const getPin = () => localStorage.getItem("gamehubnxPin") || "";
 
 async function api(path, options = {}) {
   options.headers = Object.assign({}, options.headers);
-  if (getPin()) options.headers["X-Pipensx-Pin"] = getPin();
+  if (getPin()) options.headers["X-Gamehubnx-Pin"] = getPin();
   const resp = await fetch(path, options);
   if (resp.status === 401) {
     const pin = prompt("PIN (set on the console in Settings → Web companion):");
     if (pin) {
-      localStorage.setItem("pipensxPin", pin);
+      localStorage.setItem("gamehubnxPin", pin);
       return api(path, options);
     }
   }
@@ -146,7 +146,7 @@ document.addEventListener("visibilitychange", () => {
 function notifySupported() {
   return "Notification" in window && Notification.permission !== "denied";
 }
-function alertsOn() { return localStorage.getItem("pipensxAlerts") !== "off"; }
+function alertsOn() { return localStorage.getItem("gamehubnxAlerts") !== "off"; }
 
 function refreshNotifyRow() {
   $("alerts-btn").textContent = alertsOn() ? "🔔 Alerts: on" : "🔕 Alerts: off";
@@ -154,7 +154,7 @@ function refreshNotifyRow() {
     !notifySupported() || Notification.permission !== "default";
 }
 $("alerts-btn").addEventListener("click", () => {
-  localStorage.setItem("pipensxAlerts", alertsOn() ? "off" : "on");
+  localStorage.setItem("gamehubnxAlerts", alertsOn() ? "off" : "on");
   if (alertsOn()) { unlockAudio(); beep(); }
   refreshNotifyRow();
 });
@@ -222,7 +222,7 @@ function buildBadgedIcon(done) {
 }
 function startFlash(message) {
   stopFlash();
-  const base = "pipensx";
+  const base = "gamehubnx";
   let tick = false;
   document.title = message;
   flashTimer = setInterval(() => {
@@ -235,7 +235,7 @@ function startFlash(message) {
 function stopFlash() {
   if (flashTimer) clearInterval(flashTimer);
   flashTimer = null;
-  document.title = "pipensx";
+  document.title = "gamehubnx";
   setFavicon("/icon-192.png");
 }
 document.addEventListener("visibilitychange", () => {
@@ -263,7 +263,7 @@ function notifyTransitions() {
     if (prev && prev !== t.status && interesting[t.status]) {
       const what = t.status === "Error" ? (t.error || "failed")
                                         : interesting[t.status];
-      fireAlert("pipensx: " + t.name, t.name + " — " + what,
+      fireAlert("gamehubnx: " + t.name, t.name + " — " + what,
                 t.status === "Error");
     }
     lastStatuses.set(t.id, t.status);

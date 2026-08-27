@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // The bundled romfs catalog snapshots ship zstd-compressed (they are ~80% of
 // the NRO uncompressed); these helpers let the load paths accept either form.
@@ -18,4 +18,4 @@ bool decompressZstd(std::string& data, size_t maxBytes, std::string& error);
 bool decompressZstd(std::vector<uint8_t>& data, size_t maxBytes,
                     std::string& error);
 
-}  // namespace pipensx
+}  // namespace gamehubnx

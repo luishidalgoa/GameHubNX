@@ -53,6 +53,7 @@
     "filter_all": "Все",
     "filter_games": "Игры",
     "filter_fits": "Влезет",
+    "filter_missing": "Не установлено",
     "filter_players": "Игроки",
     "players_title": "Совместная игра",
     "players_any": "Любые",
@@ -60,10 +61,10 @@
     "players_coop": "Локальный ко-оп",
     "players_lan": "По локалке",
     "players_online": "Онлайн",
-    "action_favorite": "Избранное",
+    "action_favorite": "\u2605",
     "favorites_full": "Избранное заполнено ({} игр).",
     "favorites_failed": "Не удалось сохранить избранное: {}",
-    "action_batch": "Выбор игр",
+    "action_batch": "Пакет",
     "action_batch_close": "Закрыть выбор",
     "search_placeholder": "Поиск по каталогу",
     "select_visible": "Видимые",
@@ -71,6 +72,7 @@
     "prepare_n": "Подготовить {}",
     "unknown_size": "Размер неизвестен",
     "badge_installed": "Установлено",
+    "badge_update": "Обновление",
     "shelf_popular": "Популярное",
     "shelf_new": "Новинки",
     "shelf_updated": "Недавно обновлённые",
@@ -447,7 +449,6 @@
     "sd_card": "SD-карта",
     "select_ready": "Выбрать готовые",
     "add_to_queue": "В очередь",
-    "destination": "Установить в: {}",
     "add_n_to_queue": "В очередь: {}",
     "view_downloads": "К загрузкам",
     "back_to_catalog": "В каталог",
@@ -744,5 +745,12 @@
     "install_completed": "«{}» установлено.",
     "download_failed": "Загрузка «{}» не удалась.",
     "install_failed": "Установка «{}» не удалась."
-  }
+  },
+    "install_target": {
+        "question": "Куда установить?",
+        "change": "Сменить память",
+        "changed": "Будет установлено в {}",
+        "too_late": "Установка уже началась: память изменить нельзя",
+        "free": "  (свободно: {})"
+    }
 }

@@ -53,6 +53,7 @@
     "filter_all": "全部",
     "filter_games": "游戏",
     "filter_fits": "适配",
+    "filter_missing": "未安装",
     "filter_players": "玩家",
     "players_title": "一起游玩",
     "players_any": "任意",
@@ -60,7 +61,7 @@
     "players_coop": "本地合作",
     "players_lan": "本地联机",
     "players_online": "在线",
-    "action_favorite": "收藏",
+    "action_favorite": "\u2605",
     "favorites_full": "愿望单已满（{} 个游戏）。",
     "favorites_failed": "无法保存愿望单：{}",
     "action_batch": "批量安装",
@@ -71,6 +72,7 @@
     "prepare_n": "准备 {}",
     "unknown_size": "大小未知",
     "badge_installed": "已安装",
+    "badge_update": "有更新",
     "shelf_popular": "热门",
     "shelf_new": "新上架",
     "shelf_updated": "最近更新",
@@ -447,7 +449,6 @@
     "sd_card": "SD 卡",
     "select_ready": "选择就绪项",
     "add_to_queue": "添加到队列",
-    "destination": "安装到：{}",
     "add_n_to_queue": "将 {} 添加到队列",
     "view_downloads": "查看下载",
     "back_to_catalog": "返回目录",
@@ -744,5 +745,12 @@
     "install_completed": "{} 已安装。",
     "download_failed": "{} 下载失败。",
     "install_failed": "{} 安装失败。"
-  }
+  },
+    "install_target": {
+        "question": "要安装到哪里？",
+        "change": "更改存储位置",
+        "changed": "将安装到 {}",
+        "too_late": "已开始安装：无法更改存储位置",
+        "free": "  (剩余 {})"
+    }
 }

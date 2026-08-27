@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 using Json = nlohmann::json;
@@ -174,4 +174,4 @@ bool FavoritesService::write(const std::vector<FavoriteEntry>& items,
     return false;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

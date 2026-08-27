@@ -340,7 +340,7 @@ static int dht_engine_start(void) {
     g_dht.fd = net_udp_socket(DHT_SHARED_PORT);
     if (g_dht.fd == INVALID_SOCK)
         return 0;
-    if (dht_init(g_dht.fd, -1, node_id, (const uint8_t*)"PIPENSX1") < 0) {
+    if (dht_init(g_dht.fd, -1, node_id, (const uint8_t*)"GAMEHUBNX1") < 0) {
         net_close(g_dht.fd);
         return 0;
     }

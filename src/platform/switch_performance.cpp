@@ -6,7 +6,7 @@ extern "C" {
 
 #include <switch.h>
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -76,4 +76,4 @@ void SwitchPerformanceController::deactivate() {
     }
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

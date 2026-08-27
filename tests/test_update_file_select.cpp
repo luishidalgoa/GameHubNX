@@ -7,9 +7,9 @@
 
 namespace {
 
-using pipensx::CatalogEntry;
-using pipensx::FileAction;
-using pipensx::TorrentPreview;
+using gamehubnx::CatalogEntry;
+using gamehubnx::FileAction;
+using gamehubnx::TorrentPreview;
 
 TorrentPreview::File package(const std::string& path) {
     TorrentPreview::File file;
@@ -30,7 +30,7 @@ void expectActions(const TorrentPreview& preview,
                    const std::vector<uint8_t>& expected,
                    const std::string& titleId = {}) {
     const std::vector<uint8_t> actions =
-        pipensx::selectUpdateFiles(preview, latestVersion, titleId);
+        gamehubnx::selectUpdateFiles(preview, latestVersion, titleId);
     assert(actions.size() == expected.size());
     for (size_t i = 0; i < expected.size(); ++i)
         assert(actions[i] == expected[i]);
@@ -42,7 +42,7 @@ void expectSmartActions(const TorrentPreview& preview, bool titleInstalled,
                         const std::string& titleId,
                         const std::vector<uint8_t>& expected,
                         const std::vector<std::string>& installedDlcIds = {}) {
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, titleInstalled, installedVersion, latestVersion, titleId,
         installedDlcIds);
     assert(actions.size() == expected.size());
@@ -97,7 +97,7 @@ void testMultipleFilesWithTheVersionAreAllReported() {
                      package("Mods/Game Update [v131072].nsp"),
                      package("Game [v0].nsp")};
     const std::vector<size_t> matches =
-        pipensx::updateVersionMatches(preview, "131072");
+        gamehubnx::updateVersionMatches(preview, "131072");
     assert(matches.size() == 2);
     assert(matches[0] == 0 && matches[1] == 1);
     // The default mask installs both; the caller shows a chooser instead.
@@ -112,9 +112,9 @@ void testNoVersionMatches() {
     TorrentPreview preview;
     preview.files = {package("Game Update [v131072].nsp"),
                      package("Game [v0].nsp")};
-    assert(pipensx::updateVersionMatches(preview, "131073").empty());
-    assert(pipensx::updateVersionMatches(preview, "").empty());
-    assert(pipensx::updateVersionMatches(preview, "0").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "131073").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "0").empty());
 }
 
 // strtoull("1.2.3") would yield 1 and match a [v1] package; only strict
@@ -123,10 +123,10 @@ void testNonDecimalVersionNeverMatches() {
     TorrentPreview preview;
     preview.files = {package("Game Update [v1].nsp"),
                      package("Game Update [v131072].nsp")};
-    assert(pipensx::updateVersionMatches(preview, "1.2.3").empty());
-    assert(pipensx::updateVersionMatches(preview, " 131072").empty());
-    assert(pipensx::updateVersionMatches(preview, "v131072").empty());
-    assert(pipensx::updateVersionMatches(preview, "99999999999999999999").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "1.2.3").empty());
+    assert(gamehubnx::updateVersionMatches(preview, " 131072").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "v131072").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "99999999999999999999").empty());
 }
 
 void testUnknownVersionPrefersHighestTag() {
@@ -221,20 +221,20 @@ void testSmartInstallLeavesUnknownPackagesSkipped() {
 }
 
 void testUpdateRecheckSettled() {
-    using pipensx::DownloadStatus;
-    assert(pipensx::updateRecheckSettled(false, DownloadStatus::Downloading));
-    assert(!pipensx::updateRecheckSettled(true, DownloadStatus::Downloading));
-    assert(!pipensx::updateRecheckSettled(true, DownloadStatus::Installing));
-    assert(pipensx::updateRecheckSettled(true, DownloadStatus::Installed));
-    assert(pipensx::updateRecheckSettled(true, DownloadStatus::Completed));
-    assert(pipensx::updateRecheckSettled(true, DownloadStatus::Error));
-    assert(pipensx::updateRecheckSettled(true, DownloadStatus::Removing));
+    using gamehubnx::DownloadStatus;
+    assert(gamehubnx::updateRecheckSettled(false, DownloadStatus::Downloading));
+    assert(!gamehubnx::updateRecheckSettled(true, DownloadStatus::Downloading));
+    assert(!gamehubnx::updateRecheckSettled(true, DownloadStatus::Installing));
+    assert(gamehubnx::updateRecheckSettled(true, DownloadStatus::Installed));
+    assert(gamehubnx::updateRecheckSettled(true, DownloadStatus::Completed));
+    assert(gamehubnx::updateRecheckSettled(true, DownloadStatus::Error));
+    assert(gamehubnx::updateRecheckSettled(true, DownloadStatus::Removing));
 }
 
 void testEmptyPreviewYieldsEmptyActions() {
     TorrentPreview preview;
-    assert(pipensx::selectUpdateFiles(preview, "131072").empty());
-    assert(pipensx::updateVersionMatches(preview, "131072").empty());
+    assert(gamehubnx::selectUpdateFiles(preview, "131072").empty());
+    assert(gamehubnx::updateVersionMatches(preview, "131072").empty());
 }
 
 void testSelectFilesInstallsExactlyThePicks() {
@@ -242,7 +242,7 @@ void testSelectFilesInstallsExactlyThePicks() {
     preview.files = {package("A.nsp"),
                      package("B.nsp"),
                      plain("readme.txt")};
-    const std::vector<uint8_t> actions = pipensx::selectFiles(preview, {1});
+    const std::vector<uint8_t> actions = gamehubnx::selectFiles(preview, {1});
     assert(actions.size() == 3);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Skip));
     assert(actions[1] == static_cast<uint8_t>(FileAction::Install));
@@ -254,7 +254,7 @@ void testSmartInstallMissingTitleInstallsPackagesOnly() {
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131072].nsp"),
                      plain("readme.txt")};
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, false, "", "131072", "0100AAAA00000000");
     assert(actions.size() == 3);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Install));
@@ -267,7 +267,7 @@ void testSmartInstallMissingTitleSkipsDlcPackages() {
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131072].nsp"),
                      package("DLC [0100AAAA00000001][v131072].nsp")};
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, false, "", "131072", "0100AAAA00000000");
     assert(actions.size() == 3);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Install));
@@ -280,7 +280,7 @@ void testSmartInstallSkipsSameTitleMods() {
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131072].nsp"),
                      package("Mods/Cheat [0100AAAA00000000][v131072].nsp")};
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, false, "", "131072", "0100AAAA00000000");
     assert(actions.size() == 3);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Install));
@@ -293,7 +293,7 @@ void testSmartInstallInstalledTitleInstallsOnlyNewerUpdate() {
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131072].nsp"),
                      package("DLC [0100AAAA00000001][v131072].nsp")};
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, true, "65536", "131072", "0100AAAA00000000");
     assert(actions.size() == 3);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Skip));
@@ -305,9 +305,9 @@ void testSmartInstallInstalledTitleSkipsSameOrUnknownVersion() {
     TorrentPreview preview;
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131072].nsp")};
-    const std::vector<uint8_t> same = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> same = gamehubnx::selectSmartInstallFiles(
         preview, true, "131072", "131072", "0100AAAA00000000");
-    const std::vector<uint8_t> unknown = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> unknown = gamehubnx::selectSmartInstallFiles(
         preview, true, "", "131072", "0100AAAA00000000");
     assert(same.size() == 2 && unknown.size() == 2);
     assert(same[0] == static_cast<uint8_t>(FileAction::Skip));
@@ -320,7 +320,7 @@ void testSmartInstallInstalledTitleDoesNotUseHeuristicFallback() {
     TorrentPreview preview;
     preview.files = {package("Game [0100AAAA00000000][v0].nsp"),
                      package("Game Update [0100AAAA00000000][v131073].nsp")};
-    const std::vector<uint8_t> actions = pipensx::selectSmartInstallFiles(
+    const std::vector<uint8_t> actions = gamehubnx::selectSmartInstallFiles(
         preview, true, "65536", "131072", "0100AAAA00000000");
     assert(actions.size() == 2);
     assert(actions[0] == static_cast<uint8_t>(FileAction::Skip));
@@ -331,18 +331,18 @@ void testMagnetPrefersCatalogEntry() {
     CatalogEntry entry;
     entry.infoHash = "E21269D03D34B557F63CE915DEA14F765C9C9798";
     entry.magnetUri = "magnet:?xt=urn:btih:E21269D03D34B557F63CE915DEA14F765C9C9798&tr=http://bt.t-ru.org/ann?magnet";
-    assert(pipensx::updateMagnetFor("E21269D03D34B557F63CE915DEA14F765C9C9798",
+    assert(gamehubnx::updateMagnetFor("E21269D03D34B557F63CE915DEA14F765C9C9798",
                                     &entry) == entry.magnetUri);
     CatalogEntry noMagnet;
     noMagnet.infoHash = "E21269D03D34B557F63CE915DEA14F765C9C9798";
-    assert(pipensx::updateMagnetFor("E21269D03D34B557F63CE915DEA14F765C9C9798",
+    assert(gamehubnx::updateMagnetFor("E21269D03D34B557F63CE915DEA14F765C9C9798",
                                     &noMagnet) ==
            "magnet:?xt=urn:btih:E21269D03D34B557F63CE915DEA14F765C9C9798"
            "&tr=http://bt.t-ru.org/ann?magnet");
 }
 
 void testMagnetFallsBackToRuTrackerMagnetWhenNoCatalogEntry() {
-    assert(pipensx::updateMagnetFor("e21269d03d34b557f63ce915dea14f765c9c9798",
+    assert(gamehubnx::updateMagnetFor("e21269d03d34b557f63ce915dea14f765c9c9798",
                                     nullptr) ==
            "magnet:?xt=urn:btih:e21269d03d34b557f63ce915dea14f765c9c9798"
            "&tr=http://bt.t-ru.org/ann?magnet");
@@ -350,17 +350,17 @@ void testMagnetFallsBackToRuTrackerMagnetWhenNoCatalogEntry() {
 
 void testUtf8TruncateBoundary() {
     const std::string cyr = "\xD0\xB0\xD0\xB1\xD0\xB2";  // "абв"
-    assert(pipensx::utf8TruncateBoundary(cyr, 99) == cyr.size());
-    assert(pipensx::utf8TruncateBoundary(cyr, 4) == 4);  // whole "аб"
-    assert(pipensx::utf8TruncateBoundary(cyr, 3) == 2);  // mid "б" -> "а"
-    assert(pipensx::utf8TruncateBoundary(cyr, 2) == 2);
-    assert(pipensx::utf8TruncateBoundary(cyr, 1) == 0);
-    assert(pipensx::utf8TruncateBoundary(cyr, 0) == 0);
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 99) == cyr.size());
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 4) == 4);  // whole "аб"
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 3) == 2);  // mid "б" -> "а"
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 2) == 2);
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 1) == 0);
+    assert(gamehubnx::utf8TruncateBoundary(cyr, 0) == 0);
     const std::string single = "\xC3\xA0";  // "à" as two bytes
-    assert(pipensx::utf8TruncateBoundary(single, 2) == 2);
-    assert(pipensx::utf8TruncateBoundary(single, 1) == 0);
-    assert(pipensx::utf8TruncateBoundary("abc", 2) == 2);
-    assert(pipensx::utf8TruncateBoundary("", 0) == 0);
+    assert(gamehubnx::utf8TruncateBoundary(single, 2) == 2);
+    assert(gamehubnx::utf8TruncateBoundary(single, 1) == 0);
+    assert(gamehubnx::utf8TruncateBoundary("abc", 2) == 2);
+    assert(gamehubnx::utf8TruncateBoundary("", 0) == 0);
 }
 
 } // namespace

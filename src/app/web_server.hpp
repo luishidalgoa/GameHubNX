@@ -16,7 +16,7 @@
 #include "install_space.hpp"
 #include "web_add_queue.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // The web companion: REST + SSE API and the static SPA, served over the LAN
 // so a phone/PC can watch progress, control the queue, browse the catalog and
@@ -123,4 +123,4 @@ private:
 // compress2 produces zlib framing, which browsers reject here.
 std::string gzipCompress(const std::string& input);
 
-}  // namespace pipensx
+}  // namespace gamehubnx

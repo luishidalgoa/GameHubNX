@@ -18,7 +18,7 @@ extern "C" {
 #include <unistd.h>
 #include <unordered_map>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 std::string resultText(const char* operation, Result result) {
@@ -440,4 +440,4 @@ bool InstalledTitleService::refresh(std::string& error) {
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

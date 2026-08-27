@@ -14,7 +14,7 @@
 #include <thread>
 
 namespace fs = std::filesystem;
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 
@@ -74,7 +74,7 @@ int main() {
     assert(!portArchiveSolidFitsRam(100, kPortArchiveSolidRamReserveBytes + 99));
     assert(!portArchiveSolidFitsRam(1, kPortArchiveSolidRamReserveBytes));
 
-    const std::string root = "/tmp/pipensx-switch-deploy";
+    const std::string root = "/tmp/gamehubnx-switch-deploy";
     const std::string target = root + "/sd/switch";
     const std::string data = root + "/downloads/task";
     const std::string taskId = "0123456789012345678901234567890123456789";
@@ -249,7 +249,7 @@ int main() {
     const std::string recoveryRoot = root + "/recovery";
     const std::string recoveryTarget = recoveryRoot + "/sd/switch";
     // El sufijo sale del macro, no de un literal: cuando el directorio de la
-    // app paso de pipensx a gamehubnx este test se quedo buscando el nombre
+    // app paso de gamehubnx a gamehubnx este test se quedo buscando el nombre
     // viejo y la limpieza dejo de reconocerlo, con la CI en rojo desde
     // entonces.
     const std::string staleTemp =

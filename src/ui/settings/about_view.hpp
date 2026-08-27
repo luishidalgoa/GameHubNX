@@ -2,11 +2,11 @@
 
 #include <borealis.hpp>
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class AboutView : public brls::Box {
 public:
     AboutView();
 };
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui
