@@ -210,8 +210,20 @@ private:
             // encogida. Ahora el ancho sale de la proporcion en vigor y el
             // plate se centra; la altura no se toca, que es el presupuesto de
             // la columna documentado arriba.
-            const float coverWidth =
-                std::min(kLeftColumnWidth, kCoverHeight * coverAspect());
+            //
+            // Pero SOLO cuando lo que se pinta es la portada. Si la entrada
+            // cruza con el indice de metadatos, coverUrl es su banner de eShop
+            // --16:9-- y estrecharlo a 2:3 lo aplastaria: ahi el plate sigue
+            // ocupando la columna entera, como siempre. La condicion es la
+            // misma que usa catalog_presentation para decidirlo:
+            // iconPreserveAspect marca "esto es un poster", y coverUrl igual a
+            // iconUrl significa que no hubo banner que preferir.
+            const bool esPortada =
+                presentation_.iconPreserveAspect &&
+                presentation_.coverUrl == presentation_.iconUrl;
+            const float coverWidth = esPortada
+                ? std::min(kLeftColumnWidth, kCoverHeight * coverAspect())
+                : kLeftColumnWidth;
             auto* plate = new brls::Box();
             plate->setWidth(coverWidth);
             plate->setHeight(kCoverHeight);
