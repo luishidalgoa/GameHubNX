@@ -25,24 +25,33 @@ namespace gamehubnx::ui {
 inline void askInstallTarget(
     const std::string& rootPath,
     std::function<void(install::InstallStorageTarget)> onPick) {
-    auto* dialog = new brls::Dialog(tr("gamehubnx/install_target/question"));
-    auto addChoice = [&](install::InstallStorageTarget target) {
-        std::string label = installDestinationLabel(target);
-        // El espacio libre va en el propio boton: es justo el dato que hace
-        // falta para responder, y pedirlo aqui evita que el usuario tenga que
-        // acordarse de cuanto le queda en cada sitio.
+    // El espacio libre va en el TEXTO del modal, una linea por memoria, no
+    // dentro del boton: los botones de brls::Dialog tienen ancho fijo y
+    // "Tarjeta SD (53,56 GB libres)" se sale por los lados. El dato sigue
+    // delante de los ojos al decidir, que es lo que hacia falta.
+    const install::InstallStorageTarget targets[] = {
+        install::InstallStorageTarget::SdCard,
+        install::InstallStorageTarget::Nand,
+    };
+    std::string text = tr("gamehubnx/install_target/question");
+    for (install::InstallStorageTarget target : targets) {
         const StorageSpaceSnapshot space =
             queryInstallStorageSpace(target, rootPath);
-        if (space.available)
-            label += tr("gamehubnx/install_target/free",
-                        formatBytes(space.freeBytes));
-        dialog->addButton(label, [onPick, target] {
+        if (!space.available)
+            continue;
+        text += "\n" + installDestinationLabel(target) +
+                tr("gamehubnx/install_target/free",
+                   formatBytes(space.freeBytes));
+    }
+
+    auto* dialog = new brls::Dialog(text);
+    for (install::InstallStorageTarget target : targets) {
+        dialog->addButton(installDestinationLabel(target),
+                          [onPick, target] {
             if (onPick)
                 onPick(target);
         });
-    };
-    addChoice(install::InstallStorageTarget::SdCard);
-    addChoice(install::InstallStorageTarget::Nand);
+    }
     dialog->open();
 }
 

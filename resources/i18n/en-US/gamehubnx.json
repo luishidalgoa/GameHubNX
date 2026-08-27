@@ -476,7 +476,7 @@
     "legend_install": "This install",
     "legend_free": "Free",
     "unavailable": "SD space unavailable",
-    "free": "{} free",
+    "free": ": {} free",
     "estimate_suffix": "{} (est.)",
     "need_more": "Need {} more",
     "left_after": "{} left after install",

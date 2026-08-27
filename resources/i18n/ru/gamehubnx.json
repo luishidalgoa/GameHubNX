@@ -476,7 +476,7 @@
     "legend_install": "Установка",
     "legend_free": "Свободно",
     "unavailable": "Место на SD недоступно",
-    "free": "{} свободно",
+    "free": ": свободно {}",
     "estimate_suffix": "{} (оц.)",
     "need_more": "Нужно ещё {}",
     "left_after": "{} останется",

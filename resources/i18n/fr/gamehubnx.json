@@ -476,7 +476,7 @@
     "legend_install": "Cette installation",
     "legend_free": "Libre",
     "unavailable": "Espace SD indisponible",
-    "free": "{} libres",
+    "free": " : {} libres",
     "estimate_suffix": "{} (est.)",
     "need_more": "Il manque {}",
     "left_after": "{} restants après installation",

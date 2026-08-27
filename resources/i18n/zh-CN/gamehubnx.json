@@ -476,7 +476,7 @@
     "legend_install": "本次安装",
     "legend_free": "可用",
     "unavailable": "SD 空间不可用",
-    "free": "{} 可用",
+    "free": "：剩余 {}",
     "estimate_suffix": "{}（估算）",
     "need_more": "还需 {}",
     "left_after": "安装后剩余 {}",
