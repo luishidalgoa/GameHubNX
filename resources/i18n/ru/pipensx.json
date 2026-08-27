@@ -139,6 +139,7 @@
     "fact_install_state": "Статус",
     "install_state_installed": "Установлена",
     "install_state_not_installed": "Не установлена",
+    "version_base": "Без обновлений",
     "fact_installed_version": "Установленная версия",
     "fact_available_version": "Доступная версия",
     "update_available_hint": "Доступно обновление {}.",
