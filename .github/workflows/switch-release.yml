@@ -115,12 +115,17 @@ jobs:
           cd sdcard
           zip -r -q ../build-switch/SDOut.zip switch
 
+      # pipensx.elf va incluido: es el unico modo de traducir la pila de un
+      # crash report de Atmosphere ("pipensx + 0x2154d8") a nombres de funcion
+      # y numeros de linea, y tiene que ser el binario del MISMO build que
+      # corre la consola. No se copia al SDOut.zip: en la SD no pinta nada.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gamehubnx-nro
           path: |
             build-switch/gamehubnx.nro
             build-switch/gamehubnx.nro.sha256
+            build-switch/pipensx.elf
             build-switch/SDOut.zip
           if-no-files-found: error
 
@@ -143,6 +148,7 @@ jobs:
           gh release create "${{ inputs.version }}" \
             dist/gamehubnx.nro \
             dist/gamehubnx.nro.sha256 \
+            dist/pipensx.elf \
             dist/SDOut.zip \
             --repo "${{ github.repository }}" \
             --title "${{ inputs.version }}" \

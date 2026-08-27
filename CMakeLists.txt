@@ -48,9 +48,22 @@ project(pipensx VERSION ${PIPENSX_VERSION} LANGUAGES C CXX)
 # devkitA64 defaults Release to "-g -O2": the debug info balloons the ELF to
 # ~90 MB and slows every compile and link, while elf2nro strips it from the
 # NRO anyway. Keep Release lean.
+#
+# Pero lean no es ciego: -g1 deja SOLO las tablas de linea, un orden de
+# magnitud menos que -g completo, y es la diferencia entre un crash report de
+# Atmosphere legible y una lista de diecisiete direcciones. La consola no paga
+# nada por ello --elf2nro sigue tirando la informacion al hacer el .nro-- y el
+# .elf que guarda el CI se vuelve util con addr2line.
+#
+# Se puede apagar con -DPIPENSX_SYMBOLS=OFF si alguna vez estorba.
+option(PIPENSX_SYMBOLS "Tablas de linea en el ELF de Switch (-g1)" ON)
 if (PLATFORM_SWITCH)
-    set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+    set(PIPENSX_DEBUG_FLAG "")
+    if (PIPENSX_SYMBOLS)
+        set(PIPENSX_DEBUG_FLAG " -g1")
+    endif ()
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG${PIPENSX_DEBUG_FLAG}")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG${PIPENSX_DEBUG_FLAG}")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif ()
 
