@@ -576,10 +576,25 @@ public:
                     gamehub::isBaseTitleId(other.titleId))
                     continue;                       // es un juego, no un extra
                 catalogKnowsAddOns = true;
-                if (base.empty())
+                // El emparejamiento, por orden de fiabilidad:
+                //
+                //  1. gh_id. Es la relacion que el servidor conoce desde que
+                //     escaneo los directorios y que ahora publica. No depende
+                //     del nombre del fichero, asi que funciona con volcados
+                //     nombrados de cualquier manera.
+                //  2. Title ID base. El respaldo de siempre, para catalogos que
+                //     no son GameHub y para servidores que aun no publiquen
+                //     gh_id.
+                //
+                // Sin ninguno de los dos no hay forma honesta de saber de que
+                // juego es el complemento, y se deja fuera.
+                if (entry.gameId != 0 && other.gameId != 0) {
+                    if (other.gameId != entry.gameId)
+                        continue;
+                } else if (base.empty() ||
+                           gamehub::baseTitleIdOf(other.titleId) != base) {
                     continue;
-                if (gamehub::baseTitleIdOf(other.titleId) != base)
-                    continue;                       // de otro juego
+                }
                 // DLC y actualizacion, los dos: la pantalla de complementos
                 // ensena y descarga ambos. Quien cuenta solo DLC es la fila de
                 // datos de la ficha, y lo hace ella al pintarse.

@@ -90,6 +90,14 @@ struct CatalogEntry {
        Quien lo pone es el unico que lo sabe: el que descarga el sub-indice. */
     bool fromSubIndex = false;
 
+    /* Identidad del juego en GameHub (clave gh_id del indice), 0 si no viene.
+       Es la relacion DICHA por el servidor, que la conoce desde que escaneo los
+       directorios, en vez de deducida comparando Title IDs sacados del nombre
+       del fichero. Un complemento lleva el id del juego del que forma parte, y
+       asi se emparejan aunque ninguno de los dos nombres traiga Title ID -- que
+       era el caso de ocho ficheros de esta biblioteca. */
+    int64_t gameId = 0;
+
     /* El identificador que se le entrega al proveedor de transferencia. Para
        un torrent es el magnet; para la tienda es la propia URL, que es lo que
        GameHubProvider usa como handle. Tenerlo aqui evita que cada sitio que
