@@ -57,6 +57,21 @@ bool isBaseTitleId(const std::string& titleId) {
 
 
 
+bool isDlcTitleId(const std::string& titleId) {
+    if (titleId.size() != 16)
+        return false;
+    uint64_t value = 0;
+    for (char c : titleId) {
+        int digit;
+        if (c >= '0' && c <= '9')      digit = c - '0';
+        else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+        else return false;
+        value = (value << 4) | static_cast<uint64_t>(digit);
+    }
+    return (value & 0x1FFF) >= 0x1000;
+}
+
 const char* const kSourceLabel = "GameHub";
 
 namespace {
@@ -151,6 +166,26 @@ std::string fileNameFromUrl(const std::string& url) {
 bool isTrustedUrl(const std::string& url) {
     const std::string want = originOf(kCatalogUrl);
     return !want.empty() && originOf(url) == want;
+}
+
+bool parseCoverAspect(const std::string& json, int& width, int& height) {
+    nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
+    if (root.is_discarded() || !root.is_object())
+        return false;
+    const auto w = root.find("gh_cover_width");
+    const auto h = root.find("gh_cover_height");
+    if (w == root.end() || h == root.end() ||
+        !w->is_number_integer() || !h->is_number_integer())
+        return false;
+    const int64_t wv = w->get<int64_t>();
+    const int64_t hv = h->get<int64_t>();
+    // Un rango sano: fuera de el, el indice miente o esta corrupto y es mejor
+    // el valor por defecto que una tarjeta de un pixel.
+    if (wv < 16 || hv < 16 || wv > 4096 || hv > 4096)
+        return false;
+    width  = static_cast<int>(wv);
+    height = static_cast<int>(hv);
+    return true;
 }
 
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,

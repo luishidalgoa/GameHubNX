@@ -40,6 +40,15 @@ extern const char* const kClientId;
 /// clasificarla.
 bool isBaseTitleId(const std::string& titleId);
 
+/// Cierto cuando el Title ID es de un DLC (contenido adicional).
+///
+/// Los trece bits bajos son el discriminante: el juego base los tiene a cero,
+/// la actualizacion vale exactamente 0x800, y los DLC van de 0x1000 en
+/// adelante. Distinguirlos importa porque la ficha cuenta DLC, y colar ahi las
+/// actualizaciones inflaba la cifra con algo que el usuario ya ve en su propia
+/// fila ("version disponible").
+bool isDlcTitleId(const std::string& titleId);
+
 /// El Title ID del juego base al que pertenece esta entrada.
 ///
 /// En Switch los complementos derivan del id del juego: la actualizacion es
@@ -69,6 +78,16 @@ std::string baseTitleIdOf(const std::string& titleId);
 // never cost the user the rest of their library.
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
                   std::vector<std::string>& subIndexes, std::string& error);
+
+// Proporcion de portada publicada por la tienda en la raiz del indice
+// (gh_cover_width / gh_cover_height). Es la preferencia por plataforma que el
+// usuario configura en la web de GameHub; sin ella la app pintaba las cajas con
+// una constante propia, calibrada para otro catalogo, y salian con bandas.
+//
+// Devuelve false si el indice no la trae --cualquier tienda que no sea GameHub,
+// o una version anterior del servidor-- y entonces se conserva el valor por
+// defecto de la app.
+bool parseCoverAspect(const std::string& json, int& width, int& height);
 
 // Last path segment of a URL, percent-decoded: the file name as the user sees
 // it. Shared with the provider, which needs it for the transfer's display name.

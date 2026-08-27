@@ -195,6 +195,7 @@
     "fact_region": "Região",
     "fact_languages": "Idiomas",
     "trailer_qr": "Escaneie para ver o trailer",
+    "dlc_none": "Nenhum na loja",
     "dlc_available": "{0} na loja",
     "dlc_available_installed": "{0} na loja · {1} instalados"
   },
@@ -229,7 +230,7 @@
   "downloads": {
     "import": "Importar torrent",
     "import_action": "Importar .torrent",
-    "empty_cell": "Nenhum download ainda. Pressione X para adicionar um arquivo .torrent.",
+    "empty_cell": "Nenhum download ainda. Instale um jogo pela loja.",
     "empty_title": "Ainda sem downloads",
     "empty_body": "Escolha um jogo na loja e ele aparecerá aqui enquanto baixa e instala.",
     "section_active": "Ativos",
@@ -283,6 +284,7 @@
     "peers_line": "Peers: {}   DHT: {} bons / {} duvidosos",
     "pieces_line": "Peças: {} / {}   Verificadas: {}",
     "health_line": "Saúde do torrent: {0}",
+    "health_line_direct": "Estado do download: {0}",
     "health_excellent": "Excelente",
     "health_slow": "Lento",
     "health_poor": "Ruim",

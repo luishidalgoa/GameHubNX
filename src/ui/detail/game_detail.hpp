@@ -96,8 +96,10 @@ public:
                         CloseCallback onClose = nullptr,
                         FavoritesService* favorites = nullptr,
                         SwitchDeployService* deploy = nullptr,
-                        std::vector<CatalogEntry> addOns = {})
-        : addOns_(std::move(addOns)), entry_(std::move(entry)),
+                        std::vector<CatalogEntry> addOns = {},
+                        bool catalogKnowsAddOns = false)
+        : addOns_(std::move(addOns)),
+          catalogKnowsAddOns_(catalogKnowsAddOns), entry_(std::move(entry)),
           lastFailure_(std::move(lastFailure)),
           manager_(manager), metadata_(metadata), installed_(installed),
           settings_(settings), mods_(mods), favorites_(favorites),
@@ -202,13 +204,22 @@ private:
             // The plate doubles as the placeholder tile until the art arrives
             // (and stays visible as the letterbox behind a 16:9 banner), the
             // same way the catalog card's cover box works.
+            // El plate tomaba SIEMPRE los 320 de la columna, que es 16:9 a
+            // esta altura. Con una portada 2:3 --la de Switch en GameHub-- eso
+            // dejaba dos bandas de fondo a los lados y la caja se veia
+            // encogida. Ahora el ancho sale de la proporcion en vigor y el
+            // plate se centra; la altura no se toca, que es el presupuesto de
+            // la columna documentado arriba.
+            const float coverWidth =
+                std::min(kLeftColumnWidth, kCoverHeight * coverAspect());
             auto* plate = new brls::Box();
-            plate->setWidth(kLeftColumnWidth);
+            plate->setWidth(coverWidth);
             plate->setHeight(kCoverHeight);
+            plate->setMarginLeft((kLeftColumnWidth - coverWidth) / 2.0f);
             plate->setCornerRadius(theme::kRadiusLarge);
             plate->setBackgroundColor(theme::surface());
             auto* cover = new AsyncRgbaImage();
-            cover->setWidth(kLeftColumnWidth);
+            cover->setWidth(coverWidth);
             cover->setHeight(kCoverHeight);
             cover->setPositionType(brls::PositionType::ABSOLUTE);
             cover->setPositionTop(0);
@@ -449,9 +460,15 @@ private:
         const int instalados =
             puesto ? installed_->dlcCountForBase(titleId_) : 0;
 
-        if (disponibles == 0)
-            return puesto ? tr("pipensx/detail/dlc_installed", instalados)
-                          : std::string();
+        if (disponibles == 0) {
+            if (puesto)
+                return tr("pipensx/detail/dlc_installed", instalados);
+            // Con el catalogo completo delante, cero DLC es un dato: se dice.
+            // Sin el, callarse es lo honesto -- la fila desaparece, que es como
+            // se comportaba antes de saber distinguir los dos casos.
+            return catalogKnowsAddOns_ ? tr("pipensx/detail/dlc_none")
+                                       : std::string();
+        }
         if (!puesto)
             return tr("pipensx/detail/dlc_available", (int)disponibles);
         return tr("pipensx/detail/dlc_available_installed",
@@ -1268,6 +1285,11 @@ private:
        la vista de catalogo, que es quien tiene el catalogo entero; aqui
        llegan ya filtrados. Vacio para entradas que no son de la tienda. */
     std::vector<CatalogEntry> addOns_;
+    /* Cierto cuando el catalogo en memoria trae complementos de ALGUN juego.
+       Falso significa "todavia no lo se" --los sub-indices no han llegado-- y
+       entonces la fila de DLC se calla en vez de afirmar un cero sin
+       comprobar. */
+    bool catalogKnowsAddOns_ = false;
     CatalogEntry entry_;
     CatalogPresentation presentation_;
     std::string lastFailure_;

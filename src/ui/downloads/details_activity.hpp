@@ -223,17 +223,19 @@ private:
         return button;
     }
 
-    static std::string healthText(TorrentHealth health) {
+    // `torrent` elige el rotulo: el calculo de salud vale para las dos clases
+    // de descarga --es velocidad y progreso-- pero llamarla "salud del torrent"
+    // en una descarga directa del servidor del usuario no significa nada.
+    static std::string healthText(TorrentHealth health, bool torrent) {
+        const char* line = torrent ? "pipensx/downloads/health_line"
+                                   : "pipensx/downloads/health_line_direct";
         switch (health) {
         case TorrentHealth::Excellent:
-            return tr("pipensx/downloads/health_line",
-                      tr("pipensx/downloads/health_excellent"));
+            return tr(line, tr("pipensx/downloads/health_excellent"));
         case TorrentHealth::Slow:
-            return tr("pipensx/downloads/health_line",
-                      tr("pipensx/downloads/health_slow"));
+            return tr(line, tr("pipensx/downloads/health_slow"));
         case TorrentHealth::Poor:
-            return tr("pipensx/downloads/health_line",
-                      tr("pipensx/downloads/health_poor"));
+            return tr(line, tr("pipensx/downloads/health_poor"));
         case TorrentHealth::NotActive:
             return {};
         }
@@ -529,13 +531,26 @@ private:
         } else {
             installSpeedItem_->setVisibility(brls::Visibility::GONE);
         }
-        setTextIfChanged(peers_, tr("pipensx/downloads/peers_line", task->peers,
-                                    task->dhtGood, task->dhtDubious));
-        setTextIfChanged(pieces_,
-                         tr("pipensx/downloads/pieces_line", task->piecesDone,
-                            task->piecesTotal, task->piecesVerified));
+        // Peers y piezas son conceptos del motor de torrent. Una entrada de la
+        // tienda se baja por HTTPS de un servidor del usuario: no hay enjambre
+        // al que contar ni piezas que verificar, y ensenar "0 / 0" invita a
+        // pensar que la descarga esta parada cuando va perfectamente.
+        const bool torrent = task->source == TaskSource::Torrent;
+        peers_->setVisibility(torrent ? brls::Visibility::VISIBLE
+                                      : brls::Visibility::GONE);
+        pieces_->setVisibility(torrent ? brls::Visibility::VISIBLE
+                                       : brls::Visibility::GONE);
+        if (torrent) {
+            setTextIfChanged(peers_, tr("pipensx/downloads/peers_line",
+                                        task->peers, task->dhtGood,
+                                        task->dhtDubious));
+            setTextIfChanged(pieces_,
+                             tr("pipensx/downloads/pieces_line",
+                                task->piecesDone, task->piecesTotal,
+                                task->piecesVerified));
+        }
         const TorrentHealth health = torrentHealth(*task, now);
-        setTextIfChanged(health_, healthText(health));
+        setTextIfChanged(health_, healthText(health, torrent));
         health_->setTextColor(healthColor(health));
         setTextIfChanged(error_,
                          task->error.empty()

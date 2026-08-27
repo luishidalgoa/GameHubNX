@@ -30,6 +30,17 @@ public:
     void setTasks(std::vector<DownloadTask> tasks,
                   std::string activeDeployTask = {});
     const DownloadTask* taskAt(brls::IndexPath index) const;
+
+    /* Cierto cuando hay al menos una tarea pintada. Distinto de "tasks_ no
+       esta vacio": una tarea cuyo estado no cae en ninguna seccion existe pero
+       no se pinta, y quien decide la visibilidad de la lista necesita saber lo
+       segundo. */
+    bool hasRows() const {
+        for (const Section& section : sections_)
+            if (!section.tasks.empty())
+                return true;
+        return false;
+    }
     std::string taskIdAt(brls::IndexPath index) const;
     brls::IndexPath indexForTask(const std::string& taskId) const;
     int numberOfSections(brls::RecyclerFrame*) override;
@@ -495,7 +506,11 @@ private:
         recycler_->setDefaultCellFocus(
             dataSource_->indexForTask(focusedTaskId));
         recycler_->reloadData();
-        const bool empty = tasks_.empty();
+        // Por el data source y no por tasks_: si un estado se queda sin
+        // seccion --como le pasaba a Fetching-- lo que se pinta es la fila de
+        // relleno, y decidir desde tasks_ dejaba el recycler visible con el
+        // foco sobre una celda que reloadData() acababa de liberar.
+        const bool empty = !dataSource_->hasRows();
         if (empty)
             ensureEmptyState()->setVisibility(brls::Visibility::VISIBLE);
         else if (emptyState_)

@@ -550,25 +550,35 @@ public:
         // aqui, donde esta el catalogo entero, y se le pasan ya filtrados: la
         // ficha no necesita conocer el catalogo para mostrarlos.
         std::vector<CatalogEntry> addOns;
+        // Si el catalogo cargado no tiene NI UN complemento, es que los
+        // sub-indices no han llegado todavia. Distinguir "este juego no tiene
+        // DLC" de "aun no lo se" evita que la ficha afirme un cero que no ha
+        // comprobado.
+        bool catalogKnowsAddOns = false;
         if (catalog_) {
             const std::string base = gamehub::baseTitleIdOf(entry.titleId);
-            if (!base.empty()) {
-                for (const CatalogEntry& other : catalog_->entries()) {
-                    if (other.directUrl.empty())
-                        continue;                       // no es de la tienda
-                    if (gamehub::isBaseTitleId(other.titleId))
-                        continue;                       // es un juego, no un extra
-                    if (gamehub::baseTitleIdOf(other.titleId) != base)
-                        continue;                       // de otro juego
-                    addOns.push_back(other);
-                }
+            for (const CatalogEntry& other : catalog_->entries()) {
+                if (other.directUrl.empty())
+                    continue;                       // no es de la tienda
+                if (gamehub::isBaseTitleId(other.titleId))
+                    continue;                       // es un juego, no un extra
+                catalogKnowsAddOns = true;
+                if (base.empty())
+                    continue;
+                // Solo DLC: la actualizacion de un juego ya tiene su propia
+                // fila ("version disponible") y contarla como DLC mentia.
+                if (!gamehub::isDlcTitleId(other.titleId))
+                    continue;
+                if (gamehub::baseTitleIdOf(other.titleId) != base)
+                    continue;                       // de otro juego
+                addOns.push_back(other);
             }
         }
         brls::Application::pushActivity(new GameDetailActivity(
             std::move(entry), std::move(lastFailure), manager_, metadata_,
             installed_, settings_, mods_,
             std::move(onFailure), std::move(onChange), std::move(onClose),
-            favorites_, deploy_, std::move(addOns)));
+            favorites_, deploy_, std::move(addOns), catalogKnowsAddOns));
     }
 
 private:
@@ -774,6 +784,14 @@ private:
     }
 
     void rebuildEntries() {
+        // La tienda publica en su indice la proporcion de portada que el
+        // usuario configuro en GameHub. Se adopta aqui, antes de recrear las
+        // tarjetas, porque este es el unico sitio con el catalogo delante y en
+        // el hilo de UI.
+        if (catalog_) {
+            if (const float aspect = catalog_->coverAspect(); aspect > 0.0f)
+                setCoverAspect(aspect);
+        }
         // reloadData() recycles every cell, so remember where the focus was
         // (F2 "done when": focus survives reloadData) and restore it after.
         brls::View* focus = brls::Application::getCurrentFocus();

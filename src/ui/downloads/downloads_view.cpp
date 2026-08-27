@@ -13,7 +13,14 @@ void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
         bool (*matches)(DownloadStatus);
     } groups[] = {
         {tr("pipensx/downloads/section_active"), [](DownloadStatus s) {
+            // Fetching faltaba, y no era inocuo: solo lo produce el camino
+            // debrid/GameHub --un torrent jamas lo toma-- asi que una descarga
+            // de la tienda reanudada al abrir la app se caia de las cinco
+            // secciones y desaparecia de la lista mientras duraba ese estado.
+            // La pantalla se quedaba con la fila de relleno mientras el resto
+            // del codigo seguia creyendo que habia tareas.
             return s == DownloadStatus::Checking ||
+                   s == DownloadStatus::Fetching ||
                    s == DownloadStatus::Downloading ||
                    s == DownloadStatus::Installing ||
                    s == DownloadStatus::Committing ||
@@ -86,7 +93,15 @@ int DownloadDataSource::numberOfSections(brls::RecyclerFrame*) {
     return static_cast<int>(sections_.size());
 }
 
+// Los cuatro overrides de abajo acotan el indice igual que taskAt(). No es
+// paranoia: refresh() tiene un camino --el de overlay-- que publica un
+// sections_ nuevo sin llamar a reloadData(), de modo que el RecyclerFrame se
+// queda con el reparto anterior y puede pedir una fila que ya no existe. Con
+// una tarea de la tienda pasa facil, porque al reanudarse cambia de estado
+// varias veces seguidas (Queued -> Checking -> Fetching -> Installing).
 int DownloadDataSource::numberOfRows(brls::RecyclerFrame*, int section) {
+    if (section < 0 || static_cast<size_t>(section) >= sections_.size())
+        return 0;
     return sections_[section].tasks.empty()
         ? 1
         : static_cast<int>(sections_[section].tasks.size());
@@ -94,28 +109,30 @@ int DownloadDataSource::numberOfRows(brls::RecyclerFrame*, int section) {
 
 std::string DownloadDataSource::titleForHeader(brls::RecyclerFrame*,
                                                 int section) {
+    if (section < 0 || static_cast<size_t>(section) >= sections_.size())
+        return {};
     return sections_[section].title;
 }
 
 brls::RecyclerCell* DownloadDataSource::cellForRow(
     brls::RecyclerFrame* recycler, brls::IndexPath index) {
-    Section& section = sections_[index.section];
-    if (section.tasks.empty())
+    const DownloadTask* task = taskAt(index);
+    if (!task)
         return recycler->dequeueReusableCell("Message");
     auto* cell = static_cast<DownloadCell*>(
         recycler->dequeueReusableCell("Download"));
-    cell->setTask(section.tasks[index.row], owner_->metadataService(),
+    cell->setTask(*task, owner_->metadataService(),
                   &owner_->deploySnapshot());
     return cell;
 }
 
 void DownloadDataSource::didSelectRowAt(brls::RecyclerFrame*,
                                          brls::IndexPath index) {
-    Section& section = sections_[index.section];
-    if (!section.tasks.empty())
-        owner_->openRowMenu(section.tasks[index.row].id);
-    else
-        owner_->openFilePicker();
+    // Sobre la fila de relleno no se hace nada. Antes abria el importador de
+    // .torrent, que cfaf746 dio por inalcanzable al quitar su boton: pulsarla
+    // llevaba a un selector de ficheros que ya no pinta nada en este fork.
+    if (const DownloadTask* task = taskAt(index))
+        owner_->openRowMenu(task->id);
 }
 
 }  // namespace pipensx::ui

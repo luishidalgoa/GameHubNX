@@ -106,6 +106,15 @@ public:
 
     bool load(std::string& error);
 
+    /* Proporcion de portada (ancho/alto) que publica la tienda, o 0 si el
+       indice no la trae. La UI la usa para dar a la caja la forma que el
+       usuario configuro en GameHub en vez de una constante compilada. */
+    float coverAspect() const {
+        return (coverWidth_ > 0 && coverHeight_ > 0)
+            ? static_cast<float>(coverWidth_) / static_cast<float>(coverHeight_)
+            : 0.0f;
+    }
+
     /* true si el sello de la cache coincide con la fuente efectiva actual.
        Una cache sin sello (version anterior, u otra app) se rechaza. */
     bool cacheMatchesSource() const;
@@ -164,10 +173,21 @@ public:
                                 const std::string& sourceUrl);
 
 private:
+    /* Ruta de la cache de un sub-indice (DLC, actualizaciones). Se guardan
+       aparte del raiz y con el mismo formato, asi que se reparsean con el
+       mismo parseJson y no hace falta inventar un formato combinado. */
+    std::string subIndexCachePath(size_t n) const;
+
+    /* Anade a entries_ lo que haya en las caches de sub-indice. Silencioso si
+       no hay ninguna: una biblioteca sin DLC es un caso normal. */
+    void appendCachedSubIndexes();
+
     bool loadFile(const std::string& path, const std::string& label,
                   std::string& error);
 
     std::string rootPath_;
+    int coverWidth_ = 0;
+    int coverHeight_ = 0;
     std::string catalogRoot_;
     std::string cachePath_;
     /* Fichero hermano de la cache con la URL que la genero. Sin el, una cache

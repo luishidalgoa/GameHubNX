@@ -112,8 +112,11 @@ public:
             meta = tr("pipensx/downloads/cell_fetching",
                       percentOf(static_cast<float>(task.fetchProgress)));
         } else if (task.status == DownloadStatus::Downloading) {
-            meta += "   " + formatSpeed(task.speedBytesPerSecond) +
-                    tr("pipensx/downloads/cell_peers", task.peers);
+            meta += "   " + formatSpeed(task.speedBytesPerSecond);
+            // Una descarga directa no tiene enjambre: "0 peers" no es un dato
+            // pobre, es una mentira sobre como se esta bajando el fichero.
+            if (task.source == TaskSource::Torrent)
+                meta += tr("pipensx/downloads/cell_peers", task.peers);
             if (auto eta = taskEtaSeconds(task, now_ms()))
                 meta += tr("pipensx/downloads/cell_eta",
                            formatEtaSeconds(*eta));
