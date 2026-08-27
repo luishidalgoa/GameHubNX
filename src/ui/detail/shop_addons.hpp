@@ -306,7 +306,7 @@ public:
     }
 
 private:
-    brls::Button* addButton(brls::Box* row, brls::ButtonStyle* style,
+    brls::Button* addButton(brls::Box* row, const brls::ButtonStyle* style,
                             std::function<void()> action) {
         auto* button = new brls::Button();
         button->setStyle(style);
