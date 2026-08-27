@@ -77,9 +77,11 @@ void testStagedReadyRecoversInterruptedRestart() {
     unlink("/tmp/gamehubnx-updater.nro");
     write(Target, "old");
     write(HelperSource, "minimal updater helper");
+    // sha256 del payload de arriba. Si se toca ese texto hay que recalcularlo:
+    // el renombrado de pipensx a gamehubnx lo cambio y el hash se quedo atras.
     const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
@@ -112,7 +114,7 @@ void testInstallVerifiesBeforeStaging() {
     write(HelperSource, "minimal updater helper");
     const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
@@ -188,7 +190,7 @@ void testTransientNetworkFailuresAreRetried() {
     write(HelperSource, "minimal updater helper");
     const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     int checksumAttempts = 0;
     int downloadAttempts = 0;
     gamehubnx::UpdateService installService(Target,
@@ -235,7 +237,7 @@ void testInstallNeverTouchesRunningNro() {
     write(HelperSource, "minimal updater helper");
     const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
@@ -299,7 +301,7 @@ void testHelperPublishFailurePreservesPreviousHelper() {
     write("/tmp/gamehubnx-updater.nro", "previous helper");
     const std::string payload = "new verified gamehubnx nro";
     const std::string checksum =
-        "9dc1034a694baa2d68b032ed446fbc9b170975306c571202e99ff741821365b4";
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
     gamehubnx::UpdateService service(Target,
         [checksum](const std::string&, size_t, std::string& body,
                    std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
