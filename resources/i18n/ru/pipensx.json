@@ -196,6 +196,7 @@
     "fact_region": "Регион",
     "fact_languages": "Языки",
     "trailer_qr": "Отсканируйте, чтобы посмотреть трейлер",
+    "addons_button": "DLC и обновления ({})",
     "dlc_none": "Нет в магазине",
     "dlc_available": "{0} в магазине",
     "dlc_available_installed": "{0} в магазине · {1} установлено"
@@ -228,6 +229,13 @@
     "cta_download": "Скачать {} · {}",
     "preset_packages": "Пакеты",
     "preset_download_all": "Скачать всё"
+  },
+  "addons": {
+    "title": "DLC и обновления",
+    "hint": "Выберите, чтобы открыть и установить.",
+    "kind_dlc": "DLC",
+    "kind_update": "Обновление",
+    "installed": "Установлено"
   },
   "downloads": {
     "import": "Добавить .torrent",

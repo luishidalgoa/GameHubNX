@@ -196,6 +196,7 @@
     "fact_region": "Région",
     "fact_languages": "Langues",
     "trailer_qr": "Scannez pour voir la bande-annonce",
+    "addons_button": "DLC et mises à jour ({})",
     "dlc_none": "Aucun dans la boutique",
     "dlc_available": "{0} dans la boutique",
     "dlc_available_installed": "{0} dans la boutique · {1} installés"
@@ -228,6 +229,13 @@
     "cta_download": "Télécharger {} · {}",
     "preset_packages": "Paquets",
     "preset_download_all": "Tout télécharger"
+  },
+  "addons": {
+    "title": "DLC et mises à jour",
+    "hint": "Choisissez-en un pour le voir et l'installer.",
+    "kind_dlc": "DLC",
+    "kind_update": "Mise à jour",
+    "installed": "Installé"
   },
   "downloads": {
     "import": "Importer un torrent",
