@@ -68,12 +68,6 @@ inline void installSidebarStyle() {
     style.addMetric("brls/sidebar/padding_left", 22.0f);      // was 80
     style.addMetric("brls/sidebar/padding_right", 16.0f);     // was 40
     style.addMetric("brls/sidebar/padding_top", 28.0f);
-    // El pie de espacio libre es una caja ABSOLUTA pinchada sobre todo el alto
-    // de la columna, asi que la lista crecia por debajo de el y la ultima
-    // entrada --"Acerca de"-- se solapaba con la IP del servidor web. La barra
-    // lateral es un ScrollingFrame y este relleno va a su caja de contenido, de
-    // modo que reservarlo permite que la ultima entrada suba por encima del pie
-    // en vez de quedarse debajo.
 }
 
 // Box that reports no hit at all, so touches fall through to whatever sits
