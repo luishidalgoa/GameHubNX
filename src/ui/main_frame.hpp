@@ -39,12 +39,35 @@ enum class NavIconType {
 // Style metrics back a shared global table, so this must run once after
 // Application::init() and BEFORE the first TabFrame/Sidebar is constructed
 // (both read these at inflate time).
+// Alto que el pie anclado ocupa dentro de la columna de la barra lateral, y por
+// tanto lo que la lista de navegacion tiene que poder dejar libre. Sumando sus
+// piezas (ver attachStorageFooter, mas abajo):
+//
+//   fila del servidor web   texto de 15px (~20) + margen inferior 8   =  28
+//   medidor: cabecera       texto de 15px (~20) + margen 6            =  26
+//   medidor: barra          14 + margen 2                             =  16
+//   medidor: pie            texto de 15px (~20) + margen 6            =  26
+//   relleno inferior del dock (kFooterPad)                            =  16
+//                                                                       ---
+//                                                                       112
+//
+// Se reservan 120. Pasarse solo permite desplazar un poco mas de la cuenta;
+// quedarse corto reproduce el solape, que es el fallo que esto arregla.
+inline constexpr float kSidebarFooterReserve = 120.0f;
+
 inline void installSidebarStyle() {
     brls::Style style = brls::Application::getStyle();
     style.addMetric("brls/tab_frame/sidebar_width", 248.0f);  // was 410
     style.addMetric("brls/sidebar/padding_left", 22.0f);      // was 80
     style.addMetric("brls/sidebar/padding_right", 16.0f);     // was 40
     style.addMetric("brls/sidebar/padding_top", 28.0f);
+    // El pie de espacio libre es una caja ABSOLUTA pinchada sobre todo el alto
+    // de la columna, asi que la lista crecia por debajo de el y la ultima
+    // entrada --"Acerca de"-- se solapaba con la IP del servidor web. La barra
+    // lateral es un ScrollingFrame y este relleno va a su caja de contenido, de
+    // modo que reservarlo permite que la ultima entrada suba por encima del pie
+    // en vez de quedarse debajo.
+    style.addMetric("brls/sidebar/padding_bottom", kSidebarFooterReserve);
 }
 
 // Box that reports no hit at all, so touches fall through to whatever sits
@@ -426,6 +449,8 @@ private:
 
     // Wide enough for padding + the active-accent bar + the 28px icon.
     static constexpr float kCollapsedWidth = 88.0f;
+    // Si esto cambia, kSidebarFooterReserve deja de cuadrar: es uno de sus
+    // sumandos.
     static constexpr float kFooterPad = 16.0f;
 
     bool collapsed_ = false;
