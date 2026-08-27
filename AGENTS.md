@@ -47,6 +47,21 @@ Before changing a libnx call, PC shim, install backend, or code under
 from `.agents/skills/libnx/`. It documents header-first API checks, the shared
 PC-build patterns, and required dual-build verification.
 
+## Crash reports
+
+Atmosphere writes `sdmc:/atmosphere/crash_reports/*.log` with the stack as
+module offsets (`pipensx + 0x211a38`). To read one, pair it with the
+`pipensx.elf` published by CI **for that same build** — `ci.yml` and
+`switch-release.yml` both ship it next to the `.nro`, and Release compiles with
+`-g1` so the ELF carries line tables:
+
+```sh
+scripts/symbolize_crash.py crash.log pipensx.elf
+```
+
+An ELF from a different build resolves to plausible, wrong answers. Check the
+`build='...'` stamp in `gamehubnx.log` against the artifact before trusting it.
+
 ## Context budget — don't read
 
 - `pipensx.log` is a multi-thousand-line runtime log. Never read it whole;
