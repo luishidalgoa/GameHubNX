@@ -476,7 +476,7 @@
     "legend_install": "Esta instalación",
     "legend_free": "Libre",
     "unavailable": "Espacio SD no disponible",
-    "free": "{} libre",
+    "free": ": {} libres",
     "estimate_suffix": "{} (aprox.)",
     "need_more": "Faltan {}",
     "left_after": "{} restante tras instalar",
@@ -752,5 +752,13 @@
         "changed": "Se instalará en {}",
         "too_late": "Ya ha empezado a instalarse: la memoria no se puede cambiar",
         "free": "  ({} libres)"
+    },
+    "platforms": {
+        "title": "Plataformas",
+        "games": "{} juegos",
+        "native": "Nativa",
+        "native_hint": "Se instala en la consola",
+        "emulated_hint": "Se descarga a la tarjeta SD para un emulador",
+        "empty": "Sin juegos todavía"
     }
 }

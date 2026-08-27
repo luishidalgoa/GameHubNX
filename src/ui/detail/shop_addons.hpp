@@ -80,14 +80,14 @@ public:
         setFocusable(true);
         setAxis(brls::Axis::ROW);
         setAlignItems(brls::AlignItems::CENTER);
-        setPadding(10, 20, 10, 20);
-        setHeight(76);
+        setPadding(6, 20, 6, 20);
+        setHeight(62);
 
         // Dos glifos, no un "[x]" de texto: la marca de seleccion y el tipo
         // de contenido. El tipo es lo que resuelve el "no distingo un DLC de
         // una actualizacion", y se lee por peso de relleno --macizo, contorno,
         // anillo-- que a tamano de fila funciona sin fijarse.
-        mark_ = new ActionIcon(ActionIconKind::Unchecked);
+        mark_ = new ActionIcon(ActionIconKind::UncheckedBox);
         mark_->setMarginRight(14);
         addView(mark_);
         kind_ = new ActionIcon(ActionIconKind::Game);
@@ -125,7 +125,7 @@ public:
         // volver a bajar lo que ya esta.
         mark_->setKind(item.installed  ? ActionIconKind::Skip
                        : item.selected ? ActionIconKind::Checked
-                                       : ActionIconKind::Unchecked);
+                                       : ActionIconKind::UncheckedBox);
         switch (item.kind) {
         case ShopItemKind::Game:   kind_->setKind(ActionIconKind::Game);   break;
         case ShopItemKind::Update: kind_->setKind(ActionIconKind::Update); break;
@@ -274,7 +274,7 @@ public:
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
         recycler_->setPadding(6, 0, 6, 0);
-        recycler_->estimatedRowHeight = 76;
+        recycler_->estimatedRowHeight = 62;
         recycler_->registerCell("Item", [] { return new ShopItemCell(); });
         dataSource_ = new ShopAddOnsDataSource(this);
         // Sembrado ANTES de entregarlo: ver la nota del mismo patron en
