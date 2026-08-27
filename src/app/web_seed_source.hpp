@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Fetches whole torrent pieces from a BEP-19 web seed (HTTP "GetRight" URL)
 // using HTTP Range requests, on background threads. The owner — the torrent
@@ -103,4 +103,4 @@ private:
     std::chrono::steady_clock::time_point deadUntil_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

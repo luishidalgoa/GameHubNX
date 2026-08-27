@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Largest byte index <= maxBytes that does not split a UTF-8 code point.
 // RuTracker file names are Cyrillic, so truncating a user-visible label to a
@@ -110,4 +110,4 @@ inline bool updateRecheckSettled(bool found, DownloadStatus status) {
 std::string updateMagnetFor(const std::string& infoHash,
                             const CatalogEntry* entry);
 
-} // namespace pipensx
+} // namespace gamehubnx

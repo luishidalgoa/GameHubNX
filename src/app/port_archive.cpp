@@ -29,7 +29,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr size_t kCopyBufferBytes = 256 * 1024;
@@ -1127,4 +1127,4 @@ bool extractPortArchive(const std::string& archivePath,
     return false;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

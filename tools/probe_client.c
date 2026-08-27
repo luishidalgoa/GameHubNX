@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     padInitializeDefault(&pad);
 
-    printf("pipensx probe client (H8: cross-process TCP)\n\n");
+    printf("gamehubnx probe client (H8: cross-process TCP)\n\n");
     if (R_FAILED(socketInitializeDefault())) {
         printf("socketInitializeDefault failed\n");
     } else {

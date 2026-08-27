@@ -225,7 +225,7 @@ batch-installer), не блокируя event-loop:
   деструктор отвязывает недобежавшую пробу от умирающего UI, `sync`-колбэки
   становятся no-op.
 
-Собрано и слинковано под devkitPro (aarch64, borealis, libnx): `pipensx.nro`
+Собрано и слинковано под devkitPro (aarch64, borealis, libnx): `gamehubnx.nro`
 собирается чисто, без варнингов от нового кода. Тем же прогоном
 `connectivity_orchestrator.cpp` (W2) впервые собран и слинкован для Switch. UI
 не покрывается PC-тестами (как и весь `src/ui`), но движок под ним (`runLadder`)

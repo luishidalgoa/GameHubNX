@@ -4,11 +4,11 @@
 #include <cstdio>
 #include <vector>
 
-using pipensx::StreamBudgetArbiter;
-using pipensx::StreamRamBudget;
-using pipensx::StreamRamMemorySnapshot;
-using pipensx::calculateStreamRamBudget;
-using pipensx::kFallbackStreamRamBytes;
+using gamehubnx::StreamBudgetArbiter;
+using gamehubnx::StreamRamBudget;
+using gamehubnx::StreamRamMemorySnapshot;
+using gamehubnx::calculateStreamRamBudget;
+using gamehubnx::kFallbackStreamRamBytes;
 
 namespace {
 

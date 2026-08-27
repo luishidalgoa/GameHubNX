@@ -14,7 +14,7 @@ extern "C" {
 #include "../core/sha1.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace gamehub {
 
 const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
@@ -354,4 +354,4 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
 }
 
 } // namespace gamehub
-} // namespace pipensx
+} // namespace gamehubnx

@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct StreamRamMemorySnapshot {
     bool heapDetected = false;
@@ -39,4 +39,4 @@ StreamRamBudget selectStreamRamBudget(
     uint64_t pieceLengthBytes);
 StreamRamBudget detectStreamRamBudget(uint64_t pieceLengthBytes);
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -1,4 +1,4 @@
-# Contributing to pipensx
+# Contributing to gamehubnx
 
 Read [README.md](README.md) for the application overview and
 [BUILD.md](BUILD.md) for dependency and build instructions.
@@ -32,7 +32,7 @@ make golden
 ```
 
 Changes affecting Switch-only code must also produce
-`build-switch/pipensx.nro` with `make switch`. Sleep/wake, long downloads, and
+`build-switch/gamehubnx.nro` with `make switch`. Sleep/wake, long downloads, and
 content installation require final validation on physical hardware.
 
 Add tests for new behavior and regressions. Do not commit generated build

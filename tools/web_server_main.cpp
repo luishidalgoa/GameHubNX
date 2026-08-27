@@ -23,7 +23,7 @@
 #include <string>
 #include <sys/stat.h>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 static volatile sig_atomic_t gStop = 0;
 static void onSignal(int) { gStop = 1; }

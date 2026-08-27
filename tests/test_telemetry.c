@@ -23,7 +23,7 @@ static int file_contains(const char *path, const char *needle) {
 }
 
 int main(void) {
-    const char *path = "/tmp/pipensx-telemetry-test.log";
+    const char *path = "/tmp/gamehubnx-telemetry-test.log";
     char backup[256];
     snprintf(backup, sizeof(backup), "%s.1", path);
     unlink(path);

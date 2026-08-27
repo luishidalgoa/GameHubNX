@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <unordered_set>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 // Strict decimal parse ("131072"); rejects signs, whitespace and overflow —
@@ -306,4 +306,4 @@ std::string updateMagnetFor(const std::string& infoHash,
            "&tr=http://bt.t-ru.org/ann?magnet";
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

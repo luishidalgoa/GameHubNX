@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct DebridFile {
     std::string id;
@@ -51,4 +51,4 @@ public:
     virtual bool allowsPlaintextLinks() const { return false; }
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

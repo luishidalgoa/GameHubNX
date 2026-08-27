@@ -70,7 +70,7 @@ fi
 
 echo "golden: configuring and building golden_runner"
 "$CMAKE_BIN" -S "$ROOT" -B "$ROOT/build-golden" \
-    -DPIPENSX_GOLDEN=ON -DCMAKE_BUILD_TYPE=Release >/dev/null || exit 2
+    -DGAMEHUBNX_GOLDEN=ON -DCMAKE_BUILD_TYPE=Release >/dev/null || exit 2
 "$CMAKE_BIN" --build "$ROOT/build-golden" \
     --target golden_runner || exit 2
 

@@ -156,7 +156,7 @@ C-движка — `num_pieces × piece_length`, то есть весь торр
 
 **Механизм потолка в движке уже есть** и работает в stream-install:
 `strict_piece_order` + `strict_order_lookahead` + колбэк `request_allowed`
-(`torrent.h:14-21`) — окно разрешённых пьес. `PIPENSX_WINDOW=N` в
+(`torrent.h:14-21`) — окно разрешённых пьес. `GAMEHUBNX_WINDOW=N` в
 `src/main_pc.c` включает его для PC-клиента, а строка статуса печатает
 `heap=` из `mallinfo2` — так эти цифры и снимались.
 
@@ -308,7 +308,7 @@ arrangement `4GBForSystemDev`: applet 448 вместо 507 МБ) работае�
 висеть на таймауте. Это UX-работа, а не сетевая.
 
 **Чего не делаем:** IPC-протокол из `SYSMODULE_PLAN.md` §3 (11 команд cmif,
-`src/ipc/pipensx_ipc.h`). H8 подтверждена межпроцессно — целая фаза исчезает.
+`src/ipc/gamehubnx_ipc.h`). H8 подтверждена межпроцессно — целая фаза исчезает.
 
 ---
 

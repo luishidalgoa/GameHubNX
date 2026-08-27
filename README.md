@@ -1,13 +1,13 @@
-# pipensx
+# gamehubnx
 
-[![CI](https://github.com/i3sey/pipensx/actions/workflows/ci.yml/badge.svg)](https://github.com/i3sey/pipensx/actions/workflows/ci.yml)
-[![Golden screenshots](https://github.com/i3sey/pipensx/actions/workflows/golden.yml/badge.svg)](https://github.com/i3sey/pipensx/actions/workflows/golden.yml)
+[![CI](https://github.com/luishidalgoa/GameHubNX/actions/workflows/ci.yml/badge.svg)](https://github.com/luishidalgoa/GameHubNX/actions/workflows/ci.yml)
+[![Golden screenshots](https://github.com/luishidalgoa/GameHubNX/actions/workflows/golden.yml/badge.svg)](https://github.com/luishidalgoa/GameHubNX/actions/workflows/golden.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 Native BitTorrent download manager and streaming package installer for
 Nintendo Switch homebrew.
 
-DOWNLOAD LATEST - [pipensx.nro](https://github.com/i3sey/pipensx/releases/latest/download/pipensx.nro)
+DOWNLOAD LATEST - [gamehubnx.nro](https://github.com/luishidalgoa/GameHubNX/releases/latest/download/gamehubnx.nro)
 
 <img src="resources/2026071001590800_anonymized.jpg" width="400"> <img src="resources/2026071002002700_anonymized.jpg" width="400">
 <br><br>
@@ -15,7 +15,7 @@ DOWNLOAD LATEST - [pipensx.nro](https://github.com/i3sey/pipensx/releases/latest
 
 
 > [!IMPORTANT]
-> pipensx does not include Nintendo keys, firmware, games, or a torrent catalog.
+> gamehubnx does not include Nintendo keys, firmware, games, or a torrent catalog.
 > Use it only with content you are legally allowed to download and install. The
 > project is not affiliated with Nintendo, RuTracker, or the catalog provider.
 
@@ -51,8 +51,8 @@ and then uses its on-SD cache.
 Clone the pinned submodules:
 
 ```bash
-git clone --recurse-submodules https://github.com/i3sey/pipensx.git
-cd pipensx
+git clone --recurse-submodules https://github.com/luishidalgoa/GameHubNX.git
+cd gamehubnx
 ```
 
 Run the portable PC test suite:
@@ -68,23 +68,23 @@ export DEVKITPRO=/opt/devkitpro
 make switch
 ```
 
-The resulting application is `build-switch/pipensx.nro`. See
+The resulting application is `build-switch/gamehubnx.nro`. See
 [BUILD.md](BUILD.md) for dependency installation, golden tests, optional
 metadata input, and deployment helpers.
 
 ## Install on Nintendo Switch
 
-Copy the [NRO](https://github.com/i3sey/pipensx/releases/latest/download/pipensx.nro) to:
+Copy the [NRO](https://github.com/luishidalgoa/GameHubNX/releases/latest/download/gamehubnx.nro) to:
 
 ```text
-SD:/switch/pipensx/pipensx.nro
+SD:/switch/gamehubnx/gamehubnx.nro
 ```
 
 Launch it through hbmenu in **application mode** by holding `R` while opening a
 game. Album applet mode is rejected because it does not provide enough memory
 and network resources for the application.
 
-Runtime data is stored below `SD:/switch/pipensx/`, including:
+Runtime data is stored below `SD:/switch/gamehubnx/`, including:
 
 ```text
 queue.bencode
@@ -96,7 +96,7 @@ dht_nodes.bin
 catalog/catalog.json
 catalog/metadata/
 catalog/images/
-pipensx.log
+gamehubnx.log
 ```
 
 The interface displays contextual controller hints. The main actions cover
@@ -134,6 +134,6 @@ Historical implementation notes are archived under
 
 ## License
 
-pipensx is licensed under the GNU General Public License v3.0. See
+gamehubnx is licensed under the GNU General Public License v3.0. See
 [LICENSE](LICENSE). Third-party components retain their original licenses as
 listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

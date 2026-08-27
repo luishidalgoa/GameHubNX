@@ -3,14 +3,14 @@
 
 Atmosphere escribe la pila como desplazamientos dentro del modulo:
 
-    ReturnAddress[00]:       0000000020e87a38 (pipensx + 0x211a38)
+    ReturnAddress[00]:       0000000020e87a38 (gamehubnx + 0x211a38)
 
 Sin el binario con simbolos eso no dice nada. Este script empareja cada
-desplazamiento con el pipensx.elf del MISMO build --el que publica el CI junto
+desplazamiento con el gamehubnx.elf del MISMO build --el que publica el CI junto
 al .nro-- y saca funcion y, si el ELF trae tablas de linea (-g1, que es lo que
 compila el CI), fichero y numero de linea.
 
-    scripts/symbolize_crash.py crash.log pipensx.elf
+    scripts/symbolize_crash.py crash.log gamehubnx.elf
 
 El .elf tiene que ser el del build que corria la consola: los desplazamientos
 de otro build apuntan a otro sitio y el resultado seria plausible y falso.
@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 FRAME = re.compile(r"(ReturnAddress\[\d+\]|User Exception Address|PC):\s+"
-                   r"[0-9a-fA-F]+(?:\s+\(pipensx \+ (0x[0-9a-fA-F]+)\))?")
+                   r"[0-9a-fA-F]+(?:\s+\(gamehubnx \+ (0x[0-9a-fA-F]+)\))?")
 
 
 def addr2line_binary() -> str:
@@ -44,7 +44,7 @@ def main() -> int:
 
     offsets = [m.group(2) for m in FRAME.finditer(text) if m.group(2)]
     if not offsets:
-        sys.exit("el informe no trae marcos 'pipensx + 0x...'")
+        sys.exit("el informe no trae marcos 'gamehubnx + 0x...'")
 
     out = subprocess.run([tool, "-f", "-C", "-i", "-p", "-e", elf, *offsets],
                          capture_output=True, text=True)

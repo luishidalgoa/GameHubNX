@@ -13,7 +13,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class DownloadCell : public brls::RecyclerCell {
 public:
@@ -98,15 +98,15 @@ public:
                            formatBytes(wanted.second);
         if (task.status == DownloadStatus::Installing ||
             task.status == DownloadStatus::Committing) {
-            meta = tr("pipensx/downloads/cell_package",
+            meta = tr("gamehubnx/downloads/cell_package",
                       task.packagesInstalled + 1, task.packageCount);
             if (!task.currentPackage.empty())
                 meta += "   " + task.currentPackage;
             if (auto eta = taskEtaSeconds(task, now_ms()))
-                meta += tr("pipensx/downloads/cell_eta",
+                meta += tr("gamehubnx/downloads/cell_eta",
                            formatEtaSeconds(*eta));
         } else if (task.status == DownloadStatus::Installed) {
-            meta = tr("pipensx/downloads/cell_installed_packages",
+            meta = tr("gamehubnx/downloads/cell_installed_packages",
                       task.packagesInstalled);
         } else if (task.status == DownloadStatus::Fetching) {
             // Con GameHub no hay servicio remoto preparando nada: fetchInfo
@@ -114,40 +114,40 @@ public:
             // instancia ningun debrid. Decir "el servidor esta obteniendo
             // esto" es herencia del debrid y aqui es mentira.
             meta = task.source == TaskSource::Torrent
-                ? tr("pipensx/downloads/cell_fetching",
+                ? tr("gamehubnx/downloads/cell_fetching",
                      percentOf(static_cast<float>(task.fetchProgress)))
-                : tr("pipensx/downloads/cell_preparing");
+                : tr("gamehubnx/downloads/cell_preparing");
         } else if (task.status == DownloadStatus::Downloading) {
             meta += "   " + formatSpeed(task.speedBytesPerSecond);
             // Una descarga directa no tiene enjambre: "0 peers" no es un dato
             // pobre, es una mentira sobre como se esta bajando el fichero.
             if (task.source == TaskSource::Torrent)
-                meta += tr("pipensx/downloads/cell_peers", task.peers);
+                meta += tr("gamehubnx/downloads/cell_peers", task.peers);
             if (auto eta = taskEtaSeconds(task, now_ms()))
-                meta += tr("pipensx/downloads/cell_eta",
+                meta += tr("gamehubnx/downloads/cell_eta",
                            formatEtaSeconds(*eta));
         } else if (task.status == DownloadStatus::Queued)
             meta += deploy && deploy->active() &&
                             task.mode == TransferMode::StreamInstall
-                ? tr("pipensx/deploy/waiting_stream")
-                : tr("pipensx/downloads/cell_waiting");
+                ? tr("gamehubnx/deploy/waiting_stream")
+                : tr("gamehubnx/downloads/cell_waiting");
         else if (task.status == DownloadStatus::Error && !task.error.empty())
             meta += "   " + task.error;
         if (deploy && deploy->taskId == task.id) {
             if (deploy->active()) {
                 const char* phaseKey =
                     deploy->phase == SwitchDeployPhase::Preparing
-                        ? "pipensx/deploy/phase_preparing"
+                        ? "gamehubnx/deploy/phase_preparing"
                         : deploy->phase == SwitchDeployPhase::Extracting
-                              ? "pipensx/deploy/phase_extracting"
-                              : "pipensx/deploy/phase_copying";
+                              ? "gamehubnx/deploy/phase_extracting"
+                              : "gamehubnx/deploy/phase_copying";
                 setTextIfChanged(status_, tr(phaseKey));
                 status_->setTextColor(theme::accent());
                 progress_->setProgress(deploy->totalBytes
                     ? static_cast<float>(deploy->bytesCopied) /
                           static_cast<float>(deploy->totalBytes)
                     : 0.0f);
-                meta = tr("pipensx/deploy/cell_progress",
+                meta = tr("gamehubnx/deploy/cell_progress",
                           percentOf(deploy->totalBytes
                                         ? static_cast<float>(deploy->bytesCopied) /
                                               static_cast<float>(deploy->totalBytes)
@@ -158,15 +158,15 @@ public:
                 if (!deploy->currentPath.empty())
                     meta += "   " + deploy->currentPath;
             } else if (deploy->phase == SwitchDeployPhase::Completed) {
-                setTextIfChanged(status_, tr("pipensx/deploy/completed"));
+                setTextIfChanged(status_, tr("gamehubnx/deploy/completed"));
                 status_->setTextColor(theme::success());
             } else if (deploy->phase == SwitchDeployPhase::Failed) {
-                setTextIfChanged(status_, tr("pipensx/deploy/failed"));
+                setTextIfChanged(status_, tr("gamehubnx/deploy/failed"));
                 status_->setTextColor(theme::error());
                 if (!deploy->detail.empty())
                     meta = deploy->detail;
             } else if (deploy->phase == SwitchDeployPhase::Cancelled) {
-                setTextIfChanged(status_, tr("pipensx/deploy/cancelled"));
+                setTextIfChanged(status_, tr("gamehubnx/deploy/cancelled"));
             }
         }
         setTextIfChanged(meta_, meta);
@@ -203,4 +203,4 @@ private:
         std::make_shared<ImageRequestState>();
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

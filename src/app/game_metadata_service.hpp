@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Ways a game can be played together, as published in the metadata index's
 // optional "modes" array. Bit flags so a whole snapshot can be OR-ed into one
@@ -228,4 +228,4 @@ private:
     bool localPlayerCounts_ = false;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

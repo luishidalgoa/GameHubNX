@@ -28,7 +28,7 @@ extern "C" {
 #include <thread>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // IMPROVEMENT_PLAN F-B: one journal file per task next to the queue state.
 inline std::string installJournalPath(const std::string& root,
@@ -268,7 +268,7 @@ public:
         // resume path restores it instead of regrowing from the minimum
         // (PERF_PLAN 7.3).
         if (!stalled &&
-            requestGate_.state() == pipensx::RequestGate::State::Free)
+            requestGate_.state() == gamehubnx::RequestGate::State::Free)
             lookaheadHealthy_ = lookaheadWindow_;
         return lookaheadWindow_;
     }
@@ -277,7 +277,7 @@ public:
     // engine freezes its rate EMAs for the duration (PERF_PLAN 7.2).
     bool requestsCurtailed() const {
         std::lock_guard<std::mutex> lock(queueMutex_);
-        return requestGate_.state() != pipensx::RequestGate::State::Free;
+        return requestGate_.state() != gamehubnx::RequestGate::State::Free;
     }
 
     // Live budget resize from the arbiter when the active-slot or lease
@@ -412,7 +412,7 @@ private:
         // and the strict-order window bounds the overshoot.
         pendingBytes_ += chunk.data.size();
         pending_.emplace(key, std::move(chunk));
-        if (requestGate_.state() == pipensx::RequestGate::State::Free)
+        if (requestGate_.state() == gamehubnx::RequestGate::State::Free)
             pacer_.observeSource(size, now_ms());
         requestGate_.onArrived(ordinal, offset + size);
         telemetrySinkBytes_ += size;
@@ -439,7 +439,7 @@ private:
     // ceiling. Call whenever bufferedBytesLocked() changes and as a
     // periodic heartbeat so the token bucket refills during rx lulls.
     void updateRequestGateLocked(uint64_t now) {
-        using GateState = pipensx::RequestGate::State;
+        using GateState = gamehubnx::RequestGate::State;
         requestGate_.update(bufferedBytesLocked(), producerOrdinal_,
                             producerOffset_, now);
         GateState state = requestGate_.state();
@@ -894,7 +894,7 @@ private:
             requestGate_.paused() ? 1 : 0,
             telemetryThrottleCount_,
             (unsigned long long)telemetryThrottledMs_,
-            requestGate_.state() == pipensx::RequestGate::State::Throttled
+            requestGate_.state() == gamehubnx::RequestGate::State::Throttled
                 ? 1 : 0,
             (unsigned long long)requestGate_.drainBps(),
             (unsigned long long)telemetryProcessUs_,
@@ -1061,10 +1061,10 @@ private:
     uint32_t lookaheadStallEvents_ = 0;
     uint64_t lookaheadLastAdaptMs_ = 0;
     // Request gate state (PERF_PLAN 5.3 + 7.1); guarded by queueMutex_.
-    pipensx::RequestGate requestGate_;
-    pipensx::InstallPacer pacer_;
-    pipensx::RequestGate::State requestGateState_ =
-        pipensx::RequestGate::State::Free;
+    gamehubnx::RequestGate requestGate_;
+    gamehubnx::InstallPacer pacer_;
+    gamehubnx::RequestGate::State requestGateState_ =
+        gamehubnx::RequestGate::State::Free;
     uint64_t requestGateStateSinceMs_ = 0;
     bool accepting_ = true;
     bool stopping_ = false;
@@ -1090,4 +1090,4 @@ private:
 };
 
 
-} // namespace pipensx
+} // namespace gamehubnx

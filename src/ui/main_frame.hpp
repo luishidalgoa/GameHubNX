@@ -29,7 +29,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 enum class NavIconType {
     Catalog, Downloads, Installed, Updates, Settings, Help, About
@@ -227,10 +227,10 @@ public:
     void setState(bool running, const std::string& url) {
         dot_->running = running;
         if (!running) {
-            setTextIfChanged(label_, tr("pipensx/web/off"));
+            setTextIfChanged(label_, tr("gamehubnx/web/off"));
             label_->setTextColor(theme::textTertiary());
         } else if (url.empty()) {
-            setTextIfChanged(label_, tr("pipensx/settings/web_address_none"));
+            setTextIfChanged(label_, tr("gamehubnx/settings/web_address_none"));
             label_->setTextColor(theme::textTertiary());
         } else {
             // Drop the scheme: the footer column is 216px, every pixel counts.
@@ -327,7 +327,7 @@ public:
     // height is definite, justifyContent flex-end parks the meter on the floor
     // whatever it measures, and clipsToBounds is the backstop.
     void attachStorageFooter(DownloadManager* manager,
-                             pipensx::WebServer* webServer = nullptr) {
+                             gamehubnx::WebServer* webServer = nullptr) {
         manager_ = manager;
         webServer_ = webServer;
         // Pinned over the full height of the sidebar column, so it has to be
@@ -383,10 +383,10 @@ private:
         queryInFlight_ = true;
         auto alive = alive_;
         std::string root = manager_->rootPath();
-        pipensx::WebServer* server = webServer_;
+        gamehubnx::WebServer* server = webServer_;
         brls::async([this, alive, root, server] {
-            const pipensx::StorageSpaceSnapshot storage =
-                pipensx::queryStorageSpace(root);
+            const gamehubnx::StorageSpaceSnapshot storage =
+                gamehubnx::queryStorageSpace(root);
             const bool running = server ? server->running() : true;
             std::string url = running ? webCompanionUrl(server, true) : "";
             brls::sync([this, alive, storage, running, url = std::move(url)] {
@@ -406,8 +406,8 @@ private:
     void refreshStorage() {
         if (!footer_ || !manager_)
             return;
-        const pipensx::StorageSpaceSnapshot storage =
-            pipensx::queryStorageSpace(manager_->rootPath());
+        const gamehubnx::StorageSpaceSnapshot storage =
+            gamehubnx::queryStorageSpace(manager_->rootPath());
         if (storage.available)
             footer_->setStorage(storage.totalBytes, storage.freeBytes);
         else
@@ -435,11 +435,11 @@ private:
     StorageMeter* footer_ = nullptr;
     WebStatusRow* webRow_ = nullptr;
     DownloadManager* manager_ = nullptr;
-    pipensx::WebServer* webServer_ = nullptr;
+    gamehubnx::WebServer* webServer_ = nullptr;
     brls::RepeatingTimer queryTimer_;
     bool queryInFlight_ = false;
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

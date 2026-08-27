@@ -21,7 +21,7 @@ extern "C" {
 #include <openssl/aes.h>
 #endif
 
-namespace pipensx::install {
+namespace gamehubnx::install {
 namespace {
 
 uint32_t read32(const uint8_t* p) {
@@ -1387,4 +1387,4 @@ bool PackageStream::restore(const PackageStreamState& state) {
     return impl_->restore(state);
 }
 
-} // namespace pipensx::install
+} // namespace gamehubnx::install

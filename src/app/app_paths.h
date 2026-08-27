@@ -1,6 +1,6 @@
 /* Identidad de GameHubNX en la tarjeta.
  *
- * Antes de esto habia 40+ literales "sdmc:/switch/pipensx" repetidos por diez
+ * Antes de esto habia 40+ literales "sdmc:/switch/gamehubnx" repetidos por diez
  * ficheros, y renombrar la app dejaba la mitad apuntando al proyecto del que
  * viene este fork: la carpeta que se creaba al arrancar seguia siendo la suya,
  * el auto-actualizador escribia sobre su NRO, y una instalacion antigua
@@ -39,6 +39,6 @@
 
 /* La carpeta que dejaba la app de la que procede este fork. Solo se usa para
    detectarla y avisar; nunca para escribir. */
-#define GHNX_LEGACY_APP_ROOT GHNX_SWITCH_ROOT "/pipensx"
+#define GHNX_LEGACY_APP_ROOT GHNX_SWITCH_ROOT "/gamehubnx"
 
 #endif /* GAMEHUBNX_APP_PATHS_H */

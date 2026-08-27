@@ -20,7 +20,7 @@ extern "C" {
 #include "../install/install_backend.hpp"
 #include "stream_budget_arbiter.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Supported range for setMaxActiveDownloads(). Inline because the settings
 // layer validates against it and not every binary links download_manager.cpp.
@@ -450,4 +450,4 @@ inline TorrentHealth torrentHealth(const DownloadTask& task, uint64_t nowMs) {
     return TorrentHealth::Excellent;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

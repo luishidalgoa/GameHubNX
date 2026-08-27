@@ -8,7 +8,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class MessageCell : public brls::RecyclerCell {
 public:
@@ -18,7 +18,7 @@ public:
         setPadding(24);
         label_ = new brls::Label();
         label_->setFontSize(21);
-        label_->setText(tr("pipensx/downloads/empty_cell"));
+        label_->setText(tr("gamehubnx/downloads/empty_cell"));
         addView(label_);
     }
 
@@ -126,4 +126,4 @@ private:
     brls::Label* label_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

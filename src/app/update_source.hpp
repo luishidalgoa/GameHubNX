@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Version source for the game-update check. The metadata index
 // (catalog∩titledb) is the only source of candidate versions: it is already
@@ -22,4 +22,4 @@ public:
                                        std::vector<std::string>& out) const = 0;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

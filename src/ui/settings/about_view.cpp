@@ -12,7 +12,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 namespace {
 
@@ -96,21 +96,21 @@ AboutView::AboutView() : brls::Box(brls::Axis::COLUMN) {
     auto* summary = new brls::Box(brls::Axis::COLUMN);
     summary->setGrow(1);
     auto* title =
-        addLabel(summary, "pipensx", theme::kFontTitle, theme::textPrimary());
+        addLabel(summary, "gamehubnx", theme::kFontTitle, theme::textPrimary());
     title->setMarginBottom(10);
     auto* version = addLabel(summary,
-                             tr("pipensx/about/version", PIPENSX_VERSION),
+                             tr("gamehubnx/about/version", GAMEHUBNX_VERSION),
                              theme::kFontSmall, theme::accent());
     version->setMarginBottom(4);
     auto* build = addLabel(summary,
-                           tr("pipensx/about/built", __DATE__, __TIME__),
+                           tr("gamehubnx/about/built", __DATE__, __TIME__),
                            theme::kFontCaption, theme::textTertiary());
     build->setMarginBottom(14);
     auto* description = addLabel(
-        summary, tr("pipensx/about/description"),
+        summary, tr("gamehubnx/about/description"),
         theme::kFontSmall, theme::textSecondary());
     description->setMarginBottom(12);
-    addLabel(summary, tr("pipensx/about/scan_hint"),
+    addLabel(summary, tr("gamehubnx/about/scan_hint"),
              theme::kFontCaption, theme::textSecondary());
     hero->addView(summary);
     content->addView(hero);
@@ -119,11 +119,11 @@ AboutView::AboutView() : brls::Box(brls::Axis::COLUMN) {
     qrRow->setAlignItems(brls::AlignItems::STRETCH);
     qrRow->setMarginBottom(kCardGap);
     auto* telegram = makeQrCard("Telegram", "@i3sey",
-                                tr("pipensx/about/telegram_summary"),
+                                tr("gamehubnx/about/telegram_summary"),
                                 "https://t.me/i3sey");
-    auto* github = makeQrCard("GitHub", "i3sey/pipensx",
-                              tr("pipensx/about/github_summary"),
-                              "https://github.com/i3sey/pipensx");
+    auto* github = makeQrCard("GitHub", "luishidalgoa/GameHubNX",
+                              tr("gamehubnx/about/github_summary"),
+                              "https://github.com/luishidalgoa/GameHubNX");
     github->setMarginLeft(kCardGap);
     qrRow->addView(telegram);
     qrRow->addView(github);
@@ -131,18 +131,18 @@ AboutView::AboutView() : brls::Box(brls::Axis::COLUMN) {
 
     auto* details = makeCard();
     auto* detailsTitle =
-        addLabel(details, tr("pipensx/about/project_info"), theme::kFontBody,
+        addLabel(details, tr("gamehubnx/about/project_info"), theme::kFontBody,
                  theme::textPrimary());
     detailsTitle->setMarginBottom(12);
     auto* storage = addLabel(
-        details, tr("pipensx/about/storage_info", LogPath, SettingsPath),
+        details, tr("gamehubnx/about/storage_info", LogPath, SettingsPath),
         theme::kFontSmall, theme::textSecondary());
     storage->setMarginBottom(16);
     auto* libs = addLabel(
-        details, tr("pipensx/about/libraries"),
+        details, tr("gamehubnx/about/libraries"),
         theme::kFontCaption, theme::textSecondary());
     libs->setMarginBottom(12);
-    addLabel(details, tr("pipensx/about/disclaimer"),
+    addLabel(details, tr("gamehubnx/about/disclaimer"),
              theme::kFontCaption, theme::textTertiary());
     content->addView(details);
 
@@ -152,4 +152,4 @@ AboutView::AboutView() : brls::Box(brls::Axis::COLUMN) {
     addView(scroll);
 }
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui

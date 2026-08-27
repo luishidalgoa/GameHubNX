@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstdio>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 int main() {
     {

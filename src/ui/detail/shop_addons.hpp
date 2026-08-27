@@ -32,7 +32,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 /// Que clase de contenido es una fila. Decide en que seccion cae y con que
 /// palabra se describe.
@@ -126,15 +126,15 @@ public:
             meta += "   " + formatBytes(item.entry.size);
         setTextIfChanged(meta_, meta);
         setTextIfChanged(badge_, item.installed
-                                     ? tr("pipensx/addons/installed")
+                                     ? tr("gamehubnx/addons/installed")
                                      : std::string());
     }
 
     static std::string kindLabel(ShopItemKind kind) {
         switch (kind) {
-        case ShopItemKind::Game:   return tr("pipensx/addons/kind_game");
-        case ShopItemKind::Update: return tr("pipensx/addons/kind_update");
-        case ShopItemKind::Dlc:    return tr("pipensx/addons/kind_dlc");
+        case ShopItemKind::Game:   return tr("gamehubnx/addons/kind_game");
+        case ShopItemKind::Update: return tr("gamehubnx/addons/kind_update");
+        case ShopItemKind::Dlc:    return tr("gamehubnx/addons/kind_dlc");
         }
         return {};
     }
@@ -174,9 +174,9 @@ public:
     void rebuild() {
         sections_.clear();
         const struct { ShopItemKind kind; const char* key; } grupos[] = {
-            {ShopItemKind::Game,   "pipensx/addons/section_game"},
-            {ShopItemKind::Update, "pipensx/addons/section_updates"},
-            {ShopItemKind::Dlc,    "pipensx/addons/section_dlc"},
+            {ShopItemKind::Game,   "gamehubnx/addons/section_game"},
+            {ShopItemKind::Update, "gamehubnx/addons/section_updates"},
+            {ShopItemKind::Dlc,    "gamehubnx/addons/section_dlc"},
         };
         for (const auto& g : grupos) {
             Section section;
@@ -190,7 +190,7 @@ public:
         // Nunca cero secciones: un data source vacio hace que selectRowAt de
         // borealis indexe un vector sin elementos. Ver downloads_view.hpp.
         if (sections_.empty())
-            sections_.push_back({tr("pipensx/addons/section_dlc"), {}});
+            sections_.push_back({tr("gamehubnx/addons/section_dlc"), {}});
     }
 
     std::vector<ShopItem>& items() { return items_; }
@@ -250,7 +250,7 @@ public:
 
         auto* title = new brls::Label();
         title->setFontSize(26);
-        title->setText(tr("pipensx/addons/title"));
+        title->setText(tr("gamehubnx/addons/title"));
         content->addView(title);
 
         summary_ = new brls::Label();
@@ -277,14 +277,14 @@ public:
                              [this] { installSelected(); });
         addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
                   [this] { selectAll(true); })
-            ->setText(tr("pipensx/addons/select_all"));
+            ->setText(tr("gamehubnx/addons/select_all"));
         addButton(buttons, &brls::BUTTONSTYLE_DEFAULT,
                   [this] { selectAll(false); })
-            ->setText(tr("pipensx/addons/select_none"));
+            ->setText(tr("gamehubnx/addons/select_none"));
         content->addView(buttons);
 
         frame_ = new brls::AppletFrame(content);
-        frame_->setTitle(gameTitle.empty() ? tr("pipensx/addons/title")
+        frame_->setTitle(gameTitle.empty() ? tr("gamehubnx/addons/title")
                                            : gameTitle);
         refreshSummary();
     }
@@ -292,7 +292,7 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
-        registerAction(tr("pipensx/common/close"), brls::BUTTON_B,
+        registerAction(tr("gamehubnx/common/close"), brls::BUTTON_B,
                        [](brls::View*) {
                            brls::Application::popActivity();
                            return true;
@@ -367,11 +367,11 @@ private:
             bytes += item.entry.size;
         }
         setTextIfChanged(summary_, count == 0
-            ? tr("pipensx/addons/hint")
-            : tr("pipensx/addons/selected", count, formatBytes(bytes)));
+            ? tr("gamehubnx/addons/hint")
+            : tr("gamehubnx/addons/selected", count, formatBytes(bytes)));
         setTextIfChanged(install_, count == 0
-            ? tr("pipensx/common/install")
-            : tr("pipensx/addons/install_n", count));
+            ? tr("gamehubnx/common/install")
+            : tr("gamehubnx/addons/install_n", count));
         install_->setState(count == 0 ? brls::ButtonState::DISABLED
                                       : brls::ButtonState::ENABLED);
     }
@@ -418,4 +418,4 @@ inline void ShopAddOnsDataSource::didSelectRowAt(brls::RecyclerFrame*,
         owner_->toggle(i);
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

@@ -11,7 +11,7 @@
 #include "install_space.hpp"
 #include "magnet_resolver.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class InstallSource { Torrent, Debrid };
 
@@ -115,4 +115,4 @@ private:
     ResolveTorrent resolver_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

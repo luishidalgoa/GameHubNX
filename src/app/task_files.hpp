@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct DownloadTask;
 struct TorrentPreview;
@@ -79,4 +79,4 @@ bool taskFilePathIsSafe(const std::string& path);
 bool taskFilePathIsValidUtf8(const std::string& path);
 bool taskFilePathIsFatCompatible(const std::string& path);
 
-} // namespace pipensx
+} // namespace gamehubnx

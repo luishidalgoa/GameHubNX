@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Whitelist JSON for the web companion Settings tab. Secrets are flags, not
 // values. Used by GET /api/settings and as the PATCH response body.
@@ -32,4 +32,4 @@ inline void applyCompanionSettingsRuntime(const AppSettingsData& values,
     applyProxySetting(values.proxyUrl);
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

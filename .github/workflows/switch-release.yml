@@ -52,7 +52,7 @@ jobs:
       - name: Refresh bundled catalog snapshots
         # Every public build ships an offline first-launch snapshot of the
         # Langegen torrent catalog (see resources/catalog/*.json,
-        # CMakeLists.txt PIPENSX_CATALOG_SNAPSHOT). El indice de metadatos ya
+        # CMakeLists.txt GAMEHUBNX_CATALOG_SNAPSHOT). El indice de metadatos ya
         # no se refresca aqui: se empaqueta el que este commiteado, que es lo
         # que hace que la app no dependa de ningun repo ajeno. Pull the latest
         # right before building so releases don't ship stale data committed
@@ -96,9 +96,9 @@ jobs:
 
       - name: Build gamehubnx.nro
         env:
-          PIPENSX_VERSION: ${{ inputs.version }}
+          GAMEHUBNX_VERSION: ${{ inputs.version }}
         run: |
-          PIPENSX_VERSION="${PIPENSX_VERSION#v}" make switch
+          GAMEHUBNX_VERSION="${GAMEHUBNX_VERSION#v}" make switch
           sha256sum build-switch/gamehubnx.nro > build-switch/gamehubnx.nro.sha256
 
       - name: Pack the SD-card archive
@@ -114,8 +114,8 @@ jobs:
           cd sdcard
           zip -r -q ../build-switch/SDOut.zip switch
 
-      # pipensx.elf va incluido: es el unico modo de traducir la pila de un
-      # crash report de Atmosphere ("pipensx + 0x2154d8") a nombres de funcion
+      # gamehubnx.elf va incluido: es el unico modo de traducir la pila de un
+      # crash report de Atmosphere ("gamehubnx + 0x2154d8") a nombres de funcion
       # y numeros de linea, y tiene que ser el binario del MISMO build que
       # corre la consola. No se copia al SDOut.zip: en la SD no pinta nada.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -124,7 +124,7 @@ jobs:
           path: |
             build-switch/gamehubnx.nro
             build-switch/gamehubnx.nro.sha256
-            build-switch/pipensx.elf
+            build-switch/gamehubnx.elf
             build-switch/SDOut.zip
           if-no-files-found: error
 
@@ -147,7 +147,7 @@ jobs:
           gh release create "${{ inputs.version }}" \
             dist/gamehubnx.nro \
             dist/gamehubnx.nro.sha256 \
-            dist/pipensx.elf \
+            dist/gamehubnx.elf \
             dist/SDOut.zip \
             --repo "${{ github.repository }}" \
             --title "${{ inputs.version }}" \

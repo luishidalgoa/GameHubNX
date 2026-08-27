@@ -8,7 +8,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 struct SetupSummaryFixture {
     std::string lanAddress;
@@ -17,8 +17,8 @@ struct SetupSummaryFixture {
 
 inline std::string setupDiagnosticText(const DiagnosticSummary& summary) {
     if (summary.level.empty())
-        return tr("pipensx/setup_summary/no_diagnostics");
-    return tr("pipensx/setup_summary/diagnostics",
+        return tr("gamehubnx/setup_summary/no_diagnostics");
+    return tr("gamehubnx/setup_summary/diagnostics",
               static_cast<int>(summary.errorCount), summary.stage, summary.tag,
               summary.level);
 }
@@ -39,13 +39,13 @@ public:
         setCornerRadius(theme::kRadiusLarge);
         setPadding(24, 24, 24, 24);
 
-        connection_ = addSection(tr("pipensx/setup_summary/connection"));
+        connection_ = addSection(tr("gamehubnx/setup_summary/connection"));
         addSeparator();
-        check_ = addSection(tr("pipensx/setup_summary/check"));
+        check_ = addSection(tr("gamehubnx/setup_summary/check"));
         addSeparator();
-        selected_ = addSection(tr("pipensx/setup_summary/selected"));
+        selected_ = addSection(tr("gamehubnx/setup_summary/selected"));
         addSeparator();
-        diagnostics_ = addSection(tr("pipensx/setup_summary/last_diagnostic"));
+        diagnostics_ = addSection(tr("gamehubnx/setup_summary/last_diagnostic"));
     }
 
     void setConnection(const std::string& text, NVGcolor color) {
@@ -118,4 +118,4 @@ private:
     brls::Label* diagnostics_ = nullptr;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

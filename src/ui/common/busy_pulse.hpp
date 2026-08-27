@@ -2,7 +2,7 @@
 
 #include <borealis.hpp>
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Soft alpha pulse on an existing View — no new widget class. Drive the
 // view's public Animatable alpha between lo/hi until stopBusyPulse().
@@ -31,4 +31,4 @@ inline void stopBusyPulse(brls::View* view) {
     view->setAlpha(1.0f);
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

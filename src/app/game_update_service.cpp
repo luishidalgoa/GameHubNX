@@ -12,7 +12,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr int kStateVersion = 1;
@@ -311,4 +311,4 @@ bool GameUpdateService::stale(uint64_t installedGeneration,
            metadataRefreshMs_ != metadataRefreshMs;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

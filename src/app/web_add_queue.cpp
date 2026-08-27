@@ -11,7 +11,7 @@ extern "C" {
 #include <chrono>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -291,4 +291,4 @@ void WebAddQueue::runJob(const std::string& jobId) {
     log_msg("[web] job %s imported as %s\n", jobId.c_str(), taskId.c_str());
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

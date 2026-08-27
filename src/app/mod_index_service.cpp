@@ -15,7 +15,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr size_t kMaxTableBytes = 2 * 1024 * 1024;
@@ -125,7 +125,7 @@ bool httpGet(const std::string& url, std::string& body, std::string& error) {
     }
     HttpBuffer buffer;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
     /* Every handle here runs on a background thread; without this
@@ -364,4 +364,4 @@ uint32_t ModIndexService::modCount(const std::string& titleId) const {
     return it == byBaseId_.end() ? 0 : it->second;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

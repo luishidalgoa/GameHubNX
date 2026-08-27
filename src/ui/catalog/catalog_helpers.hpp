@@ -14,7 +14,7 @@
 #include "app/game_metadata_service.hpp"
 #include "ui/common/async_image.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // ---------------------------------------------------------------------------
 // Shared catalog helpers (used by both the list and the detail page)
@@ -32,39 +32,39 @@ inline std::string classifyResolveFailure(const std::string& error) {
     std::string lower = catalogLower(error);
     if (lower.find("not registered") != std::string::npos ||
         lower.find("stale") != std::string::npos)
-        return tr("pipensx/health/stale");
+        return tr("gamehubnx/health/stale");
     // Reachable-peer failures come before the metadata one: not getting a
     // connection open is a network problem, and "no metadata" would send the
     // reporter after the catalog entry instead of their Wi-Fi.
     if (lower.find("could not connect") != std::string::npos)
-        return tr("pipensx/health/network_blocked");
+        return tr("gamehubnx/health/network_blocked");
     if (lower.find("metadata") != std::string::npos)
-        return tr("pipensx/health/no_metadata");
+        return tr("gamehubnx/health/no_metadata");
     if (lower.find("no usable peers") != std::string::npos ||
         lower.find("no peers") != std::string::npos)
-        return tr("pipensx/health/no_peers");
-    return tr("pipensx/health/resolve_failed");
+        return tr("gamehubnx/health/no_peers");
+    return tr("gamehubnx/health/resolve_failed");
 }
 
 inline std::string badgeForCatalogHealth(const CatalogEntry& entry) {
     switch (entry.health) {
-        case pipensx::CatalogHealth::Ok:
-            return entry.metadataOk ? tr("pipensx/health/fresh")
-                                    : tr("pipensx/health/checked");
-        case pipensx::CatalogHealth::NoPeers:
-            return tr("pipensx/health/no_peers");
-        case pipensx::CatalogHealth::MetadataTimeout:
-            return tr("pipensx/health/no_metadata");
-        case pipensx::CatalogHealth::TrackerNotRegistered:
-        case pipensx::CatalogHealth::Dead:
-            return tr("pipensx/health/dead");
-        case pipensx::CatalogHealth::Replaced:
-            return tr("pipensx/health/replaced");
-        case pipensx::CatalogHealth::Unknown:
+        case gamehubnx::CatalogHealth::Ok:
+            return entry.metadataOk ? tr("gamehubnx/health/fresh")
+                                    : tr("gamehubnx/health/checked");
+        case gamehubnx::CatalogHealth::NoPeers:
+            return tr("gamehubnx/health/no_peers");
+        case gamehubnx::CatalogHealth::MetadataTimeout:
+            return tr("gamehubnx/health/no_metadata");
+        case gamehubnx::CatalogHealth::TrackerNotRegistered:
+        case gamehubnx::CatalogHealth::Dead:
+            return tr("gamehubnx/health/dead");
+        case gamehubnx::CatalogHealth::Replaced:
+            return tr("gamehubnx/health/replaced");
+        case gamehubnx::CatalogHealth::Unknown:
             break;
     }
     return entry.catalogGeneratedAt || entry.sourceUpdatedAt
-         ? tr("pipensx/health/unchecked") : std::string();
+         ? tr("gamehubnx/health/unchecked") : std::string();
 }
 
 inline std::string joinStrings(const std::vector<std::string>& values,
@@ -91,19 +91,19 @@ struct PlayerModeOption {
 inline const std::vector<PlayerModeOption>& playerModeOptions() {
     static const std::vector<PlayerModeOption> options = {
         {PlayerFilter::Splitscreen, kPlayerModeSplit,
-         "pipensx/catalog/players_split"},
+         "gamehubnx/catalog/players_split"},
         {PlayerFilter::LocalCoop, kPlayerModeCoop,
-         "pipensx/catalog/players_coop"},
-        {PlayerFilter::Lan, kPlayerModeLan, "pipensx/catalog/players_lan"},
+         "gamehubnx/catalog/players_coop"},
+        {PlayerFilter::Lan, kPlayerModeLan, "gamehubnx/catalog/players_lan"},
         {PlayerFilter::Online, kPlayerModeOnline,
-         "pipensx/catalog/players_online"},
+         "gamehubnx/catalog/players_online"},
     };
     return options;
 }
 
 inline std::string playerFilterLabel(PlayerFilter filter) {
     if (filter == PlayerFilter::Any)
-        return tr("pipensx/catalog/players_any");
+        return tr("gamehubnx/catalog/players_any");
     for (const PlayerModeOption& option : playerModeOptions())
         if (option.filter == filter)
             return tr(option.key);
@@ -117,10 +117,10 @@ inline std::string playersFact(const GameMetadata* metadata) {
         return {};
     std::string count;
     if (metadata->players >= 2)
-        count = tr("pipensx/detail/players_up_to",
+        count = tr("gamehubnx/detail/players_up_to",
                    std::to_string(metadata->players));
     else if (metadata->players == 1)
-        count = tr("pipensx/detail/players_single");
+        count = tr("gamehubnx/detail/players_single");
     std::vector<std::string> modes;
     for (const PlayerModeOption& option : playerModeOptions())
         if (metadata->modes & option.bit)
@@ -172,4 +172,4 @@ inline void appendAsyncImage(brls::Box* parent, GameMetadataService* service,
     loadImageInto(image, service, url);
     parent->addView(image);
 }
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

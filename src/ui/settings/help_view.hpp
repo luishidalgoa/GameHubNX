@@ -10,7 +10,7 @@
 #include "ui/settings/bug_report_view.hpp"
 #include "ui/settings/settings_cells.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class HelpView : public brls::Box {
 public:
@@ -20,7 +20,7 @@ public:
           metadata_(metadata), installed_(installed) {
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(24, 34, 24, 34);
-        content->addView(actionCell(tr("pipensx/settings/report_bug"), "",
+        content->addView(actionCell(tr("gamehubnx/settings/report_bug"), "",
             [this] {
                 brls::Application::pushActivity(new BugReportActivity(
                     manager_, catalog_, metadata_, installed_));
@@ -35,4 +35,4 @@ private:
     InstalledTitleService* installed_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

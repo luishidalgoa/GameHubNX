@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // Per-app state of the game-update check (check-only feature: it reports
 // whether an update exists, it never downloads one).
@@ -95,4 +95,4 @@ private:
     bool checking_ = false;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -28,7 +28,7 @@ Follow the existing pattern (`TorboxProvider` + `TorboxClient`). Touchpoints:
 | First-run | `src/ui/first_run_view.hpp` — option card, diagram kind, `updateSelection()` case |
 | Switch init | `src/main_switch.cpp` — call `setXxxKey()` on the manager after settings load |
 | Build | `CMakeLists.txt` — add to `APP_SERVICE_SOURCES`; `Makefile.pc` — object rule, test targets, link into `test_manager` |
-| Locale | `resources/i18n/*/pipensx.json` — first-run and diagram strings |
+| Locale | `resources/i18n/*/gamehubnx.json` — first-run and diagram strings |
 | Tests | `tests/test_<name>_client.cpp` (static parsers), `tests/test_<name>_provider.cpp` (mock transport) |
 
 ## Provider test pattern

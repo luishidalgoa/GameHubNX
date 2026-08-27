@@ -5,7 +5,7 @@
 
 #include <borealis.hpp>
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Shared row builders for the settings screen and its Advanced sub-page, so the
 // two lists render identical section headers and action rows.
@@ -32,4 +32,4 @@ inline brls::DetailCell* actionCell(const std::string& title,
     return cell;
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

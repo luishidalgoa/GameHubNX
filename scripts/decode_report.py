@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruct a pipensx log from a bug-report screenshot.
+"""Reconstruct a gamehubnx log from a bug-report screenshot.
 
 A reporter opens Settings -> Report a bug, which renders the recent log tail as
 a grid of QR codes on one screen, and sends the developer a photo/screenshot of
@@ -38,7 +38,7 @@ def parse_chunk(data):
     if len(data) < HEADER_SIZE:
         raise ReportError("chunk shorter than header")
     if data[0:2] != MAGIC:
-        raise ReportError("bad magic (not a pipensx report chunk)")
+        raise ReportError("bad magic (not a gamehubnx report chunk)")
     if data[2] != FORMAT_VERSION:
         raise ReportError(f"unsupported format version {data[2]}")
     session, idx, total, flags, crc, clen = struct.unpack(">HBBBII", data[3:16])

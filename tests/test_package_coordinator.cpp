@@ -60,7 +60,7 @@ metainfo_t makeSingleFileMetainfo(const std::string& name, uint64_t size) {
     return mi;
 }
 
-bool feedRange(pipensx::PackageCoordinator& coordinator,
+bool feedRange(gamehubnx::PackageCoordinator& coordinator,
                const std::vector<uint8_t>& data, uint64_t offset,
                uint64_t end) {
     const auto& config = coordinator.configs()[0];
@@ -79,7 +79,7 @@ bool feedRange(pipensx::PackageCoordinator& coordinator,
 } // namespace
 
 int main() {
-    const std::string root = "/tmp/pipensx-package-coordinator-test";
+    const std::string root = "/tmp/gamehubnx-package-coordinator-test";
     std::filesystem::remove_all(root);
     std::filesystem::create_directories(root);
 
@@ -91,14 +91,14 @@ int main() {
 
     metainfo_t mi = makeSingleFileMetainfo("game.nsp", nsp.size());
     const std::string taskId = "00112233445566778899aabbccddeeff00112233";
-    const std::string journalPath = pipensx::installJournalPath(root, taskId);
+    const std::string journalPath = gamehubnx::installJournalPath(root, taskId);
 
-    pipensx::install::InstallJournal saved;
+    gamehubnx::install::InstallJournal saved;
     {
-        pipensx::StreamBudgetArbiter arbiter;
-        pipensx::PackageCoordinator coordinator(
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
             mi, taskId, root, true, {}, 0,
-            pipensx::install::InstallStorageTarget::SdCard,
+            gamehubnx::install::InstallStorageTarget::SdCard,
             arbiter, nullptr);
         assert(coordinator.error().empty());
         assert(coordinator.configs().size() == 1);
@@ -110,7 +110,7 @@ int main() {
         assert(feedRange(coordinator, nsp, 0, 36ull * 1024 * 1024));
         bool journalLoaded = false;
         for (int spins = 0; spins < 3000; ++spins) {
-            if (pipensx::install::loadInstallJournal(journalPath, saved)) {
+            if (gamehubnx::install::loadInstallJournal(journalPath, saved)) {
                 journalLoaded = true;
                 break;
             }
@@ -121,15 +121,15 @@ int main() {
         coordinator.markRecoverableError("peer connection timed out");
     }
 
-    assert(pipensx::install::loadInstallJournal(journalPath, saved));
+    assert(gamehubnx::install::loadInstallJournal(journalPath, saved));
     assert(saved.state.consumed > 0);
     uint64_t resumeOffset = saved.state.consumed;
 
     {
-        pipensx::StreamBudgetArbiter arbiter;
-        pipensx::PackageCoordinator coordinator(
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
             mi, taskId, root, true, {}, 0,
-            pipensx::install::InstallStorageTarget::SdCard,
+            gamehubnx::install::InstallStorageTarget::SdCard,
             arbiter, nullptr);
         assert(coordinator.error().empty());
         assert(coordinator.configs()[0].ready_bytes == resumeOffset);
@@ -140,7 +140,7 @@ int main() {
     struct stat st{};
     std::string committed = root + "/install-sim/" + taskId + "-game.nsp";
     assert(stat(committed.c_str(), &st) == 0);
-    assert(!pipensx::install::loadInstallJournal(journalPath, saved));
+    assert(!gamehubnx::install::loadInstallJournal(journalPath, saved));
 
     metainfo_free(&mi);
     std::filesystem::remove_all(root);

@@ -3,7 +3,7 @@
 #include "debrid_provider.hpp"
 #include "torbox_client.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 class TorboxProvider : public DebridProvider {
 public:
@@ -33,4 +33,4 @@ private:
     TorboxClient client_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

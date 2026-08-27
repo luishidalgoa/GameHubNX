@@ -105,7 +105,7 @@ int main() {
     snprintf(url, sizeof(url), "http://127.0.0.1:%u/file.bin", port);
 
     {
-        pipensx::WebSeedSource src(url, "file.bin", piece_length, total,
+        gamehubnx::WebSeedSource src(url, "file.bin", piece_length, total,
                                    num_pieces, 3);
         for (uint32_t p = 0; p < num_pieces; ++p)
             assert(src.enqueue(p));
@@ -116,7 +116,7 @@ int main() {
         std::vector<int> seen(num_pieces, 0);
         uint32_t drained = 0;
         for (int spins = 0; spins < 2000 && drained < num_pieces; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (!src.popCompleted(c)) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 continue;

@@ -6,7 +6,7 @@
 #include <sstream>
 #include <unordered_set>
 
-namespace pipensx {
+namespace gamehubnx {
 
 std::vector<std::string> mergeScreenshotUrls(
     const GameMetadata* metadata, const CatalogEntry& entry, size_t limit) {
@@ -165,4 +165,4 @@ bool catalogEntryMatchesPlayerFilter(const GameMetadata* metadata,
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

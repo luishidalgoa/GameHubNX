@@ -14,7 +14,7 @@
 | H5 | bsd/fsdev/csrng работают вне апплета | строка `init fs=… socket=… csrng=…` |
 | H6 | фон не убивает игру | скорость по `rx*` под игрой против покоя |
 | H7 | цена в SYSTEM-пуле | `heap_used` + строка `static heap=… ring=… report=…` |
-| H8 | TCP между процессами | `loopback in-process …` + вердикт `pipensx-probe-client.nro` |
+| H8 | TCP между процессами | `loopback in-process …` + вердикт `gamehubnx-probe-client.nro` |
 
 ## Сборка
 
@@ -30,7 +30,7 @@ make probe
 ```
 build-switch/probe/atmosphere/contents/00FF0000504E5358/exefs.nsp
 build-switch/probe/atmosphere/contents/00FF0000504E5358/toolbox.json
-build-switch/probe/switch/pipensx-probe-client.nro
+build-switch/probe/switch/gamehubnx-probe-client.nro
 ```
 
 Скопировать содержимое `build-switch/probe/` в корень SD.
@@ -47,7 +47,7 @@ build-switch/probe/switch/pipensx-probe-client.nro
 
 ## Конфиг
 
-`sdmc:/switch/pipensx/probe.ini`, читается один раз при старте:
+`sdmc:/switch/gamehubnx/probe.ini`, читается один раз при старте:
 
 ```ini
 host = 192.168.1.1        # IP предпочтительнее имени: убирает DNS из переменных
@@ -106,7 +106,7 @@ curl http://<ip-консоли>:8099/       # весь отчёт
 curl http://<ip-консоли>:8099/ping   # жив ли зонд
 ```
 
-Дубль — `sdmc:/switch/pipensx/probe-report.txt`, пишется раз в 30 с и сразу
+Дубль — `sdmc:/switch/gamehubnx/probe-report.txt`, пишется раз в 30 с и сразу
 после пробуждения. Сэмплы копятся в RAM, а не пишутся построчно: во сне `fs`
 может быть недоступна, и потерять записи именно там было бы бессмысленно.
 
@@ -127,7 +127,7 @@ curl http://<ip-консоли>:8099/ping   # жив ли зонд
 | E3 | 10 мин с запущенной игрой | H6 |
 | E4 | сон из игры, 10 мин | H1 в реальном сценарии |
 | E5 | док/андок, обрыв Wi-Fi | устойчивость psc/nifm |
-| E6 | `pipensx-probe-client.nro` из hbmenu, пока зонд работает | H8 |
+| E6 | `gamehubnx-probe-client.nro` из hbmenu, пока зонд работает | H8 |
 
 Перед E1 — контрольный замер того же URL с ПК в той же сети, иначе медленный
 хост будет выглядеть как отказ bsd.

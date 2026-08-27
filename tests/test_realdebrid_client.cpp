@@ -4,8 +4,8 @@
 #include <cstdio>
 #include <string>
 
-using pipensx::RdClient;
-using pipensx::RdTorrentInfo;
+using gamehubnx::RdClient;
+using gamehubnx::RdTorrentInfo;
 
 namespace {
 

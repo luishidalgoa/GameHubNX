@@ -14,7 +14,7 @@
 #include "app/installed_title_service.hpp"
 #include "ui/common/ui_helpers.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // "Report a bug" screen. Snapshots device state into the log, reads the recent
 // log tail, and renders it as a single screenful of QR codes so a reporter can
@@ -75,4 +75,4 @@ class BugReportActivity : public brls::Activity {
     brls::Label* hint_ = nullptr;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

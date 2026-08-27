@@ -8,7 +8,7 @@
 #include "download_manager.hpp"
 #include "install/install_backend.hpp"
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class SpaceEstimateCertainty {
     Exact,
@@ -86,4 +86,4 @@ StorageSpaceSnapshot queryInstallStorageSpace(
 // runner renders the storage meters deterministically. Pass nullptr to restore.
 void setStorageSpaceOverride(const StorageSpaceSnapshot* snapshot);
 
-} // namespace pipensx
+} // namespace gamehubnx

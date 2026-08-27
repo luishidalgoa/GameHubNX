@@ -14,7 +14,7 @@
 #include "qrcodegen/qrcodegen.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Renders `value` as a QR code on a rounded light card. Fixed default size;
 // override with setWidth/setHeight. Used by the About cards and the web
@@ -119,4 +119,4 @@ private:
     int texture_ = 0;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

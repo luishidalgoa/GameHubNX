@@ -9,7 +9,7 @@ extern "C" {
 #include "../core/util.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -234,7 +234,7 @@ bool WebSeedSource::fetchPiece(uint32_t piece, std::vector<uint8_t>& out) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
 
     CURLcode rc = curl_easy_perform(curl);
     long status = 0;
@@ -253,4 +253,4 @@ bool WebSeedSource::fetchPiece(uint32_t piece, std::vector<uint8_t>& out) {
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -28,7 +28,7 @@ extern "C" {
 #include <borealis/extern/nanovg/stb_image.h>
 #pragma GCC diagnostic pop
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr size_t kMaxIndexBytes = 24 * 1024 * 1024;
@@ -163,7 +163,7 @@ bool httpGetOnce(const std::string& url, size_t limit,
     HttpBuffer buffer;
     buffer.limit = limit;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "pipensx/0.4");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "gamehubnx/0.4");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, followRedirects ? 1L : 0L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 8L);
     const bool relayRequest =
@@ -1159,4 +1159,4 @@ void GameMetadataService::imageWorkerMain() const {
     }
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

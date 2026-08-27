@@ -11,7 +11,7 @@
 namespace {
 
 std::string tempRoot(const char* tag) {
-    return "/tmp/pipensx-storage-" + std::string(tag) + "-" +
+    return "/tmp/gamehubnx-storage-" + std::string(tag) + "-" +
            std::to_string(static_cast<long long>(getpid()));
 }
 
@@ -29,10 +29,10 @@ void testDirectorySizeFileAndMissing() {
     makeDir(root);
     writeFile(root + "/a.bin", "12345");
     uint64_t size = 0;
-    assert(pipensx::directorySize(root + "/a.bin", size));
+    assert(gamehubnx::directorySize(root + "/a.bin", size));
     assert(size == 5);
     uint64_t missing = 123;
-    assert(!pipensx::directorySize(root + "/nope", missing));
+    assert(!gamehubnx::directorySize(root + "/nope", missing));
     assert(missing == 123); // unchanged on failure
     unlink((root + "/a.bin").c_str());
     rmdir(root.c_str());
@@ -45,7 +45,7 @@ void testDirectorySizeRecursive() {
     writeFile(root + "/a.bin", "12345");
     writeFile(root + "/sub/b.bin", "1234567890");
     uint64_t size = 0;
-    assert(pipensx::directorySize(root, size));
+    assert(gamehubnx::directorySize(root, size));
     assert(size == 15);
     unlink((root + "/a.bin").c_str());
     unlink((root + "/sub/b.bin").c_str());
@@ -67,7 +67,7 @@ void testScanBreakdownBuckets() {
     writeFile(root + "/catalog/images/i.jpg", "123456");
     writeFile(root + "/catalog/metadata/m.json", "1234");
     writeFile(root + "/installed-icons/x.jpg", "12");
-    const pipensx::StorageBreakdown b = pipensx::scanStorageBreakdown(root);
+    const gamehubnx::StorageBreakdown b = gamehubnx::scanStorageBreakdown(root);
     assert(b.downloadsBytes == 10);
     assert(b.torrentBytes == 5);
     assert(b.imageCacheBytes == 6);
@@ -101,11 +101,11 @@ void testClearTemporaryFiles() {
     writeFile(root + "/queue.bencode", "123");
     uint64_t recovered = 0;
     std::string error;
-    assert(pipensx::clearTemporaryFiles(root, error, recovered));
+    assert(gamehubnx::clearTemporaryFiles(root, error, recovered));
     assert(recovered == 10 + 5 + 4);
     // queue.bencode survives; install-temp and tmp torrents are gone.
     uint64_t queueSize = 0;
-    assert(pipensx::directorySize(root + "/queue.bencode", queueSize));
+    assert(gamehubnx::directorySize(root + "/queue.bencode", queueSize));
     assert(queueSize == 3);
     unlink((root + "/queue.bencode").c_str());
     rmdir(root.c_str());
@@ -122,14 +122,14 @@ void testClearOrphanTorrents() {
     uint64_t recovered = 0;
     std::string error;
     // Estimate matches the bytes about to be recovered.
-    assert(pipensx::orphanTorrentBytes(root, active) == 3 + 5);
-    assert(pipensx::clearOrphanTorrents(root, active, error, recovered));
+    assert(gamehubnx::orphanTorrentBytes(root, active) == 3 + 5);
+    assert(gamehubnx::clearOrphanTorrents(root, active, error, recovered));
     assert(recovered == 3 + 5); // aaaa + cccc
     uint64_t bsize = 0;
-    assert(pipensx::directorySize(root + "/bbbb.torrent", bsize));
+    assert(gamehubnx::directorySize(root + "/bbbb.torrent", bsize));
     assert(bsize == 4);
     uint64_t nsize = 0;
-    assert(pipensx::directorySize(root + "/notes.txt", nsize));
+    assert(gamehubnx::directorySize(root + "/notes.txt", nsize));
     assert(nsize == 4);
     unlink((root + "/bbbb.torrent").c_str());
     unlink((root + "/notes.txt").c_str());

@@ -7,7 +7,7 @@
 #include <cstring>
 #include <string_view>
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -213,4 +213,4 @@ BugReport buildBugReport(const std::string& logTail,
     return report;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

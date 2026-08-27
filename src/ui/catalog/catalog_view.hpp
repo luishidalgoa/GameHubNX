@@ -35,7 +35,7 @@
 #include "ui/detail/shop_addons.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class CatalogView;
 
@@ -141,7 +141,7 @@ private:
         info.sub = info.subIsBadge
             ? badge
             : entries_[row].size ? formatBytes(entries_[row].size)
-                                 : tr("pipensx/catalog/unknown_size");
+                                 : tr("gamehubnx/catalog/unknown_size");
         info.iconUrl = row < iconUrls_.size() ? iconUrls_[row] : std::string();
         info.iconPreserveAspect = row < iconPreserveAspect_.size() &&
                                   iconPreserveAspect_[row] != 0;
@@ -291,22 +291,22 @@ public:
         header_->setMarginBottom(10);
         header_->setMarginLeft(34);
         header_->setMarginRight(34);
-        sortLatest_ = makeChip(tr("pipensx/catalog/sort_latest"),
+        sortLatest_ = makeChip(tr("gamehubnx/catalog/sort_latest"),
                                [this] { setSort(SortMode::Latest); });
-        sortPopular_ = makeChip(tr("pipensx/catalog/sort_popular"),
+        sortPopular_ = makeChip(tr("gamehubnx/catalog/sort_popular"),
                                 [this] { setSort(SortMode::Popular); });
-        sortAlpha_ = makeChip(tr("pipensx/catalog/sort_alpha"),
+        sortAlpha_ = makeChip(tr("gamehubnx/catalog/sort_alpha"),
                               [this] { setSort(SortMode::Alphabetical); });
-        sortSize_ = makeChip(tr("pipensx/catalog/sort_size"),
+        sortSize_ = makeChip(tr("gamehubnx/catalog/sort_size"),
                              [this] { setSort(SortMode::Largest); });
         sortLatest_->setMarginLeft(0);
         header_->addView(sortLatest_);
         header_->addView(sortPopular_);
         header_->addView(sortAlpha_);
         header_->addView(sortSize_);
-        filterAll_ = makeChip(tr("pipensx/catalog/filter_all"),
+        filterAll_ = makeChip(tr("gamehubnx/catalog/filter_all"),
                               [this] { setFilter(CatalogFilter::All); });
-        filterGames_ = makeChip(tr("pipensx/catalog/filter_games"),
+        filterGames_ = makeChip(tr("gamehubnx/catalog/filter_games"),
                                 [this] { setFilter(CatalogFilter::Games); });
         filterAll_->setMarginLeft(16);
         header_->addView(filterAll_);
@@ -321,11 +321,11 @@ public:
             favoritesOnly_ = !favoritesOnly_;
             rebuildEntries();
         });
-        filterFits_ = makeChip(tr("pipensx/catalog/filter_fits"), [this] {
+        filterFits_ = makeChip(tr("gamehubnx/catalog/filter_fits"), [this] {
             fitsOnly_ = !fitsOnly_;
             rebuildEntries();
         });
-        filterPlayers_ = makeChip(tr("pipensx/catalog/filter_players"),
+        filterPlayers_ = makeChip(tr("gamehubnx/catalog/filter_players"),
                                   [this] { openPlayerFilterMenu(); });
         filterFavorites_->setMarginLeft(16);
         header_->addView(filterFavorites_);
@@ -347,7 +347,7 @@ public:
         count_->setMarginTop(12);
         count_->setShrink(0.0f);
         header_->addView(count_);
-        clearSearch_ = makeChip(tr("pipensx/common/clear"), [this] {
+        clearSearch_ = makeChip(tr("gamehubnx/common/clear"), [this] {
             if (query_.empty() && !shelfDrilldown_)
                 return;
             query_.clear();
@@ -388,7 +388,7 @@ public:
         selectVisible->setGrow(1);
         selectVisible->setHeight(44);
         selectVisible->setMarginRight(8);
-        selectVisible->setText(tr("pipensx/catalog/select_visible"));
+        selectVisible->setText(tr("gamehubnx/catalog/select_visible"));
         selectVisible->registerClickAction([this](brls::View*) {
             selectVisibleEntries();
             return true;
@@ -399,7 +399,7 @@ public:
         clearSelection->setGrow(1);
         clearSelection->setHeight(44);
         clearSelection->setMarginRight(8);
-        clearSelection->setText(tr("pipensx/common/clear"));
+        clearSelection->setText(tr("gamehubnx/common/clear"));
         clearSelection->registerClickAction([this](brls::View*) {
             selectedHashes_.clear();
             rebuildEntries();
@@ -410,7 +410,7 @@ public:
         prepareBatch_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
         prepareBatch_->setGrow(1);
         prepareBatch_->setHeight(44);
-        prepareBatch_->setText(tr("pipensx/catalog/prepare"));
+        prepareBatch_->setText(tr("gamehubnx/catalog/prepare"));
         prepareBatch_->registerClickAction([this](brls::View*) {
             prepareSelectedEntries();
             return true;
@@ -435,13 +435,13 @@ public:
         // hotkeys keep working, and both are duplicated by focusable header
         // controls — the magnifier button for search, the four sort chips for
         // sort — so nothing here becomes unreachable.
-        registerAction(tr("pipensx/common/search"), brls::BUTTON_X,
+        registerAction(tr("gamehubnx/common/search"), brls::BUTTON_X,
                        [this](brls::View*) {
             openSearchKeyboard();
             return true;
         }, /*hidden=*/true);
         registerSortAction(false);
-        registerAction(tr("pipensx/common/refresh"), brls::BUTTON_RB,
+        registerAction(tr("gamehubnx/common/refresh"), brls::BUTTON_RB,
                        [this](brls::View*) {
             if (batchMode_)
                 prepareSelectedEntries();
@@ -449,13 +449,13 @@ public:
                 refreshCatalog();
             return true;
         });
-        registerAction(tr("pipensx/catalog/action_batch"), brls::BUTTON_LB,
+        registerAction(tr("gamehubnx/catalog/action_batch"), brls::BUTTON_LB,
                        [this](brls::View*) {
             toggleBatchMode();
             return true;
         });
         if (favorites_) {
-            registerAction(tr("pipensx/catalog/action_favorite"),
+            registerAction(tr("gamehubnx/catalog/action_favorite"),
                            brls::BUTTON_RT, [this](brls::View*) {
                 toggleFocusedFavorite();
                 return true;
@@ -484,7 +484,7 @@ public:
                 shelfDrilldown_ = false;
                 rebuildEntries();
             },
-            tr("pipensx/catalog/search_placeholder"), "", 256, query_,
+            tr("gamehubnx/catalog/search_placeholder"), "", 256, query_,
             brls::KEYBOARD_DISABLE_NONE);
     }
 
@@ -564,7 +564,7 @@ public:
             return;
         if (batchMode_) {
             if (!dataSource_->selectableAt(row)) {
-                brls::Application::notify(tr("pipensx/catalog/already_in_downloads"));
+                brls::Application::notify(tr("gamehubnx/catalog/already_in_downloads"));
                 return;
             }
             const std::string hash = lowerAscii(picked->infoHash);
@@ -731,7 +731,7 @@ private:
         if (!favorites_->contains(hash) &&
             favorites_->items().size() >= FavoritesService::kMaxFavorites) {
             brls::Application::notify(
-                tr("pipensx/catalog/favorites_full",
+                tr("gamehubnx/catalog/favorites_full",
                    FavoritesService::kMaxFavorites));
             return;
         }
@@ -739,7 +739,7 @@ private:
         favorites_->toggle(hash, presentation.title, error);
         if (!error.empty()) {
             brls::Application::notify(
-                tr("pipensx/catalog/favorites_failed", error));
+                tr("gamehubnx/catalog/favorites_failed", error));
             return;
         }
         rebuildEntries();
@@ -752,11 +752,11 @@ private:
         batchControls_->setVisibility(batchMode_ ? brls::Visibility::VISIBLE
                                                  : brls::Visibility::GONE);
         updateActionHint(brls::BUTTON_LB,
-                         batchMode_ ? tr("pipensx/catalog/action_batch_close")
-                                    : tr("pipensx/catalog/action_batch"));
+                         batchMode_ ? tr("gamehubnx/catalog/action_batch_close")
+                                    : tr("gamehubnx/catalog/action_batch"));
         updateActionHint(brls::BUTTON_RB,
-                         batchMode_ ? tr("pipensx/catalog/prepare")
-                                    : tr("pipensx/common/refresh"));
+                         batchMode_ ? tr("gamehubnx/catalog/prepare")
+                                    : tr("gamehubnx/common/refresh"));
         rebuildEntries();
     }
 
@@ -813,7 +813,7 @@ private:
             selectedHashes_.erase(hash);
         if (entries.empty()) {
             rebuildEntries();
-            brls::Application::notify(tr("pipensx/catalog/select_one_game"));
+            brls::Application::notify(tr("gamehubnx/catalog/select_one_game"));
             return;
         }
 
@@ -863,20 +863,20 @@ private:
                 bytes += entry.size;
         }
         const StorageSpaceSnapshot storage =
-            pipensx::queryStorageSpace(manager_->rootPath());
-        std::string text = tr("pipensx/catalog/batch_selected",
+            gamehubnx::queryStorageSpace(manager_->rootPath());
+        std::string text = tr("gamehubnx/catalog/batch_selected",
                               selectedHashes_.size(), formatBytes(bytes));
         if (unknown)
-            text += tr("pipensx/catalog/batch_unknown", unknown);
+            text += tr("gamehubnx/catalog/batch_unknown", unknown);
         text += storage.available
-            ? tr("pipensx/catalog/batch_sd_free",
+            ? tr("gamehubnx/catalog/batch_sd_free",
                  formatBytes(storage.freeBytes))
-            : tr("pipensx/catalog/batch_sd_unavailable");
+            : tr("gamehubnx/catalog/batch_sd_unavailable");
         status_->setText(text);
         const bool available = !selectedHashes_.empty();
         prepareBatch_->setState(available ? brls::ButtonState::ENABLED
                                           : brls::ButtonState::DISABLED);
-        prepareBatch_->setText(tr("pipensx/catalog/prepare_n",
+        prepareBatch_->setText(tr("gamehubnx/catalog/prepare_n",
                                   selectedHashes_.size()));
         setActionAvailable(brls::BUTTON_RB, available);
     }
@@ -1075,7 +1075,7 @@ private:
                                            catalogTextPreference());
             if (it == added.end() && !presentation.titleId.empty() &&
                 installed_ && installed_->contains(presentation.titleId))
-                stateBadges.back() = tr("pipensx/catalog/badge_installed");
+                stateBadges.back() = tr("gamehubnx/catalog/badge_installed");
             gameNames.push_back(std::move(presentation.title));
             iconUrls.push_back(std::move(presentation.iconUrl));
             iconPreserveAspect.push_back(
@@ -1173,7 +1173,7 @@ private:
             if (items.empty() && visible.size() > 1)
                 items = buildShelf(popular, 1);
             if (!items.empty())
-                shelves.push_back({tr("pipensx/catalog/shelf_popular"), std::move(items),
+                shelves.push_back({tr("gamehubnx/catalog/shelf_popular"), std::move(items),
                            [this] {
                     openShelfDrilldown(SortMode::Popular);
                     focusGrid();
@@ -1189,7 +1189,7 @@ private:
                 });
             items = buildShelf(byDate, grid::kMinShelfItems);
             if (!items.empty())
-                shelves.push_back({tr("pipensx/catalog/shelf_new"), std::move(items),
+                shelves.push_back({tr("gamehubnx/catalog/shelf_new"), std::move(items),
                            [this] {
                     openShelfDrilldown(SortMode::Latest);
                     focusGrid();
@@ -1208,7 +1208,7 @@ private:
                 });
             items = buildShelf(updated, grid::kMinShelfItems);
             if (!items.empty())
-                shelves.push_back({tr("pipensx/catalog/shelf_updated"), std::move(items),
+                shelves.push_back({tr("gamehubnx/catalog/shelf_updated"), std::move(items),
                                    std::function<void()>()});
 
             // Genre picks from GameMetadataService categories: the two
@@ -1266,8 +1266,8 @@ private:
         dataSource_->setShelves(std::move(shelves), heroIndex,
                                 std::move(heroImage));
         dataSource_->setMessage(query_.empty()
-            ? tr("pipensx/catalog/empty_inline")
-            : tr("pipensx/catalog/nothing_found_inline"));
+            ? tr("gamehubnx/catalog/empty_inline")
+            : tr("gamehubnx/catalog/nothing_found_inline"));
         recycler_->reloadData();
         if (!focusInCatalog)
             recycler_->setContentOffsetY(0, false);
@@ -1283,21 +1283,21 @@ private:
                 // supuesta la causa es peor que uno vago.
                 const bool fallo = !lastCatalogError_.empty();
                 ensureEmptyState()->setContent(
-                    fallo ? tr("pipensx/catalog/empty_title")
-                          : tr("pipensx/catalog/loaded_but_empty_title"),
+                    fallo ? tr("gamehubnx/catalog/empty_title")
+                          : tr("gamehubnx/catalog/loaded_but_empty_title"),
                     // Con el motivo detras cuando lo hay: "no se pudo
                     // contactar con la tienda" es accionable; una pantalla
                     // vacia no lo es.
-                    fallo ? tr("pipensx/catalog/empty_body") + "\n\n" +
+                    fallo ? tr("gamehubnx/catalog/empty_body") + "\n\n" +
                                 lastCatalogError_
-                          : tr("pipensx/catalog/loaded_but_empty_body"),
-                    tr("pipensx/catalog/empty_action"),
+                          : tr("gamehubnx/catalog/loaded_but_empty_body"),
+                    tr("gamehubnx/catalog/empty_action"),
                     [this] { refreshCatalog(); });
             } else {
                 ensureEmptyState()->setContent(
-                    tr("pipensx/catalog/no_match_title"),
-                    tr("pipensx/catalog/no_match_body"),
-                    tr("pipensx/catalog/no_match_action"), [this] {
+                    tr("gamehubnx/catalog/no_match_title"),
+                    tr("gamehubnx/catalog/no_match_body"),
+                    tr("gamehubnx/catalog/no_match_action"), [this] {
                         if (query_.empty() && !shelfDrilldown_)
                             return;
                         query_.clear();
@@ -1316,8 +1316,8 @@ private:
             restoreFocus(focusHash, focusShelf);
 
         countText_ = query_.empty()
-            ? tr("pipensx/catalog/count_releases", withThousands(count))
-            : tr("pipensx/catalog/count_matches", withThousands(count));
+            ? tr("gamehubnx/catalog/count_releases", withThousands(count))
+            : tr("gamehubnx/catalog/count_matches", withThousands(count));
         if (!busy_ && batchMode_) {
             refreshBatchStatus();
         } else if (!busy_) {
@@ -1341,13 +1341,13 @@ private:
             query_.empty() && !shelfDrilldown_ ? brls::Visibility::GONE
                                                : brls::Visibility::VISIBLE);
         styleSortChip(sortLatest_, SortMode::Latest,
-                      tr("pipensx/catalog/sort_latest"));
+                      tr("gamehubnx/catalog/sort_latest"));
         styleSortChip(sortPopular_, SortMode::Popular,
-                      tr("pipensx/catalog/sort_popular"));
+                      tr("gamehubnx/catalog/sort_popular"));
         styleSortChip(sortAlpha_, SortMode::Alphabetical,
-                      tr("pipensx/catalog/sort_alpha"));
+                      tr("gamehubnx/catalog/sort_alpha"));
         styleSortChip(sortSize_, SortMode::Largest,
-                      tr("pipensx/catalog/sort_size"));
+                      tr("gamehubnx/catalog/sort_size"));
         const bool gamesOnly = settings_ &&
             settings_->get().catalogFilter == CatalogFilter::Games;
         styleChip(filterAll_, !gamesOnly);
@@ -1357,7 +1357,7 @@ private:
         // The chip carries the active choice, so the header states the filter
         // in force without opening the menu.
         filterPlayers_->setText(playerFilter_ == PlayerFilter::Any
-            ? tr("pipensx/catalog/filter_players")
+            ? tr("gamehubnx/catalog/filter_players")
             : ui::playerFilterLabel(playerFilter_));
         styleChip(filterPlayers_, playerFilter_ != PlayerFilter::Any);
         count_->setText(countText_);
@@ -1371,24 +1371,24 @@ private:
         if (!freshness_)
             return;
         if (busy_) {
-            freshness_->setText(tr("pipensx/catalog/freshness_updating"));
+            freshness_->setText(tr("gamehubnx/catalog/freshness_updating"));
             freshness_->setTextColor(theme::warning());
             return;
         }
         const uint64_t wallSec =
             settings_ ? settings_->get().lastCatalogRefreshWallSec : 0;
         if (wallSec == 0) {
-            freshness_->setText(tr("pipensx/catalog/freshness_never"));
+            freshness_->setText(tr("gamehubnx/catalog/freshness_never"));
             freshness_->setTextColor(theme::error());
             return;
         }
         const int64_t epoch = static_cast<int64_t>(wallSec);
         const std::string date = formatEpochDateUtc(epoch);
         if (isLocalToday(epoch)) {
-            freshness_->setText(tr("pipensx/catalog/freshness_ok", date));
+            freshness_->setText(tr("gamehubnx/catalog/freshness_ok", date));
             freshness_->setTextColor(theme::success());
         } else {
-            freshness_->setText(tr("pipensx/catalog/freshness_stale", date));
+            freshness_->setText(tr("gamehubnx/catalog/freshness_stale", date));
             freshness_->setTextColor(theme::error());
         }
     }
@@ -1581,7 +1581,7 @@ private:
                 selected = static_cast<int>(i);
         }
         auto* dropdown = new brls::Dropdown(
-            tr("pipensx/catalog/players_title"), labels,
+            tr("gamehubnx/catalog/players_title"), labels,
             [this, choices](int index) {
                 if (index < 0 || index >= static_cast<int>(choices.size()))
                     return;
@@ -1668,8 +1668,8 @@ private:
     // swap re-registers. registerAction replaces the entry for a button it
     // already holds, which is what makes this safe to call repeatedly.
     void registerSortAction(bool busy) {
-        registerAction(busy ? tr("pipensx/common/stop")
-                            : tr("pipensx/common/sort"),
+        registerAction(busy ? tr("gamehubnx/common/stop")
+                            : tr("gamehubnx/common/sort"),
                        brls::BUTTON_Y, [this](brls::View*) {
             if (busy_)
                 cancelled_->store(true);
@@ -1770,26 +1770,26 @@ private:
     static std::string badgeForStatus(DownloadStatus status) {
         switch (status) {
             case DownloadStatus::Queued:
-                return tr("pipensx/detail/status_queued");
+                return tr("gamehubnx/detail/status_queued");
             case DownloadStatus::Fetching:
-                return tr("pipensx/downloads/status_fetching");
+                return tr("gamehubnx/downloads/status_fetching");
             case DownloadStatus::Checking:
             case DownloadStatus::Downloading:
             case DownloadStatus::Verifying:
-                return tr("pipensx/downloads/status_downloading");
+                return tr("gamehubnx/downloads/status_downloading");
             case DownloadStatus::Paused:
-                return tr("pipensx/downloads/status_paused");
+                return tr("gamehubnx/downloads/status_paused");
             case DownloadStatus::Installing:
             case DownloadStatus::Committing:
-                return tr("pipensx/downloads/status_installing");
+                return tr("gamehubnx/downloads/status_installing");
             case DownloadStatus::Completed:
-                return tr("pipensx/downloads/status_completed");
+                return tr("gamehubnx/downloads/status_completed");
             case DownloadStatus::Installed:
-                return tr("pipensx/downloads/status_installed");
+                return tr("gamehubnx/downloads/status_installed");
             case DownloadStatus::Error:
-                return tr("pipensx/downloads/status_error");
+                return tr("gamehubnx/downloads/status_error");
             case DownloadStatus::Removing:
-                return tr("pipensx/downloads/status_removing");
+                return tr("gamehubnx/downloads/status_removing");
         }
         return "";
     }
@@ -1879,29 +1879,29 @@ private:
         if (fetchCatalog && fetchMetadata) {
             if (catalogOk && metadataOk) {
                 brls::Application::notify(
-                    tr("pipensx/catalog/updated_both",
+                    tr("gamehubnx/catalog/updated_both",
                        catalog_->entries().size()));
             } else if (catalogOk) {
                 brls::Application::notify(
-                    tr("pipensx/catalog/updated_catalog_artwork_failed",
+                    tr("gamehubnx/catalog/updated_catalog_artwork_failed",
                        metadataError));
             } else if (metadataOk) {
                 brls::Application::notify(
-                    tr("pipensx/catalog/updated_artwork_catalog_failed",
+                    tr("gamehubnx/catalog/updated_artwork_catalog_failed",
                        catalogError));
             } else {
                 brls::Application::notify(
-                    tr("pipensx/catalog/updated_both_failed", catalogError,
+                    tr("gamehubnx/catalog/updated_both_failed", catalogError,
                        metadataError));
             }
         } else if (fetchCatalog) {
             brls::Application::notify(catalogOk
-                ? tr("pipensx/catalog/updated_catalog",
+                ? tr("gamehubnx/catalog/updated_catalog",
                      catalog_->entries().size())
                 : catalogError);
         } else if (fetchMetadata) {
             brls::Application::notify(metadataOk
-                ? tr("pipensx/catalog/updated_artwork", metadata_->size())
+                ? tr("gamehubnx/catalog/updated_artwork", metadata_->size())
                 : metadataError);
         }
     }
@@ -1928,9 +1928,9 @@ private:
         if (fetchMods)
             modsInFlight_ = true;
         const std::string updating = fetchCatalog && fetchMetadata
-            ? tr("pipensx/catalog/updating_both")
-            : fetchCatalog ? tr("pipensx/catalog/updating_catalog")
-                           : tr("pipensx/catalog/updating_artwork");
+            ? tr("gamehubnx/catalog/updating_both")
+            : fetchCatalog ? tr("gamehubnx/catalog/updating_catalog")
+                           : tr("gamehubnx/catalog/updating_artwork");
         if (notify)
             brls::Application::notify(updating);
         auto alive = alive_;
@@ -2125,4 +2125,4 @@ private:
     bool installedRefreshInFlight_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

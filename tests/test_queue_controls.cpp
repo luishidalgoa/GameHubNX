@@ -16,7 +16,7 @@ extern "C" {
 namespace {
 
 std::string tempRoot() {
-    return "/tmp/pipensx-queue-" +
+    return "/tmp/gamehubnx-queue-" +
            std::to_string(static_cast<long long>(getpid()));
 }
 
@@ -45,8 +45,8 @@ std::string makeTorrent(const std::string& directory, const std::string& name,
     return path;
 }
 
-using pipensx::DownloadStatus;
-using pipensx::DownloadTask;
+using gamehubnx::DownloadStatus;
+using gamehubnx::DownloadTask;
 
 DownloadTask task(DownloadStatus status) {
     DownloadTask t;
@@ -69,7 +69,7 @@ void testSummarizeQueueCounts() {
     tasks.push_back(task(DownloadStatus::Paused));
     tasks.push_back(task(DownloadStatus::Completed));
     tasks.push_back(task(DownloadStatus::Error));
-    const pipensx::QueueSummary s = pipensx::summarizeQueue(tasks, 0);
+    const gamehubnx::QueueSummary s = gamehubnx::summarizeQueue(tasks, 0);
     assert(s.downloading == 4); // Downloading + Checking + Fetching
     assert(s.installing == 1);
     assert(s.queued == 4);
@@ -93,7 +93,7 @@ void testSummarizeQueueSpeedAndEta() {
     DownloadTask q = task(DownloadStatus::Queued);
     q.totalBytes = 300; // remaining 300
     tasks.push_back(q);
-    const pipensx::QueueSummary s = pipensx::summarizeQueue(tasks, 0);
+    const gamehubnx::QueueSummary s = gamehubnx::summarizeQueue(tasks, 0);
     assert(s.downloadSpeedBps == 300);
     assert(s.installSpeedBps == 0);
     assert(s.totalRemainingBytes == 600 + 400 + 300);
@@ -104,7 +104,7 @@ void testSummarizeQueueSpeedAndEta() {
 void testSummarizeQueueNoThroughputNoEta() {
     std::vector<DownloadTask> tasks;
     tasks.push_back(task(DownloadStatus::Queued));
-    const pipensx::QueueSummary s = pipensx::summarizeQueue(tasks, 0);
+    const gamehubnx::QueueSummary s = gamehubnx::summarizeQueue(tasks, 0);
     assert(s.queued == 1);
     assert(s.etaSeconds == 0);
 }
@@ -118,14 +118,14 @@ void testMoveTask() {
     const std::string source3 = makeTorrent(root, "c.bin", "cccc");
     std::string queueRoot = root + "/queue";
     {
-        pipensx::DownloadManager manager(queueRoot, false);
+        gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second, third;
-        assert(manager.importTorrent(source, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
                                      first, error));
-        assert(manager.importTorrent(source2, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
                                      second, error));
-        assert(manager.importTorrent(source3, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source3, gamehubnx::TransferMode::DownloadOnly,
                                      third, error));
         auto tasks = manager.snapshot();
         assert(tasks.size() == 3);
@@ -174,12 +174,12 @@ void testPauseResumeAll() {
     const std::string source2 = makeTorrent(root, "b.bin", "bbbb");
     std::string queueRoot = root + "/queue";
     {
-        pipensx::DownloadManager manager(queueRoot, false);
+        gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second;
-        assert(manager.importTorrent(source, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
                                      first, error));
-        assert(manager.importTorrent(source2, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
                                      second, error));
         manager.pauseAll();
         auto tasks = manager.snapshot();
@@ -217,12 +217,12 @@ void testClearCompleted() {
     std::string queueRoot = root + "/queue";
     std::string keepPath;
     {
-        pipensx::DownloadManager manager(queueRoot, false);
+        gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second;
-        assert(manager.importTorrent(source, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
                                      first, error));
-        assert(manager.importTorrent(source2, pipensx::TransferMode::DownloadOnly,
+        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
                                      second, error));
         keepPath = manager.snapshot()[0].dataPath;
         std::ofstream marker(keepPath + "/kept.bin",
@@ -232,7 +232,7 @@ void testClearCompleted() {
     }
     markFirstQueuedCompleted(queueRoot);
     {
-        pipensx::DownloadManager manager(queueRoot, false);
+        gamehubnx::DownloadManager manager(queueRoot, false);
         auto tasks = manager.snapshot();
         assert(tasks.size() == 2);
         assert(tasks[0].status == DownloadStatus::Completed);
@@ -251,7 +251,7 @@ void testClearCompleted() {
     }
     markFirstQueuedCompleted(queueRoot);
     {
-        pipensx::DownloadManager manager(queueRoot, false);
+        gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         const std::string remainingPath = manager.snapshot()[0].dataPath;
         assert(manager.clearCompleted(true, error));

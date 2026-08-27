@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-pipensx itself is licensed under the GNU General Public License v3.0 (see
+gamehubnx itself is licensed under the GNU General Public License v3.0 (see
 [LICENSE](LICENSE)). The third-party components bundled in `vendor/` and
 referenced below retain their original licenses.
 
@@ -57,4 +57,4 @@ No NSZ source code is included. The reference project is licensed under the MIT
 license.
 
 Goldleaf was reviewed for Nintendo content-management behavior, but no Goldleaf
-source code is included or copied into pipensx.
+source code is included or copied into gamehubnx.

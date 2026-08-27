@@ -18,7 +18,7 @@
 
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 enum class ActionIconKind {
     Install,    // solid accent badge, arrow knocked out
@@ -183,4 +183,4 @@ private:
     ActionIconKind kind_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

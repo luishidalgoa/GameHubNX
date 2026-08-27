@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-using pipensx::install::PackageCallbacks;
-using pipensx::install::PackageStream;
+using gamehubnx::install::PackageCallbacks;
+using gamehubnx::install::PackageStream;
 
 namespace {
 
@@ -638,7 +638,7 @@ Capture runResume(bool compressed, const std::vector<uint8_t>& package,
     assert(cut < package.size());
     Capture capture;
     Capture snapshot;
-    pipensx::install::PackageStreamState state;
+    gamehubnx::install::PackageStreamState state;
     bool haveState = false;
     {
         PackageStream stream(compressed, capture.callbacks());
@@ -652,7 +652,7 @@ Capture runResume(bool compressed, const std::vector<uint8_t>& package,
                 assert(false);
             }
             offset += count;
-            pipensx::install::PackageStreamState candidate;
+            gamehubnx::install::PackageStreamState candidate;
             if (stream.checkpoint(candidate)) {
                 state = std::move(candidate);
                 snapshot = capture;
@@ -746,7 +746,7 @@ void testSolidMidEntryNotCheckpointable() {
     // Feed enough that the solid Zstandard stream has consumed input but the
     // entry has not finished: no safe point exists there.
     assert(stream.write(package.data(), package.size() / 2));
-    pipensx::install::PackageStreamState state;
+    gamehubnx::install::PackageStreamState state;
     assert(!stream.checkpoint(state));
 }
 
@@ -754,7 +754,7 @@ void testRestoreRejectsInconsistentState() {
     std::vector<uint8_t> first {1, 2, 3, 4, 5};
     auto package = makePfs0({{"first.nca", first}});
     Capture capture;
-    pipensx::install::PackageStreamState state;
+    gamehubnx::install::PackageStreamState state;
     {
         PackageStream stream(false, capture.callbacks());
         assert(stream.write(package.data(), package.size() - 2));

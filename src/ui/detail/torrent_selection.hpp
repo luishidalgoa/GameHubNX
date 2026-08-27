@@ -18,7 +18,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 struct TorrentSelectionEntry {
     std::string path;
@@ -40,11 +40,11 @@ inline std::pair<std::string, std::string> splitPath(const std::string& path) {
 
 inline std::string fileKindLabel(const TorrentSelectionEntry& entry) {
     if (!entry.package)
-        return entry.cartridge ? tr("pipensx/torrent/kind_cartridge")
-                               : tr("pipensx/torrent/kind_other");
+        return entry.cartridge ? tr("gamehubnx/torrent/kind_cartridge")
+                               : tr("gamehubnx/torrent/kind_other");
     if (entry.compressed)
-        return tr("pipensx/torrent/kind_nsz");
-    return tr("pipensx/torrent/kind_nsp");
+        return tr("gamehubnx/torrent/kind_nsz");
+    return tr("gamehubnx/torrent/kind_nsp");
 }
 
 class TorrentSelectionCell : public brls::RecyclerCell {
@@ -60,7 +60,7 @@ public:
         // same button replaces it (View::registerAction), so this only changes
         // the hint text in the applet frame's button bar — the click still
         // routes to the data source exactly as before.
-        registerAction(tr("pipensx/common/toggle"), brls::BUTTON_A,
+        registerAction(tr("gamehubnx/common/toggle"), brls::BUTTON_A,
                        [this](brls::View*) {
             auto* recycler =
                 dynamic_cast<brls::RecyclerFrame*>(getParent()->getParent());
@@ -159,7 +159,7 @@ public:
     void setEmpty() {
         icon_->setKind(ActionIconKind::Skip);
         directory_->setVisibility(brls::Visibility::GONE);
-        name_->setText(tr("pipensx/torrent/empty"));
+        name_->setText(tr("gamehubnx/torrent/empty"));
         name_->setTextColor(theme::textDisabled());
         meta_->setText("");
         size_->setText("");
@@ -303,7 +303,7 @@ public:
     friend class TorrentSelectionDataSource;
 
     TorrentSelectionActivity(DownloadManager* manager, std::string path,
-                             pipensx::TorrentPreview preview,
+                             gamehubnx::TorrentPreview preview,
                              TransferMode preferred,
                              StreamSelection initialSelection,
                              std::vector<uint8_t> initialPeers = {},
@@ -313,7 +313,7 @@ public:
                              // torrent, que es de donde viene esta pantalla;
                              // una entrada de la tienda pasa el suyo, porque
                              // ahi no hay torrent que valga.
-                             const char* titleKey = "pipensx/torrent/title")
+                             const char* titleKey = "gamehubnx/torrent/title")
         : manager_(manager), path_(std::move(path)),
           preview_(std::move(preview)), preferred_(preferred),
           initialSelection_(initialSelection),
@@ -349,11 +349,11 @@ public:
         summaryRow->addView(summary_);
 
         addLegendEntry(summaryRow, ActionIconKind::Install,
-                       tr("pipensx/torrent/legend_install"));
+                       tr("gamehubnx/torrent/legend_install"));
         addLegendEntry(summaryRow, ActionIconKind::Download,
-                       tr("pipensx/torrent/legend_download"));
+                       tr("gamehubnx/torrent/legend_download"));
         addLegendEntry(summaryRow, ActionIconKind::Skip,
-                       tr("pipensx/torrent/legend_skip"));
+                       tr("gamehubnx/torrent/legend_skip"));
         content->addView(summaryRow);
 
         meter_ = new StorageMeter();
@@ -369,7 +369,7 @@ public:
             portHint_->setFontSize(theme::kFontCaption);
             portHint_->setTextColor(theme::accent());
             portHint_->setMarginBottom(8);
-            portHint_->setText(tr("pipensx/torrent/port_detected"));
+            portHint_->setText(tr("gamehubnx/torrent/port_detected"));
             content->addView(portHint_);
         }
 
@@ -395,7 +395,7 @@ public:
         selectPackages_->setHeight(46);
         selectPackages_->setMarginRight(10);
         selectPackages_->setGrow(1);
-        selectPackages_->setText(tr("pipensx/torrent/preset_packages"));
+        selectPackages_->setText(tr("gamehubnx/torrent/preset_packages"));
         selectPackages_->registerClickAction([this](brls::View*) {
             applyPreset([this] { dataSource_->selectPackagesOnly(); });
             return true;
@@ -407,7 +407,7 @@ public:
         selectDownloadAll_->setFontSize(16);
         selectDownloadAll_->setHeight(46);
         selectDownloadAll_->setGrow(1);
-        selectDownloadAll_->setText(tr("pipensx/torrent/preset_download_all"));
+        selectDownloadAll_->setText(tr("gamehubnx/torrent/preset_download_all"));
         selectDownloadAll_->registerClickAction([this](brls::View*) {
             applyPreset([this] { dataSource_->selectDownloadAll(); });
             return true;
@@ -420,7 +420,7 @@ public:
         clearAll_->setHeight(46);
         clearAll_->setMarginLeft(10);
         clearAll_->setGrow(1);
-        clearAll_->setText(tr("pipensx/common/clear"));
+        clearAll_->setText(tr("gamehubnx/common/clear"));
         clearAll_->registerClickAction([this](brls::View*) {
             setAllSelected(false);
             return true;
@@ -434,7 +434,7 @@ public:
             selectPort_->setHeight(46);
             selectPort_->setMarginLeft(10);
             selectPort_->setGrow(1);
-            selectPort_->setText(tr("pipensx/torrent/select_port"));
+            selectPort_->setText(tr("gamehubnx/torrent/select_port"));
             selectPort_->registerClickAction([this](brls::View*) {
                 applyPreset([this] {
                     dataSource_->selectPortFiles(preview_, portRoot_);
@@ -450,7 +450,7 @@ public:
         installSelected_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
         installSelected_->setFontSize(21);
         installSelected_->setHeight(54);
-        installSelected_->setText(tr("pipensx/common/continue"));
+        installSelected_->setText(tr("gamehubnx/common/continue"));
         installSelected_->registerClickAction([this](brls::View*) {
             confirmSelection();
             return true;
@@ -460,7 +460,7 @@ public:
         content->addView(buttons);
         frame_ = new brls::AppletFrame(content);
         frame_->setTitle(preview_.name.empty()
-                             ? tr("pipensx/torrent/frame_title")
+                             ? tr("gamehubnx/torrent/frame_title")
                                               : preview_.name);
 
         populateEntries();
@@ -479,17 +479,17 @@ public:
     }
 
     void onContentAvailable() override {
-        registerAction(tr("pipensx/torrent/preset_packages"), brls::BUTTON_X,
+        registerAction(tr("gamehubnx/torrent/preset_packages"), brls::BUTTON_X,
                        [this](brls::View*) {
             applyPreset([this] { dataSource_->selectPackagesOnly(); });
             return true;
         });
-        registerAction(tr("pipensx/common/clear"), brls::BUTTON_Y,
+        registerAction(tr("gamehubnx/common/clear"), brls::BUTTON_Y,
                        [this](brls::View*) {
             setAllSelected(false);
             return true;
         });
-        registerAction(tr("pipensx/common/continue"), brls::BUTTON_RB,
+        registerAction(tr("gamehubnx/common/continue"), brls::BUTTON_RB,
                        [this](brls::View*) {
                            confirmSelection();
                            return true;
@@ -620,8 +620,8 @@ private:
 
     void refreshStorageSnapshots() {
         downloadStorage_ =
-            pipensx::queryStorageSpace(manager_->rootPath());
-        packageStorage_ = pipensx::queryInstallStorageSpace(
+            gamehubnx::queryStorageSpace(manager_->rootPath());
+        packageStorage_ = gamehubnx::queryInstallStorageSpace(
             manager_->installTarget(), manager_->rootPath());
     }
 
@@ -633,25 +633,25 @@ private:
         const TransferMode mode = installs > 0
             ? TransferMode::StreamInstall
             : TransferMode::DownloadOnly;
-        const auto estimate = pipensx::estimateInstallSpace(preview_, actions,
+        const auto estimate = gamehubnx::estimateInstallSpace(preview_, actions,
                                                             mode);
-        const auto check = pipensx::assessTransferSpace(
+        const auto check = gamehubnx::assessTransferSpace(
             estimate, downloadStorage_, packageStorage_);
         // The meter caption right below already prints the byte totals, so the
         // summary stays on counts.
-        std::string text = tr("pipensx/torrent/summary", selected,
+        std::string text = tr("gamehubnx/torrent/summary", selected,
                               preview_.files.size());
         if (installs > 0) {
-            text += tr("pipensx/torrent/summary_install", installs);
+            text += tr("gamehubnx/torrent/summary_install", installs);
             if (downloads > 0)
-                text += tr("pipensx/torrent/summary_download", downloads);
+                text += tr("gamehubnx/torrent/summary_download", downloads);
         } else if (downloads > 0) {
-            text += tr("pipensx/torrent/summary_download_only");
+            text += tr("gamehubnx/torrent/summary_download_only");
         }
         summary_->setText(text);
 
         const auto meterTarget = installs > 0 ? manager_->installTarget()
-            : pipensx::install::InstallStorageTarget::SdCard;
+            : gamehubnx::install::InstallStorageTarget::SdCard;
         const StorageSpaceSnapshot& meterStorage =
             installs > 0 ? packageStorage_ : downloadStorage_;
         meter_->setHeader(storageMeterHeader(meterTarget));
@@ -667,14 +667,14 @@ private:
         const std::string destination =
             installDestinationLabel(manager_->installTarget());
         if (selected == 0) {
-            installSelected_->setText(tr("pipensx/common/continue"));
+            installSelected_->setText(tr("gamehubnx/common/continue"));
         } else if (installs > 0) {
             installSelected_->setText(tr(
-                "pipensx/torrent/cta_install", installs, destination,
+                "gamehubnx/torrent/cta_install", installs, destination,
                 formatBytes(estimate.requiredBytes)));
         } else {
             installSelected_->setText(tr(
-                "pipensx/torrent/cta_download", downloads,
+                "gamehubnx/torrent/cta_download", downloads,
                 formatBytes(estimate.requiredBytes)));
         }
         installSelected_->setState(selected == 0 || estimate.overflow ||
@@ -687,29 +687,29 @@ private:
     void confirmSelection() {
         std::vector<uint8_t> actions = dataSource_->fileActions();
         if (actions.empty() && preview_.files.empty()) {
-            brls::Application::notify(tr("pipensx/torrent/no_files"));
+            brls::Application::notify(tr("gamehubnx/torrent/no_files"));
             return;
         }
         size_t selected = dataSource_->selectedCount();
         if (selected == 0) {
-            brls::Application::notify(tr("pipensx/torrent/select_one_file"));
+            brls::Application::notify(tr("gamehubnx/torrent/select_one_file"));
             return;
         }
 
         TransferMode mode = dataSource_->installCount() > 0
             ? TransferMode::StreamInstall
             : TransferMode::DownloadOnly;
-        const auto estimate = pipensx::estimateInstallSpace(preview_, actions,
+        const auto estimate = gamehubnx::estimateInstallSpace(preview_, actions,
                                                             mode);
         // Authoritative gate: the cached snapshot may be stale if a background
         // download ate into the card while this screen was open, so re-query
         // and keep the fresh reading for the meter.
         refreshStorageSnapshots();
-        if (pipensx::assessTransferSpace(estimate, downloadStorage_,
+        if (gamehubnx::assessTransferSpace(estimate, downloadStorage_,
                                          packageStorage_)
                 .status == InstallSpaceCheckStatus::Insufficient) {
             refreshSummary();
-            brls::Application::notify(tr("pipensx/torrent/no_space"));
+            brls::Application::notify(tr("gamehubnx/torrent/no_space"));
             return;
         }
         std::string id;
@@ -736,20 +736,20 @@ private:
         const std::string destination =
             installDestinationLabel(manager_->installTarget());
         brls::Application::notify(mode == TransferMode::StreamInstall
-            ? tr("pipensx/torrent/added_installing", destination)
-            : tr("pipensx/torrent/added"));
+            ? tr("gamehubnx/torrent/added_installing", destination)
+            : tr("gamehubnx/torrent/added"));
         brls::Application::popActivity();
     }
 
     DownloadManager* manager_;
     std::string path_;
-    pipensx::TorrentPreview preview_;
+    gamehubnx::TorrentPreview preview_;
     TransferMode preferred_;
     StreamSelection initialSelection_;
     std::vector<uint8_t> initialPeers_;
     DebridImport debridImport_;
     std::function<void()> abandon_;
-    const char* titleKey_ = "pipensx/torrent/title";
+    const char* titleKey_ = "gamehubnx/torrent/title";
     // Queried once at construction instead of once per A press: on Switch this
     // is an nsGetStorageSize IPC. confirmSelection() re-queries before it
     // commits, so a stale reading can never let an oversized install through.
@@ -771,4 +771,4 @@ private:
     bool finished_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

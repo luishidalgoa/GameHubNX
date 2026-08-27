@@ -1,4 +1,4 @@
-# pipensx
+# gamehubnx
 
 Native Nintendo Switch-homebrew BitTorrent download manager and streaming
 package installer. C11/C++ with borealis UI and vendored libutp, zstd and dht.
@@ -13,7 +13,7 @@ make pc      # portable CLI, Makefile.pc
 ```
 
 `CORE_SOURCES`, `APP_SERVICE_SOURCES`, and `UI_SOURCES` build in both Switch
-`pipensx` and PC `golden_runner`. `Makefile.pc` also compiles `src/app/*.cpp`.
+`gamehubnx` and PC `golden_runner`. `Makefile.pc` also compiles `src/app/*.cpp`.
 CMake uses C++20 but shared `src/core` and `src/app` code must compile as
 C++17. Verify every affected build; a Switch build alone is insufficient for
 platform-specific changes.
@@ -50,13 +50,13 @@ PC-build patterns, and required dual-build verification.
 ## Crash reports
 
 Atmosphere writes `sdmc:/atmosphere/crash_reports/*.log` with the stack as
-module offsets (`pipensx + 0x211a38`). To read one, pair it with the
-`pipensx.elf` published by CI **for that same build** — `ci.yml` and
+module offsets (`gamehubnx + 0x211a38`). To read one, pair it with the
+`gamehubnx.elf` published by CI **for that same build** — `ci.yml` and
 `switch-release.yml` both ship it next to the `.nro`, and Release compiles with
 `-g1` so the ELF carries line tables:
 
 ```sh
-scripts/symbolize_crash.py crash.log pipensx.elf
+scripts/symbolize_crash.py crash.log gamehubnx.elf
 ```
 
 An ELF from a different build resolves to plausible, wrong answers. Check the
@@ -64,10 +64,10 @@ An ELF from a different build resolves to plausible, wrong answers. Check the
 
 ## Context budget — don't read
 
-- `pipensx.log` is a multi-thousand-line runtime log. Never read it whole;
+- `gamehubnx.log` is a multi-thousand-line runtime log. Never read it whole;
   grep it by tag (`[torrent]`, `[dht]`, `[status]`, ...) when you need it.
 - Do not open images, binaries, or build output: `resources/*.jpg|png`,
-  `tests/golden/*.png`, `tests/fixtures/golden/*.png`, `pipensx.nro`,
+  `tests/golden/*.png`, `tests/fixtures/golden/*.png`, `gamehubnx.nro`,
   `build-golden/**`, `build-switch/**`, anything under `bug-reports/`.
   Golden diffs are triaged by the numbers (AE, bbox, density) from the
   `golden` skill — never by viewing the PNG.
@@ -84,7 +84,7 @@ An ELF from a different build resolves to plausible, wrong answers. Check the
   after changing source lists or flags:
 ```sh
  make -f Makefile.pc clean && bear -- make -f Makefile.pc test
- cmake -S . -B build-golden -DPIPENSX_GOLDEN=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ cmake -S . -B build-golden -DGAMEHUBNX_GOLDEN=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
  ```
  PC objects and test binaries go under `build-pc/` (never next to `src/` /
  `tests/` sources).

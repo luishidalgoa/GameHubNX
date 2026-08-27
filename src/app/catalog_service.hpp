@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class CatalogHealth {
     Unknown,
@@ -222,4 +222,4 @@ private:
         onAdopt_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

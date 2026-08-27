@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct TorboxFile {
     uint64_t id;
@@ -70,4 +70,4 @@ private:
     TorboxTransport transport_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

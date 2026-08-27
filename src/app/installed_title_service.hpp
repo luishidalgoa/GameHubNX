@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct InstalledTitle {
     uint64_t applicationId = 0;
@@ -142,4 +142,4 @@ inline bool titleVersionIsNewer(const std::string& latest,
            latestValue > installedValue;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -10,7 +10,7 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
-namespace pipensx {
+namespace gamehubnx {
 
 namespace {
 
@@ -594,4 +594,4 @@ void HttpServer::loopMain() {
     }
 }
 
-}  // namespace pipensx
+}  // namespace gamehubnx

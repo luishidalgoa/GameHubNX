@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct PortArchiveProbe {
     bool ok = false;
@@ -44,4 +44,4 @@ bool extractPortArchive(const std::string& archivePath,
                         const std::function<void(const std::string&)>& currentFile,
                         std::string& error);
 
-} // namespace pipensx
+} // namespace gamehubnx

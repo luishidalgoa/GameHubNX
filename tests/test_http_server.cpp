@@ -16,7 +16,7 @@
 #include <cstring>
 #include <string>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 
@@ -82,7 +82,7 @@ void testParser() {
     const std::string req =
         "GET /api/tasks?pin=12%2034&x HTTP/1.1\r\n"
         "Host: switch\r\n"
-        "X-Pipensx-Pin:  777 \r\n"
+        "X-Gamehubnx-Pin:  777 \r\n"
         "\r\n";
     // incremental: every strict prefix is "need more data"
     for (size_t i = 0; i + 1 < req.size(); ++i) {
@@ -102,7 +102,7 @@ void testParser() {
     assert(r.queryParam("x").empty());
     assert(r.queryParam("nope").empty());
     assert(r.header("host") == "switch");
-    assert(r.header("x-pipensx-pin") == "777");
+    assert(r.header("x-gamehubnx-pin") == "777");
 
     // header block over cap without terminator
     std::string big = "GET / HTTP/1.1\r\nX: " + std::string(9000, 'a');

@@ -70,21 +70,21 @@ sysmodule, приостановлены**. Официальные фоновые
 Три бинаря, общий код движка не форкается:
 
 ```
-pipensx.nro                      — приложение (есть; становится IPC-клиентом
+gamehubnx.nro                      — приложение (есть; становится IPC-клиентом
                                    для фоновых задач)
 atmosphere/contents/<TID>/       — sysmodule: exefs.nsp + flags/boot2.flag
                                    + toolbox.json
-switch/.overlays/pipensx.ovl     — Tesla-оверлей (libtesla + nx-ovlloader)
+switch/.overlays/gamehubnx.ovl     — Tesla-оверлей (libtesla + nx-ovlloader)
 ```
 
 Структура исходников:
 
 ```
 src/sysmodule/main.c        — init сервисов, heap, главный цикл
-src/sysmodule/ipc_server.c  — cmif-сервер сервиса "pipensx"
+src/sysmodule/ipc_server.c  — cmif-сервер сервиса "gamehubnx"
 src/sysmodule/task_queue.c  — очередь задач + персист (тестируема на PC)
 src/sysmodule/engine_host.c — обвязка torrent_create/tick, бюджеты
-src/ipc/pipensx_ipc.h       — общий протокол (cmd id, POD-структуры) —
+src/ipc/gamehubnx_ipc.h       — общий протокол (cmd id, POD-структуры) —
                               единственный источник правды для всех трёх
                               бинарей
 overlay/                    — исходники .ovl
@@ -104,7 +104,7 @@ overlay/                    — исходники .ovl
 двух портов окажется мало (memory contention, лимиты bsd).
 
 Состояние фоновых задач хранит **только sysmodule**
-(`sdmc:/switch/pipensx/sysmodule-queue.bencode`, атомарная запись по образцу
+(`sdmc:/switch/gamehubnx/sysmodule-queue.bencode`, атомарная запись по образцу
 `download_manager.cpp:1418–1444`). Приложение отображает их по IPC и в свой
 `queue.bencode` не дублирует — ссылки по id задачи.
 
@@ -152,12 +152,12 @@ foreground-движка (96 пиров, свободный порядок). Дл
 
 ---
 
-## 3. IPC-протокол (сервис `pipensx`)
+## 3. IPC-протокол (сервис `gamehubnx`)
 
-Имя сервиса `pipensx` — 7 символов, лимит sm (8) соблюдён. Реализация —
+Имя сервиса `gamehubnx` — 7 символов, лимит sm (8) соблюдён. Реализация —
 cmif-сервер на чистом libnx (без libstratosphere: не тащить второй тулчейн
 в CMake-сборку). Все структуры — POD фиксированного размера в
-`src/ipc/pipensx_ipc.h`, версия протокола проверяется первой командой.
+`src/ipc/gamehubnx_ipc.h`, версия протокола проверяется первой командой.
 
 | Cmd | Имя | In | Out |
 |---|---|---|---|
@@ -189,8 +189,8 @@ Push-событий нет: приложение и оверлей поллят 
 
 Прототип из F-A («движок в sysmodule качает один торрент на SD»), но ещё
 дешевле: собрать headless-цикл по образцу `src/main_pc.c` как **обычный
-NRO без borealis** (`pipensx_headless.nro`): берёт `.torrent` с SD, качает
-в `sdmc:/switch/pipensx/downloads`, лог в файл. Один рабочий поток, cap
+NRO без borealis** (`gamehubnx_headless.nro`): берёт `.torrent` с SD, качает
+в `sdmc:/switch/gamehubnx/downloads`, лог в файл. Один рабочий поток, cap
 12 пиров, lookahead 1.
 
 Проверяет разом: движок + curl/mbedtls + bsd-сокеты + fopen-storage на
@@ -210,7 +210,7 @@ Switch вне GUI-контекста, и даёт первый замер heap (
   `toolbox.json` — чтобы пользователь мог выключить модуль стандартными
   средствами.
 - Init по §1.2, `svcSetHeapSize(8 МБ)`, лог
-  `sdmc:/switch/pipensx/sysmodule.log` (переиспользовать `log_init`).
+  `sdmc:/switch/gamehubnx/sysmodule.log` (переиспользовать `log_init`).
 - cmif-сервер: только `GetVersion`; smoke-клиент в приложении (строчка в
   экране диагностики).
 - Внутрь — цикл фазы 0. Критерий: торрент докачивается, пока запущена игра.
@@ -250,7 +250,7 @@ Switch вне GUI-контекста, и даёт первый замер heap (
   (документировать в README).
 - `.ovl`: список задач (имя, прогресс-бар, скорость, пиры), pause/resume,
   «выключить демон до перезагрузки».
-- Тот же `pipensx_ipc.h`; поллинг 1 Гц только пока оверлей открыт.
+- Тот же `gamehubnx_ipc.h`; поллинг 1 Гц только пока оверлей открыт.
 
 ### Фаза 5 — память и отказ от curl (M/L, по результатам фаз 0–2)
 

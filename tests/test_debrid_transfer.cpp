@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-using namespace pipensx;
+using namespace gamehubnx;
 
 namespace {
 
@@ -149,7 +149,7 @@ std::vector<uint8_t> makePfs0(
 }
 
 void testDownloadOnlyFullRun() {
-    const std::string root = "/tmp/pipensx-torbox-transfer-test";
+    const std::string root = "/tmp/gamehubnx-torbox-transfer-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -198,7 +198,7 @@ void testDownloadOnlyFullRun() {
 }
 
 void testResumeUsesOnDiskOffset() {
-    const std::string root = "/tmp/pipensx-torbox-resume-test";
+    const std::string root = "/tmp/gamehubnx-torbox-resume-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -278,7 +278,7 @@ void testStopRequestedReturnsStopped() {
 }
 
 void testStreamInstallCommitsPackage() {
-    const std::string root = "/tmp/pipensx-torbox-stream-test";
+    const std::string root = "/tmp/gamehubnx-torbox-stream-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -322,7 +322,7 @@ void testStreamInstallCommitsPackage() {
 }
 
 void testPartialStreamFailureRetriesWithoutPacerDeadlock() {
-    const std::string root = "/tmp/pipensx-torbox-stream-failure-test";
+    const std::string root = "/tmp/gamehubnx-torbox-stream-failure-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
 
@@ -367,7 +367,7 @@ void testPartialStreamFailureRetriesWithoutPacerDeadlock() {
 }
 
 void testSelectionPathsPicksOneFile() {
-    const std::string root = "/tmp/pipensx-torbox-selection-test";
+    const std::string root = "/tmp/gamehubnx-torbox-selection-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -408,7 +408,7 @@ void testSelectionPathsPicksOneFile() {
 }
 
 void testSelectionPathsNoMatchReturnsFailed() {
-    const std::string root = "/tmp/pipensx-torbox-nomatch-test";
+    const std::string root = "/tmp/gamehubnx-torbox-nomatch-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -444,7 +444,7 @@ void testSelectionPathsNoMatchReturnsFailed() {
 }
 
 void testMagnetFileFallback() {
-    const std::string root = "/tmp/pipensx-torbox-fallback-test";
+    const std::string root = "/tmp/gamehubnx-torbox-fallback-test";
     system(("rm -rf " + root).c_str());
     ::mkdir(root.c_str(), 0777);
 
@@ -487,7 +487,7 @@ void testMagnetFileFallback() {
 }
 
 void testOutOfOrderRangesAssembleInOrder() {
-    const std::string root = "/tmp/pipensx-torbox-ooo-test";
+    const std::string root = "/tmp/gamehubnx-torbox-ooo-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -552,7 +552,7 @@ void testOutOfOrderRangesAssembleInOrder() {
 }
 
 void testRangeIgnoredFallsBackToSequential() {
-    const std::string root = "/tmp/pipensx-torbox-range200-test";
+    const std::string root = "/tmp/gamehubnx-torbox-range200-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";
@@ -608,7 +608,7 @@ void testRangeIgnoredFallsBackToSequential() {
 }
 
 void testStreamInstallCoalescesTinyChunks() {
-    const std::string root = "/tmp/pipensx-torbox-coalesce-test";
+    const std::string root = "/tmp/gamehubnx-torbox-coalesce-test";
     system(("rm -rf " + root).c_str());
     mkdir(root.c_str(), 0755);
     const std::string data = root + "/data";

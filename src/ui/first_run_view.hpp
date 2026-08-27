@@ -16,7 +16,7 @@ extern "C" {
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // One arrow of the mode diagram: a horizontal line with an arrowhead on its
 // right edge and a caption label below the line. The chips it connects are
@@ -93,15 +93,15 @@ public:
         setHeight(96);
         setAlignItems(brls::AlignItems::CENTER);
 
-        makeChip(tr("pipensx/first_run/diagram_console"));
-        serverHop_ = new ModeDiagramArrow(tr("pipensx/first_run/diagram_lan"));
+        makeChip(tr("gamehubnx/first_run/diagram_console"));
+        serverHop_ = new ModeDiagramArrow(tr("gamehubnx/first_run/diagram_lan"));
         addView(serverHop_);
-        serverChip_ = makeChip(tr("pipensx/first_run/diagram_torrserver"),
+        serverChip_ = makeChip(tr("gamehubnx/first_run/diagram_torrserver"),
                                &serverLabel_);
         swarmHop_ =
-            new ModeDiagramArrow(tr("pipensx/first_run/diagram_internet"));
+            new ModeDiagramArrow(tr("gamehubnx/first_run/diagram_internet"));
         addView(swarmHop_);
-        makeChip(tr("pipensx/first_run/diagram_swarm"));
+        makeChip(tr("gamehubnx/first_run/diagram_swarm"));
         setKind(Kind::TorrServer);
     }
 
@@ -115,24 +115,24 @@ public:
         switch (kind) {
             case Kind::TorrServer:
                 serverLabel_->setText(
-                    tr("pipensx/first_run/diagram_torrserver"));
-                serverHop_->setCaption(tr("pipensx/first_run/diagram_lan"));
+                    tr("gamehubnx/first_run/diagram_torrserver"));
+                serverHop_->setCaption(tr("gamehubnx/first_run/diagram_lan"));
                 swarmHop_->setCaption(
-                    tr("pipensx/first_run/diagram_internet"));
+                    tr("gamehubnx/first_run/diagram_internet"));
                 break;
             case Kind::TorBox:
             case Kind::RealDebrid:
                 serverLabel_->setText(
                     kind == Kind::RealDebrid
-                        ? tr("pipensx/first_run/diagram_realdebrid")
-                        : tr("pipensx/first_run/diagram_torbox"));
+                        ? tr("gamehubnx/first_run/diagram_realdebrid")
+                        : tr("gamehubnx/first_run/diagram_torbox"));
                 serverHop_->setCaption(
-                    tr("pipensx/first_run/diagram_internet"));
+                    tr("gamehubnx/first_run/diagram_internet"));
                 swarmHop_->setCaption(
-                    tr("pipensx/first_run/diagram_internet"));
+                    tr("gamehubnx/first_run/diagram_internet"));
                 break;
             case Kind::Direct:
-                swarmHop_->setCaption(tr("pipensx/first_run/diagram_torrent"));
+                swarmHop_->setCaption(tr("gamehubnx/first_run/diagram_torrent"));
                 break;
         }
     }
@@ -189,7 +189,7 @@ public:
         setPadding(24, 24, 24, 24);
 
         auto* heading = new brls::Label();
-        heading->setText(tr("pipensx/setup_summary/selected"));
+        heading->setText(tr("gamehubnx/setup_summary/selected"));
         heading->setFontSize(theme::kFontCaption);
         heading->setTextColor(theme::textTertiary());
         heading->setMarginBottom(8);
@@ -333,7 +333,7 @@ public:
         left->setMarginRight(24);
 
         auto* intro = new brls::Label();
-        intro->setText(tr("pipensx/first_run/intro"));
+        intro->setText(tr("gamehubnx/first_run/intro"));
         intro->setFontSize(theme::kFontSmall);
         intro->setTextColor(theme::textSecondary());
         intro->setSingleLine(false);
@@ -341,25 +341,25 @@ public:
         left->addView(intro);
 
         left->addView(new FirstRunOption(
-            tr("pipensx/first_run/torrserver"),
+            tr("gamehubnx/first_run/torrserver"),
             [this] { choose(DebridProviderKind::TorrServer, false); },
             [this] { updateSelection(DebridProviderKind::TorrServer, false); }));
         left->addView(new FirstRunOption(
-            tr("pipensx/first_run/realdebrid"),
+            tr("gamehubnx/first_run/realdebrid"),
             [this] { choose(DebridProviderKind::RealDebrid, false); },
             [this] { updateSelection(DebridProviderKind::RealDebrid, false); }));
         left->addView(new FirstRunOption(
-            tr("pipensx/first_run/torbox"),
+            tr("gamehubnx/first_run/torbox"),
             [this] { choose(DebridProviderKind::TorBox, false); },
             [this] { updateSelection(DebridProviderKind::TorBox, false); }));
         left->addView(new FirstRunOption(
-            tr("pipensx/first_run/direct"),
+            tr("gamehubnx/first_run/direct"),
             [this] { choose(DebridProviderKind::TorBox, true); },
             [this] { updateSelection(DebridProviderKind::TorBox, true); }));
         left->setDefaultFocusedIndex(0);
 
         auto* note = new brls::Label();
-        note->setText(tr("pipensx/first_run/note"));
+        note->setText(tr("gamehubnx/first_run/note"));
         note->setFontSize(theme::kFontCaption);
         note->setTextColor(theme::textTertiary());
         note->setSingleLine(false);
@@ -401,7 +401,7 @@ public:
                      OnComplete onComplete) {
         auto* frame = new brls::AppletFrame(
             new FirstRunView(settings, manager, std::move(onComplete)));
-        frame->setTitle(tr("pipensx/first_run/title"));
+        frame->setTitle(tr("gamehubnx/first_run/title"));
         brls::Application::pushActivity(new brls::Activity(frame));
     }
 
@@ -427,28 +427,28 @@ private:
         std::string name, how, peer, setup;
         if (torrenting) {
             kind = ModeDiagram::Kind::Direct;
-            name = tr("pipensx/first_run/direct");
-            how = tr("pipensx/first_run/direct_how");
-            peer = tr("pipensx/first_run/direct_peer");
-            setup = tr("pipensx/first_run/direct_setup");
+            name = tr("gamehubnx/first_run/direct");
+            how = tr("gamehubnx/first_run/direct_how");
+            peer = tr("gamehubnx/first_run/direct_peer");
+            setup = tr("gamehubnx/first_run/direct_setup");
         } else if (provider == DebridProviderKind::TorrServer) {
             kind = ModeDiagram::Kind::TorrServer;
-            name = tr("pipensx/first_run/torrserver");
-            how = tr("pipensx/first_run/torrserver_how");
-            peer = tr("pipensx/first_run/torrserver_peer");
-            setup = tr("pipensx/first_run/torrserver_setup");
+            name = tr("gamehubnx/first_run/torrserver");
+            how = tr("gamehubnx/first_run/torrserver_how");
+            peer = tr("gamehubnx/first_run/torrserver_peer");
+            setup = tr("gamehubnx/first_run/torrserver_setup");
         } else if (provider == DebridProviderKind::RealDebrid) {
             kind = ModeDiagram::Kind::RealDebrid;
-            name = tr("pipensx/first_run/realdebrid");
-            how = tr("pipensx/first_run/realdebrid_how");
-            peer = tr("pipensx/first_run/realdebrid_peer");
-            setup = tr("pipensx/first_run/realdebrid_setup");
+            name = tr("gamehubnx/first_run/realdebrid");
+            how = tr("gamehubnx/first_run/realdebrid_how");
+            peer = tr("gamehubnx/first_run/realdebrid_peer");
+            setup = tr("gamehubnx/first_run/realdebrid_setup");
         } else {
             kind = ModeDiagram::Kind::TorBox;
-            name = tr("pipensx/first_run/torbox");
-            how = tr("pipensx/first_run/torbox_how");
-            peer = tr("pipensx/first_run/torbox_peer");
-            setup = tr("pipensx/first_run/torbox_setup");
+            name = tr("gamehubnx/first_run/torbox");
+            how = tr("gamehubnx/first_run/torbox_how");
+            peer = tr("gamehubnx/first_run/torbox_peer");
+            setup = tr("gamehubnx/first_run/torbox_setup");
         }
         summary_->setMode(kind, name, how, peer, setup);
     }
@@ -495,13 +495,13 @@ inline void showCatalogDisclaimer(AppSettings* settings,
         onOk();
         return;
     }
-    auto* dialog = new brls::Dialog(tr("pipensx/disclaimer/catalog"));
+    auto* dialog = new brls::Dialog(tr("gamehubnx/disclaimer/catalog"));
     // Narrow the stock 720px dialog frame for this short one-liner.
     if (auto* frame = dialog->getView("brls/dialog/applet"))
         frame->setWidth(520);
     dialog->setCancelable(false);
-    dialog->addButton(tr("pipensx/common/ok"), [settings, onOk] {
-        pipensx::AppSettingsData values = settings->get();
+    dialog->addButton(tr("gamehubnx/common/ok"), [settings, onOk] {
+        gamehubnx::AppSettingsData values = settings->get();
         if (!values.catalogDisclaimerAcknowledged) {
             values.catalogDisclaimerAcknowledged = true;
             std::string error;
@@ -521,4 +521,4 @@ inline void showCatalogDisclaimer(AppSettings* settings,
     dialog->open();
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

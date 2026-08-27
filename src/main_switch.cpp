@@ -56,21 +56,21 @@ extern "C" {
 #include "ui/settings/settings_view.hpp"
 #include "ui/theme.hpp"
 
-using pipensx::AppSettings;
-using pipensx::CatalogService;
-using pipensx::DownloadManager;
-using pipensx::SwitchDeployService;
-using pipensx::GameMetadataService;
-using pipensx::GameUpdateService;
-using pipensx::InstalledTitleService;
-using pipensx::FavoritesService;
-using pipensx::ModIndexService;
-using pipensx::SwitchPerformanceController;
-using pipensx::UpdateCheckResult;
-using pipensx::UpdateService;
-using pipensx::WebServer;
+using gamehubnx::AppSettings;
+using gamehubnx::CatalogService;
+using gamehubnx::DownloadManager;
+using gamehubnx::SwitchDeployService;
+using gamehubnx::GameMetadataService;
+using gamehubnx::GameUpdateService;
+using gamehubnx::InstalledTitleService;
+using gamehubnx::FavoritesService;
+using gamehubnx::ModIndexService;
+using gamehubnx::SwitchPerformanceController;
+using gamehubnx::UpdateCheckResult;
+using gamehubnx::UpdateService;
+using gamehubnx::WebServer;
 
-using namespace pipensx::ui;
+using namespace gamehubnx::ui;
 
 namespace {
 
@@ -144,33 +144,33 @@ public:
           installed_(installed), settings_(settings), updater_(updater),
           mods_(mods), favorites_(favorites), webServer_(webServer),
           deploy_(deploy), gameUpdates_(gameUpdates) {
-        auto* tabs = new pipensx::ui::MainFrame();
-        using pipensx::ui::NavIconType;
-        tabs->addNavTab(tr("pipensx/nav/catalog"), NavIconType::Catalog,
+        auto* tabs = new gamehubnx::ui::MainFrame();
+        using gamehubnx::ui::NavIconType;
+        tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog,
                         [manager, catalog, metadata, installed,
                          settings, mods, favorites, deploy, tabs] {
             return new CatalogView(manager, catalog, metadata, installed,
                                    settings, [tabs] { tabs->focusTab(1); },
                                    mods, favorites, deploy);
         });
-        tabs->addNavTab(tr("pipensx/nav/downloads"), NavIconType::Downloads,
+        tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [manager, metadata, settings, deploy] {
             return new MainView(manager, metadata, settings, deploy);
         });
-        tabs->addNavTab(tr("pipensx/nav/installed"), NavIconType::Installed,
+        tabs->addNavTab(tr("gamehubnx/nav/installed"), NavIconType::Installed,
                         [installed, manager, metadata, settings, catalog,
                          gameUpdates] {
             return new InstalledView(installed, manager, metadata, settings,
                                      catalog, gameUpdates);
         });
-        tabs->addNavTab(tr("pipensx/nav/updates"), NavIconType::Updates,
+        tabs->addNavTab(tr("gamehubnx/nav/updates"), NavIconType::Updates,
                         [installed, manager, metadata, settings, catalog,
                          gameUpdates] {
             return new InstalledView(installed, manager, metadata, settings,
                                      catalog, gameUpdates, true,
                                      InstalledView::Mode::Updates);
         });
-        tabs->addNavTab(tr("pipensx/nav/settings"), NavIconType::Settings,
+        tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,
                          installed, updater, mods, webServer] {
             return new SettingsView(settings, manager, catalog, metadata,
@@ -183,7 +183,7 @@ public:
         // lo unico que cambia es que no aparecen en la navegacion.
         tabs->attachStorageFooter(manager, webServer);
         frame_ = new brls::AppletFrame(tabs);
-        frame_->setTitle(tr("pipensx/app/title"));
+        frame_->setTitle(tr("gamehubnx/app/title"));
     }
 
     brls::View* createContentView() override {
@@ -195,14 +195,14 @@ public:
         // the bottom bar on every screen under MainActivity — and the catalog
         // already registers more hints than a 1280px bar holds in Russian.
         // Plus-to-exit is a console convention, and HOME works regardless.
-        registerAction(tr("pipensx/app/exit"), brls::BUTTON_START,
+        registerAction(tr("gamehubnx/app/exit"), brls::BUTTON_START,
             [this](brls::View*) {
                 startupStage("quit requested by Plus");
                 if (deploy_ && deploy_->snapshot().active()) {
                     auto* dialog = new brls::Dialog(
-                        tr("pipensx/deploy/exit_question"));
-                    dialog->addButton(tr("pipensx/common/cancel"), [] {});
-                    dialog->addButton(tr("pipensx/deploy/cancel_and_exit"),
+                        tr("gamehubnx/deploy/exit_question"));
+                    dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
+                    dialog->addButton(tr("gamehubnx/deploy/cancel_and_exit"),
                                       [this] {
                         deploy_->cancel();
                         brls::Application::quit();
@@ -215,19 +215,19 @@ public:
             }, /*hidden=*/true);
         // Visible on every screen: the web companion QR is the whole pairing
         // story, so it must not stay buried three levels deep in Settings.
-        registerAction(tr("pipensx/app/web_qr"), brls::BUTTON_BACK,
+        registerAction(tr("gamehubnx/app/web_qr"), brls::BUTTON_BACK,
             [this](brls::View*) {
-                const pipensx::AppSettingsData& values = settings_->get();
-                const std::string url = pipensx::ui::webCompanionUrl(
+                const gamehubnx::AppSettingsData& values = settings_->get();
+                const std::string url = gamehubnx::ui::webCompanionUrl(
                     webServer_, values.webServerEnabled);
                 if (url.empty()) {
                     brls::Application::notify(
                         tr(values.webServerEnabled
-                               ? "pipensx/settings/web_address_none"
-                               : "pipensx/web/off"));
+                               ? "gamehubnx/settings/web_address_none"
+                               : "gamehubnx/web/off"));
                     return true;
                 }
-                pipensx::ui::showWebQrDialog(url, values.webServerPin);
+                gamehubnx::ui::showWebQrDialog(url, values.webServerPin);
                 return true;
             });
     }
@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
     telemetry_set_enabled(settings.get().extendedTelemetry ? 1 : 0);
     // Before curl_global_init and before any service builds a handle: curl
     // reads the proxy from the environment when it sets up a transfer.
-    pipensx::applyProxySetting(settings.get().proxyUrl);
+    gamehubnx::applyProxySetting(settings.get().proxyUrl);
     if (!settings.get().proxyUrl.empty())
         log_msg("[startup] proxy %s\n", settings.get().proxyUrl.c_str());
     log_msg("[telemetry] setting enabled=%d interval_ms=5000 build='%s %s'\n",
@@ -357,11 +357,11 @@ int main(int argc, char** argv) {
             borealisLocaleFor(settings.get().language);
         if (!brls::Application::init())
             throw std::runtime_error("Borealis Application::init failed");
-        pipensx::ui::theme::registerColors();
-        pipensx::ui::installSidebarStyle();
+        gamehubnx::ui::theme::registerColors();
+        gamehubnx::ui::installSidebarStyle();
 
         startupStage("Borealis createWindow");
-        brls::Application::createWindow("pipensx");
+        brls::Application::createWindow("gamehubnx");
         brls::Application::setGlobalQuit(false);
 
         startupStage("CatalogService construction");
@@ -438,14 +438,14 @@ int main(int argc, char** argv) {
         UpdateService updater;
 
         startupStage("WebServer construction");
-        WebServer webServer(manager, "romfs:/web", PIPENSX_VERSION);
+        WebServer webServer(manager, "romfs:/web", GAMEHUBNX_VERSION);
         webServer.setPin(settings.get().webServerPin);
         webServer.setStreamSelection(settings.get().streamSelection);
         webServer.setSettingsHandlers(
             [&settings](std::string& json, std::string& error) {
                 bool ok = false;
                 if (!runOnUiThread([&] {
-                        json = pipensx::companionSettingsJson(settings.get());
+                        json = gamehubnx::companionSettingsJson(settings.get());
                         ok = true;
                     })) {
                     error = "timed out";
@@ -458,17 +458,17 @@ int main(int argc, char** argv) {
                                               std::string& json) {
                 bool ok = false;
                 if (!runOnUiThread([&] {
-                        pipensx::AppSettingsData next = settings.get();
-                        if (!pipensx::applyCompanionSettingsPatch(next, body,
+                        gamehubnx::AppSettingsData next = settings.get();
+                        if (!gamehubnx::applyCompanionSettingsPatch(next, body,
                                                                   error))
                             return;
                         if (!settings.update(next, error))
                             return;
-                        pipensx::applyCompanionSettingsRuntime(settings.get(),
+                        gamehubnx::applyCompanionSettingsRuntime(settings.get(),
                                                                manager);
                         webServer.setStreamSelection(
                             settings.get().streamSelection);
-                        json = pipensx::companionSettingsJson(settings.get());
+                        json = gamehubnx::companionSettingsJson(settings.get());
                         ok = true;
                     })) {
                     error = "timed out";
@@ -482,7 +482,7 @@ int main(int argc, char** argv) {
         // catalogue reference current from all of them.
         catalog.setOnAdopt(
             [&webServer](
-                std::shared_ptr<const std::vector<pipensx::CatalogEntry>> e) {
+                std::shared_ptr<const std::vector<gamehubnx::CatalogEntry>> e) {
                 webServer.updateCatalog(std::move(e));
             });
         if (settings.get().webServerEnabled)
@@ -518,13 +518,13 @@ int main(int argc, char** argv) {
             startupStage("pending update prompt");
             const std::string helper = launchUpdater.helperPath();
             auto* dialog = new brls::Dialog(
-                tr("pipensx/settings/update_pending_install"));
-            dialog->addButton(tr("pipensx/settings/install_and_restart"),
+                tr("gamehubnx/settings/update_pending_install"));
+            dialog->addButton(tr("gamehubnx/settings/install_and_restart"),
                               [helper] {
 #ifdef __SWITCH__
                 if (!envHasNextLoad()) {
                     brls::Application::notify(
-                        tr("pipensx/settings/update_no_restart"));
+                        tr("gamehubnx/settings/update_no_restart"));
                     return;
                 }
                 const std::string arguments =
@@ -533,13 +533,13 @@ int main(int argc, char** argv) {
                                                      arguments.c_str());
                 if (R_FAILED(result)) {
                     brls::Application::notify(
-                        tr("pipensx/settings/update_restart_failed"));
+                        tr("gamehubnx/settings/update_restart_failed"));
                     return;
                 }
 #endif
                 brls::Application::quit();
             });
-            dialog->addButton(tr("pipensx/common/later"), [] {});
+            dialog->addButton(tr("gamehubnx/common/later"), [] {});
             dialog->open();
         }
         if (!updatePendingFinish && settings.get().checkForUpdatesOnLaunch) {
@@ -548,7 +548,7 @@ int main(int argc, char** argv) {
                     return;
                 brls::sync([version = std::move(result.release.version)] {
                     brls::Application::notify(
-                        tr("pipensx/settings/update_available_launch", version));
+                        tr("gamehubnx/settings/update_available_launch", version));
                 });
             });
         }
@@ -570,7 +570,7 @@ int main(int argc, char** argv) {
         // instala esto sobre una instalacion previa: conservaba torrenting
         // activado y los ajustes heredados.
         {
-            pipensx::AppSettingsData next = settings.get();
+            gamehubnx::AppSettingsData next = settings.get();
             const bool cambia = !next.firstRunCompleted ||
                                 !next.catalogDisclaimerAcknowledged ||
                                 next.torrentingEnabled ||
@@ -593,18 +593,18 @@ int main(int argc, char** argv) {
         bool firstFrame = true;
         uint64_t lastInputMs = now_ms();
         uint64_t lastDeployOfferPollMs = now_ms();
-        pipensx::SwitchDeployPhase lastDeployPhase =
-            pipensx::SwitchDeployPhase::Idle;
+        gamehubnx::SwitchDeployPhase lastDeployPhase =
+            gamehubnx::SwitchDeployPhase::Idle;
         bool deployOfferDialogOpen = false;
         // Download/install lifecycle notifications (#33): the main loop is the
         // only place that runs regardless of which screen is focused, so
         // terminal status transitions are surfaced here as toasts instead of
         // requiring the Downloads tab to stay open. The map only tracks tasks
         // observed after startup, so pre-existing rows never re-notify.
-        std::unordered_map<std::string, pipensx::DownloadStatus> lastTaskStatus;
+        std::unordered_map<std::string, gamehubnx::DownloadStatus> lastTaskStatus;
         uint64_t lastDownloadScanMs = now_ms();
         while (true) {
-            const pipensx::SwitchDeploySnapshot deployState = deploy.snapshot();
+            const gamehubnx::SwitchDeploySnapshot deployState = deploy.snapshot();
             bool activeTransfer = manager.hasActiveTransfer() ||
                                   deployState.active();
             performance.setActive(activeTransfer);
@@ -614,30 +614,30 @@ int main(int argc, char** argv) {
             if (!brls::Application::mainLoop())
                 break;
             if (deployState.phase != lastDeployPhase) {
-                if (deployState.phase == pipensx::SwitchDeployPhase::Completed)
+                if (deployState.phase == gamehubnx::SwitchDeployPhase::Completed)
                     brls::Application::notify(deployState.detail.empty()
-                        ? tr("pipensx/deploy/completed")
-                        : tr("pipensx/deploy/completed_warning",
+                        ? tr("gamehubnx/deploy/completed")
+                        : tr("gamehubnx/deploy/completed_warning",
                              deployState.detail));
                 else if (deployState.phase ==
-                         pipensx::SwitchDeployPhase::Failed)
+                         gamehubnx::SwitchDeployPhase::Failed)
                     brls::Application::notify(
-                        tr("pipensx/deploy/failed") +
+                        tr("gamehubnx/deploy/failed") +
                         (deployState.detail.empty()
                              ? std::string() : " " + deployState.detail));
                 else if (deployState.phase ==
-                         pipensx::SwitchDeployPhase::Cancelled)
-                    brls::Application::notify(tr("pipensx/deploy/cancelled"));
+                         gamehubnx::SwitchDeployPhase::Cancelled)
+                    brls::Application::notify(tr("gamehubnx/deploy/cancelled"));
                 else if (deployState.phase ==
-                         pipensx::SwitchDeployPhase::Preparing)
-                    brls::Application::notify(tr("pipensx/deploy/phase_preparing"));
+                         gamehubnx::SwitchDeployPhase::Preparing)
+                    brls::Application::notify(tr("gamehubnx/deploy/phase_preparing"));
                 else if (deployState.phase ==
-                         pipensx::SwitchDeployPhase::Copying)
-                    brls::Application::notify(tr("pipensx/deploy/phase_copying"));
+                         gamehubnx::SwitchDeployPhase::Copying)
+                    brls::Application::notify(tr("gamehubnx/deploy/phase_copying"));
                 else if (deployState.phase ==
-                         pipensx::SwitchDeployPhase::Extracting)
+                         gamehubnx::SwitchDeployPhase::Extracting)
                     brls::Application::notify(
-                        tr("pipensx/deploy/phase_extracting"));
+                        tr("gamehubnx/deploy/phase_extracting"));
                 lastDeployPhase = deployState.phase;
             }
 
@@ -647,31 +647,31 @@ int main(int argc, char** argv) {
             if (frameNowMs - lastDownloadScanMs >= 1000) {
                 lastDownloadScanMs = frameNowMs;
                 std::unordered_set<std::string> seen;
-                for (const pipensx::DownloadTask& task : manager.snapshot()) {
+                for (const gamehubnx::DownloadTask& task : manager.snapshot()) {
                     seen.insert(task.id);
                     auto previous = lastTaskStatus.find(task.id);
                     if (previous == lastTaskStatus.end()) {
                         lastTaskStatus[task.id] = task.status;
                         continue;
                     }
-                    const pipensx::DownloadStatus prevStatus = previous->second;
+                    const gamehubnx::DownloadStatus prevStatus = previous->second;
                     if (prevStatus == task.status)
                         continue;
                     lastTaskStatus[task.id] = task.status;
-                    if (task.status == pipensx::DownloadStatus::Completed)
+                    if (task.status == gamehubnx::DownloadStatus::Completed)
                         brls::Application::notify(
-                            tr("pipensx/notify/download_completed", task.name));
-                    else if (task.status == pipensx::DownloadStatus::Installed)
+                            tr("gamehubnx/notify/download_completed", task.name));
+                    else if (task.status == gamehubnx::DownloadStatus::Installed)
                         brls::Application::notify(
-                            tr("pipensx/notify/install_completed", task.name));
-                    else if (task.status == pipensx::DownloadStatus::Error) {
+                            tr("gamehubnx/notify/install_completed", task.name));
+                    else if (task.status == gamehubnx::DownloadStatus::Error) {
                         const bool installFailed =
-                            prevStatus == pipensx::DownloadStatus::Installing ||
-                            prevStatus == pipensx::DownloadStatus::Committing ||
-                            task.mode == pipensx::TransferMode::StreamInstall;
+                            prevStatus == gamehubnx::DownloadStatus::Installing ||
+                            prevStatus == gamehubnx::DownloadStatus::Committing ||
+                            task.mode == gamehubnx::TransferMode::StreamInstall;
                         brls::Application::notify(tr(
-                            installFailed ? "pipensx/notify/install_failed"
-                                          : "pipensx/notify/download_failed",
+                            installFailed ? "gamehubnx/notify/install_failed"
+                                          : "gamehubnx/notify/download_failed",
                             task.name));
                     }
                 }
@@ -700,9 +700,9 @@ int main(int argc, char** argv) {
                     const std::string name =
                         task ? task->name : offerId.substr(0, 8);
                     auto* dialog = new brls::Dialog(
-                        tr("pipensx/deploy/offer_question", name));
+                        tr("gamehubnx/deploy/offer_question", name));
                     dialog->addButton(
-                        tr("pipensx/deploy/copy"),
+                        tr("gamehubnx/deploy/copy"),
                         [&deploy, offerId,
                          inspection = std::move(offer->inspection),
                          &deployOfferDialogOpen]() mutable {
@@ -719,24 +719,24 @@ int main(int argc, char** argv) {
                                     stack.back()->getContentView());
                             if (!inspection.canStart() &&
                                 inspection.problem !=
-                                    pipensx::SwitchDeployProblem::Conflict &&
+                                    gamehubnx::SwitchDeployProblem::Conflict &&
                                 inspection.problem !=
-                                    pipensx::SwitchDeployProblem::NoSpace &&
+                                    gamehubnx::SwitchDeployProblem::NoSpace &&
                                 inspection.problem !=
-                                    pipensx::SwitchDeployProblem::NoRam) {
+                                    gamehubnx::SwitchDeployProblem::NoRam) {
                                 brls::Application::notify(
                                     inspection.detail.empty()
-                                        ? tr("pipensx/deploy/failed")
+                                        ? tr("gamehubnx/deploy/failed")
                                         : inspection.detail);
                                 return;
                             }
                             brls::Application::pushActivity(
-                                new pipensx::ui::SwitchDeployPreviewActivity(
+                                new gamehubnx::ui::SwitchDeployPreviewActivity(
                                     std::move(inspection), &deploy),
                                 brls::TransitionAnimation::NONE);
                         });
                     dialog->addButton(
-                        tr("pipensx/common/later"),
+                        tr("gamehubnx/common/later"),
                         [&deploy, offerId, &deployOfferDialogOpen] {
                             deployOfferDialogOpen = false;
                             deploy.dismissDeployOffer(offerId);
@@ -762,16 +762,16 @@ int main(int argc, char** argv) {
                     break;
                 }
             }
-            const bool saverOpen = pipensx::ui::burnInSaverIsTop();
-            if (pipensx::ui::controllerHasButtonDown(pad) || touched) {
+            const bool saverOpen = gamehubnx::ui::burnInSaverIsTop();
+            if (gamehubnx::ui::controllerHasButtonDown(pad) || touched) {
                 lastInputMs = now_ms();
                 if (saverOpen)
                     brls::Application::popActivity(
                         brls::TransitionAnimation::NONE);
             } else if (!saverOpen &&
-                       now_ms() - lastInputMs >= pipensx::ui::kBurnInIdleMs) {
+                       now_ms() - lastInputMs >= gamehubnx::ui::kBurnInIdleMs) {
                 brls::Application::pushActivity(
-                    new pipensx::ui::BurnInSaverActivity(),
+                    new gamehubnx::ui::BurnInSaverActivity(),
                     brls::TransitionAnimation::NONE);
                 lastInputMs = now_ms();
             }
@@ -787,7 +787,7 @@ int main(int argc, char** argv) {
                     else {
                         log_msg("[update] installed update confirmed\n");
                         brls::Application::notify(
-                            tr("pipensx/settings/updated_to", PIPENSX_VERSION));
+                            tr("gamehubnx/settings/updated_to", GAMEHUBNX_VERSION));
                     }
                 }
                 firstFrame = false;

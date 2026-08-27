@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
                            strcmp(argv[1], "--finish-update") == 0;
     update_log("[helper] started requested=%d nextload=%d\n",
                requested ? 1 : 0, envHasNextLoad() ? 1 : 0);
-    /* Never re-launch pipensx. Relaunching the full app inside the same
+    /* Never re-launch gamehubnx. Relaunching the full app inside the same
      * hbloader session re-initializes the graphics/applet/service stack a
      * second time and crashes (black screen then fatal). Every path below
      * returns with no nextload set, so the loader drops to HOME and the user

@@ -3,7 +3,7 @@
 #include <cctype>
 #include <string>
 
-namespace pipensx {
+namespace gamehubnx {
 
 bool RealdebridProvider::createFromMagnet(const std::string& magnet,
                                           std::string& id,
@@ -84,4 +84,4 @@ bool RealdebridProvider::remove(const std::string& id, std::string& error) {
     return client_.remove(id, error);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

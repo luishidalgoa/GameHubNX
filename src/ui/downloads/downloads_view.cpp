@@ -1,7 +1,7 @@
 #include "ui/downloads/downloads_view.hpp"
 #include "ui/i18n.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
                                   std::string activeDeployTask) {
@@ -12,7 +12,7 @@ void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
         std::string title;
         bool (*matches)(DownloadStatus);
     } groups[] = {
-        {tr("pipensx/downloads/section_active"), [](DownloadStatus s) {
+        {tr("gamehubnx/downloads/section_active"), [](DownloadStatus s) {
             // Fetching faltaba, y no era inocuo: solo lo produce el camino
             // debrid/GameHub --un torrent jamas lo toma-- asi que una descarga
             // de la tienda reanudada al abrir la app se caia de las cinco
@@ -27,17 +27,17 @@ void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
                    s == DownloadStatus::Verifying ||
                    s == DownloadStatus::Removing;
         }},
-        {tr("pipensx/downloads/section_queue"), [](DownloadStatus s) {
+        {tr("gamehubnx/downloads/section_queue"), [](DownloadStatus s) {
             return s == DownloadStatus::Queued;
         }},
-        {tr("pipensx/downloads/section_paused"), [](DownloadStatus s) {
+        {tr("gamehubnx/downloads/section_paused"), [](DownloadStatus s) {
             return s == DownloadStatus::Paused;
         }},
-        {tr("pipensx/downloads/section_completed"), [](DownloadStatus s) {
+        {tr("gamehubnx/downloads/section_completed"), [](DownloadStatus s) {
             return s == DownloadStatus::Completed ||
                    s == DownloadStatus::Installed;
         }},
-        {tr("pipensx/downloads/section_errors"), [](DownloadStatus s) {
+        {tr("gamehubnx/downloads/section_errors"), [](DownloadStatus s) {
             return s == DownloadStatus::Error;
         }},
     };
@@ -135,4 +135,4 @@ void DownloadDataSource::didSelectRowAt(brls::RecyclerFrame*,
         owner_->openRowMenu(task->id);
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

@@ -1,7 +1,7 @@
 # Historical implementation plans
 
 These documents record design and implementation work performed during early
-pipensx development. They are retained for architectural context, but they are
+gamehubnx development. They are retained for architectural context, but they are
 not a current roadmap and may describe code that has since changed or been
 removed.
 

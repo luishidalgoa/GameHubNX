@@ -5,8 +5,8 @@
 Clone with the pinned submodules, or initialize them in an existing checkout:
 
 ```bash
-git clone --recurse-submodules https://github.com/i3sey/pipensx.git
-cd pipensx
+git clone --recurse-submodules https://github.com/luishidalgoa/GameHubNX.git
+cd gamehubnx
 # Existing clone only:
 git submodule update --init --recursive
 ```
@@ -31,10 +31,10 @@ make pc
 make test
 ```
 
-The client is written to `./pipensx` and accepts:
+The client is written to `./gamehubnx` and accepts:
 
 ```bash
-./pipensx /path/to/file.torrent [output_dir]
+./gamehubnx /path/to/file.torrent [output_dir]
 ```
 
 ## Nintendo Switch
@@ -87,7 +87,7 @@ export DEVKITPRO=/opt/devkitpro
 make switch
 ```
 
-The artifact is `build-switch/pipensx.nro`. Override CMake when it is not on
+The artifact is `build-switch/gamehubnx.nro`. Override CMake when it is not on
 `PATH`:
 
 ```bash
@@ -96,12 +96,12 @@ make switch CMAKE_BIN=/path/to/cmake
 
 Public builds contain no bundled catalog or game metadata dataset. At runtime,
 catalog refresh also fetches the verified optional metadata index from the
-configured pipensx-metadata manifest; failures keep the previous cache and do
+configured gamehubnx-metadata manifest; failures keep the previous cache and do
 not block Langegen catalog updates. A builder who needs a first-run offline
 fallback may still embed a lawfully obtained compatible index explicitly:
 
 ```bash
-make switch PIPENSX_METADATA_INDEX=/absolute/path/game_metadata_index.json
+make switch GAMEHUBNX_METADATA_INDEX=/absolute/path/game_metadata_index.json
 ```
 
 The path is build input only. Do not copy or commit the dataset under
@@ -129,14 +129,14 @@ The deployment helper requires `gio` and an explicit target. By default it
 replaces only the NRO:
 
 ```bash
-make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/pipensx'
+make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/gamehubnx'
 ```
 
 Set `DEPLOY_CLEAN=1` to remove other remote files while preserving cached
 artwork under `catalog/images/`:
 
 ```bash
-make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/pipensx' DEPLOY_CLEAN=1
+make deploy MTP_DIR='mtp://DEVICE/1: SD Card/switch/gamehubnx' DEPLOY_CLEAN=1
 ```
 
 ## Cleanup and secret audit

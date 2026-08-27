@@ -4,9 +4,9 @@
 #include <cstdio>
 #include <string>
 
-using pipensx::HttpRequest;
-using pipensx::HttpResponse;
-using pipensx::TorboxPairingServer;
+using gamehubnx::HttpRequest;
+using gamehubnx::HttpResponse;
+using gamehubnx::TorboxPairingServer;
 
 namespace {
 

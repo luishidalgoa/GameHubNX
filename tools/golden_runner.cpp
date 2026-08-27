@@ -1,6 +1,6 @@
 // golden_runner — F4 golden-screenshot harness (PC/SDL2 build only).
 //
-// Renders ONE pipensx screen with deterministic fixture data and writes a
+// Renders ONE gamehubnx screen with deterministic fixture data and writes a
 // PNG. One screen per process keeps runs fully isolated (fresh focus state,
 // fresh animations, fresh services). Driven by scripts/golden.sh.
 //
@@ -85,15 +85,15 @@ extern "C" {
 
 namespace fs = std::filesystem;
 
-using pipensx::AppSettings;
-using pipensx::CatalogService;
-using pipensx::DownloadManager;
-using pipensx::GameMetadataService;
-using pipensx::GameUpdateService;
-using pipensx::InstalledTitle;
-using pipensx::InstalledTitleService;
-using pipensx::ModIndexService;
-using namespace pipensx::ui;
+using gamehubnx::AppSettings;
+using gamehubnx::CatalogService;
+using gamehubnx::DownloadManager;
+using gamehubnx::GameMetadataService;
+using gamehubnx::GameUpdateService;
+using gamehubnx::InstalledTitle;
+using gamehubnx::InstalledTitleService;
+using gamehubnx::ModIndexService;
+using namespace gamehubnx::ui;
 
 namespace {
 
@@ -197,7 +197,7 @@ public:
     explicit GoldenActivity(brls::View* content, bool withExitAction = false)
         : withExitAction_(withExitAction) {
         frame_ = new brls::AppletFrame(content);
-        frame_->setTitle("pipensx");
+        frame_->setTitle("gamehubnx");
     }
 
     brls::View* createContentView() override {
@@ -206,11 +206,11 @@ public:
 
     void onContentAvailable() override {
         if (withExitAction_) {
-            registerAction(tr("pipensx/app/exit"), brls::BUTTON_START,
+            registerAction(tr("gamehubnx/app/exit"), brls::BUTTON_START,
                            [](brls::View*) { return true; }, /*hidden=*/true);
             // Visible on-device on every screen (web companion QR) — must be
             // part of the measured budget.
-            registerAction(tr("pipensx/app/web_qr"), brls::BUTTON_BACK,
+            registerAction(tr("gamehubnx/app/web_qr"), brls::BUTTON_BACK,
                            [](brls::View*) { return true; });
         }
     }
@@ -235,7 +235,7 @@ brls::Hints* findHints(brls::View* view) {
     return nullptr;
 }
 
-// Plant deterministic files in the pipensx-managed directories so the storage
+// Plant deterministic files in the gamehubnx-managed directories so the storage
 // breakdown golden screen renders the same bucket sizes on every machine.
 void seedStorageFixture(const std::string& rootPath) {
     const std::string dirs[] = {"/downloads", "/torrents",
@@ -269,7 +269,7 @@ void seedInstalledFixture(InstalledTitleService& installed) {
         t.applicationId = 0x0100000000010000ULL;
         t.titleId = "0100000000010000";
         t.name = "Pipen Odyssey";
-        t.publisher = "Pipensx Fixtures";
+        t.publisher = "Gamehubnx Fixtures";
         t.version = "65536";
         fixtureTitles.push_back(std::move(t));
     }
@@ -278,7 +278,7 @@ void seedInstalledFixture(InstalledTitleService& installed) {
         t.applicationId = 0x0100000000020000ULL;
         t.titleId = "0100000000020000";
         t.name = "Kart Nova Deluxe";
-        t.publisher = "Pipensx Fixtures";
+        t.publisher = "Gamehubnx Fixtures";
         t.version = "65536";
         fixtureTitles.push_back(std::move(t));
     }
@@ -296,14 +296,14 @@ void seedInstalledFixture(InstalledTitleService& installed) {
         t.applicationId = 0x0100000000040000ULL;
         t.titleId = "0100000000040000";
         t.name = "Broken Versions";
-        t.publisher = "Pipensx Fixtures";
+        t.publisher = "Gamehubnx Fixtures";
         t.version = "1.0";
         fixtureTitles.push_back(std::move(t));
     }
     installed.injectTitles(std::move(fixtureTitles));
     // Seed the update-check results: generations 0 vs the live (>0)
     // generation also pins the stale status text deterministically.
-    std::ofstream state("sdmc:/switch/pipensx/game-updates.json",
+    std::ofstream state("sdmc:/switch/gamehubnx/game-updates.json",
                         std::ios::binary | std::ios::trunc);
     state
         << "{\"version\":1,\"installed_generation\":0,"
@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
     // Fresh sandbox: the app writes logs/settings under "sdmc:/..." which
     // resolves relative to the CWD on PC ("sdmc:" is a plain directory).
     fs::remove_all(sandbox, ec);
-    fs::create_directories(sandbox / "sdmc:" / "switch" / "pipensx", ec);
+    fs::create_directories(sandbox / "sdmc:" / "switch" / "gamehubnx", ec);
     if (chdir(sandbox.c_str()) != 0)
         return fail("cannot chdir into sandbox");
 
@@ -400,10 +400,10 @@ int main(int argc, char** argv) {
         locale == "ru" ? brls::LOCALE_RU : brls::LOCALE_EN_US;
     if (!brls::Application::init())
         return fail("borealis Application::init failed");
-    pipensx::ui::theme::registerColors();
+    gamehubnx::ui::theme::registerColors();
     // Must run before the first Sidebar is inflated, exactly as in main_switch.
-    pipensx::ui::installSidebarStyle();
-    brls::Application::createWindow("pipensx-golden");
+    gamehubnx::ui::installSidebarStyle();
+    brls::Application::createWindow("gamehubnx-golden");
     brls::Application::setGlobalQuit(false);
 
     // Same wiring order as src/main_switch.cpp, minus network bring-up.
@@ -414,7 +414,7 @@ int main(int argc, char** argv) {
     // open a live fetch against the offline golden fixtures. Stamp the wall
     // clock too: the freshness badge treats 0 as "never refreshed".
     {
-        pipensx::AppSettingsData values = settings.get();
+        gamehubnx::AppSettingsData values = settings.get();
         const uint64_t now = now_ms();
         values.lastCatalogRefreshMs = now;
         values.lastCatalogRefreshWallSec =
@@ -425,7 +425,7 @@ int main(int argc, char** argv) {
         settings.update(values, stampError);
     }
 
-    CatalogService catalog("sdmc:/switch/pipensx",
+    CatalogService catalog("sdmc:/switch/gamehubnx",
                            (fixtures / "catalog.json").string());
     if (!catalog.load(error))
         std::fprintf(stderr, "golden_runner: catalog fixture: %s\n",
@@ -434,10 +434,10 @@ int main(int argc, char** argv) {
     // Re-adopt so auto-refresh sees "today" and stays offline.
     if (!catalog.entries().empty())
         catalog.adopt(
-            std::vector<pipensx::CatalogEntry>(catalog.entries()));
+            std::vector<gamehubnx::CatalogEntry>(catalog.entries()));
 
     GameMetadataService metadata(
-        "sdmc:/switch/pipensx",
+        "sdmc:/switch/gamehubnx",
         (fixtures / "game_metadata_index.json").string());
     if (!metadata.load(error))
         std::fprintf(stderr, "golden_runner: metadata fixture: %s\n",
@@ -447,7 +447,7 @@ int main(int argc, char** argv) {
 
     // Fixture mod index: no network, the table lists the fixture title so the
     // ModCD chip and fact row are covered by the golden screens.
-    ModIndexService mods("sdmc:/switch/pipensx",
+    ModIndexService mods("sdmc:/switch/gamehubnx",
                          (fixtures / "modcd_table.md").string());
     if (!mods.load(error))
         std::fprintf(stderr, "golden_runner: mod index fixture: %s\n",
@@ -456,7 +456,7 @@ int main(int argc, char** argv) {
     // Seeded with one favourite so the baselines cover the starred card badge,
     // the active ★ chip and the game page's "in wishlist" button, not just the
     // empty state.
-    pipensx::FavoritesService favorites("sdmc:/switch/pipensx");
+    gamehubnx::FavoritesService favorites("sdmc:/switch/gamehubnx");
     std::string favoritesError;
     favorites.load(favoritesError);
     if (!catalog.entries().empty()) {
@@ -464,24 +464,24 @@ int main(int argc, char** argv) {
                          catalog.entries().front().title, favoritesError);
     }
 
-    InstalledTitleService installed("sdmc:/switch/pipensx");
+    InstalledTitleService installed("sdmc:/switch/gamehubnx");
     installed.refresh(error); // shim: succeeds with an empty library
     GameUpdateService gameUpdates(&metadata,
-                                  "sdmc:/switch/pipensx/game-updates.json");
+                                  "sdmc:/switch/gamehubnx/game-updates.json");
     {
         std::string loadError;
         gameUpdates.load(loadError);
     }
 
-    DownloadManager manager("sdmc:/switch/pipensx");
+    DownloadManager manager("sdmc:/switch/gamehubnx");
 
     // 512 GB card, 118.24 GB free — statvfs on the sandbox would otherwise
     // report whatever the build machine happens to have.
-    pipensx::StorageSpaceSnapshot goldenStorage;
+    gamehubnx::StorageSpaceSnapshot goldenStorage;
     goldenStorage.totalBytes = 512000000000ULL;
     goldenStorage.freeBytes = 126976000000ULL;
     goldenStorage.available = true;
-    pipensx::setStorageSpaceOverride(&goldenStorage);
+    gamehubnx::setStorageSpaceOverride(&goldenStorage);
 
     brls::Activity* activity = nullptr;
     brls::View* focusAfterLayout = nullptr;
@@ -611,7 +611,7 @@ int main(int argc, char** argv) {
         // update's version, so the recommendation mask preselected both. The
         // readme between them is not a package: it must never become a row,
         // and toggling the second row must flip mask slot 2, not slot 1.
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         preview.name = "Pipen Odyssey [Multi]";
         preview.files = {
             {"Repack/Pipen Odyssey [v131072].nsp", 2361441976ULL, true,
@@ -623,8 +623,8 @@ int main(int argc, char** argv) {
         preview.fileCount = static_cast<uint32_t>(preview.files.size());
         preview.totalBytes = 2361441976ULL + 4096ULL + 934155878ULL;
         preview.packageCount = 2;
-        const uint8_t install = static_cast<uint8_t>(pipensx::FileAction::Install);
-        const uint8_t skip = static_cast<uint8_t>(pipensx::FileAction::Skip);
+        const uint8_t install = static_cast<uint8_t>(gamehubnx::FileAction::Install);
+        const uint8_t skip = static_cast<uint8_t>(gamehubnx::FileAction::Skip);
         std::vector<uint8_t> updateActions = {install, skip, install};
         updateChooser = new UpdateFileChooserActivity(
             nullptr, std::move(preview), std::move(updateActions), {},
@@ -638,7 +638,7 @@ int main(int argc, char** argv) {
         // More files than fit on screen: the recycler only recycles once the
         // list is taller than its viewport, and a short list would hide the
         // whole class of cull/navigation bugs this screen guards.
-        pipensx::TorrentPreview preview;
+        gamehubnx::TorrentPreview preview;
         preview.name = "Mixed release";
         preview.multi = true;
         preview.files = {
@@ -674,15 +674,15 @@ int main(int argc, char** argv) {
             for (const auto& file : preview.files) {
                 entries.push_back({file.path, file.length, file.package,
                                    file.compressed, file.cartridge,
-                                   file.package ? pipensx::FileAction::Install
-                                                : pipensx::FileAction::Download});
+                                   file.package ? gamehubnx::FileAction::Install
+                                                : gamehubnx::FileAction::Download});
             }
             selection.setEntries(std::move(entries));
             selection.selectPortFiles(preview, preview.name + "/switch");
             const std::vector<uint8_t> actions = selection.fileActions();
             for (size_t i = 0; i < actions.size(); ++i) {
-                const auto expected = i == 11 ? pipensx::FileAction::Download
-                                              : pipensx::FileAction::Skip;
+                const auto expected = i == 11 ? gamehubnx::FileAction::Download
+                                              : gamehubnx::FileAction::Skip;
                 if (actions[i] != static_cast<uint8_t>(expected))
                     portSelectionOk = false;
             }
@@ -691,21 +691,21 @@ int main(int argc, char** argv) {
         // all three row states: packages Install, everything else Skip, and
         // a Download row appears as soon as anything is toggled.
         activity = new TorrentSelectionActivity(
-            &manager, "sdmc:/switch/pipensx/_golden_selection.torrent",
-            std::move(preview), pipensx::TransferMode::StreamInstall,
-            pipensx::StreamSelection::PackagesOnly);
+            &manager, "sdmc:/switch/gamehubnx/_golden_selection.torrent",
+            std::move(preview), gamehubnx::TransferMode::StreamInstall,
+            gamehubnx::StreamSelection::PackagesOnly);
     } else if (screen == "downloads") {
         activity = new GoldenActivity(
             new MainView(&manager, &metadata, &settings));
     } else if (screen == "download-files") {
-        pipensx::TaskFileInventory inventory;
+        gamehubnx::TaskFileInventory inventory;
         inventory.taskId = "golden-port";
-        inventory.rootPath = "SD:/switch/pipensx/downloads/Port-release";
+        inventory.rootPath = "SD:/switch/gamehubnx/downloads/Port-release";
         inventory.settled = true;
         inventory.presentBytes = 1288490188ULL;
         auto add = [&](const std::string& path, uint64_t size,
-                       pipensx::TaskFileState state) {
-            pipensx::TaskFileInfo file;
+                       gamehubnx::TaskFileState state) {
+            gamehubnx::TaskFileInfo file;
             file.logicalPath = path;
             file.localPath = path;
             file.size = size;
@@ -713,17 +713,17 @@ int main(int argc, char** argv) {
             inventory.files.push_back(std::move(file));
         };
         add("Release/switch/MyPort/MyPort.nro", 7340032,
-            pipensx::TaskFileState::Present);
+            gamehubnx::TaskFileState::Present);
         add("Release/switch/MyPort/data/game.pak", 1280000000ULL,
-            pipensx::TaskFileState::Present);
+            gamehubnx::TaskFileState::Present);
         add("Release/readme.txt", 4096,
-            pipensx::TaskFileState::Skipped);
+            gamehubnx::TaskFileState::Skipped);
         add("Release/base.nsp", 4294967296ULL,
-            pipensx::TaskFileState::Installed);
+            gamehubnx::TaskFileState::Installed);
         activity = new TaskFilesActivity(std::move(inventory));
     } else if (screen == "deploy-preview") {
-        pipensx::SwitchDeployInspection inspection;
-        inspection.problem = pipensx::SwitchDeployProblem::Conflict;
+        gamehubnx::SwitchDeployInspection inspection;
+        inspection.problem = gamehubnx::SwitchDeployProblem::Conflict;
         inspection.detail = "/switch/MyPort/config.ini";
         inspection.plan.taskId = "golden-port";
         inspection.plan.bytesToCopy = 1280000000ULL;
@@ -731,8 +731,8 @@ int main(int argc, char** argv) {
         inspection.plan.ignoredFiles = 2;
         auto add = [&](const std::string& source,
                        const std::string& destination, uint64_t size,
-                       pipensx::SwitchDeployEntryState state) {
-            pipensx::SwitchDeployEntry entry;
+                       gamehubnx::SwitchDeployEntryState state) {
+            gamehubnx::SwitchDeployEntry entry;
             entry.sourceRelativePath = source;
             entry.destinationRelativePath = destination;
             entry.size = size;
@@ -740,33 +740,33 @@ int main(int argc, char** argv) {
             inspection.plan.files.push_back(std::move(entry));
         };
         add("Release/switch/MyPort/data/game.pak", "MyPort/data/game.pak",
-            1280000000ULL, pipensx::SwitchDeployEntryState::Missing);
+            1280000000ULL, gamehubnx::SwitchDeployEntryState::Missing);
         add("Release/switch/MyPort/MyPort.nro", "MyPort/MyPort.nro", 7340032,
-            pipensx::SwitchDeployEntryState::ExistingIdentical);
+            gamehubnx::SwitchDeployEntryState::ExistingIdentical);
         add("Release/switch/MyPort/config.ini", "MyPort/config.ini", 2048,
-            pipensx::SwitchDeployEntryState::ExistingConflict);
+            gamehubnx::SwitchDeployEntryState::ExistingConflict);
         activity = new SwitchDeployPreviewActivity(std::move(inspection),
                                                    nullptr);
     } else if (screen == "downloads-back") {
         downloadsBackFrame = new MainFrame();
         auto* downloadsView = new MainView(&manager, &metadata, &settings);
         downloadsBackFrame->addNavTab(
-            tr("pipensx/nav/downloads"), NavIconType::Downloads,
+            tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
             [downloadsView] { return downloadsView; });
         activity = new GoldenActivity(downloadsBackFrame);
     } else if (screen == "downloads-removing") {
-        pipensx::DownloadTask removing;
+        gamehubnx::DownloadTask removing;
         removing.id = "removing-fixture";
         removing.name = "Large package cleanup";
-        removing.status = pipensx::DownloadStatus::Removing;
+        removing.status = gamehubnx::DownloadStatus::Removing;
 
         DownloadDataSource source(nullptr);
         source.setTasks({removing});
-        const pipensx::DownloadTask* row =
+        const gamehubnx::DownloadTask* row =
             source.taskAt(brls::IndexPath(0, 0));
         if (source.numberOfSections(nullptr) != 1 ||
             source.numberOfRows(nullptr, 0) != 1 || !row ||
-            row->status != pipensx::DownloadStatus::Removing)
+            row->status != gamehubnx::DownloadStatus::Removing)
             return fail("downloads-removing row is not visible");
         std::printf("golden_runner: downloads-removing row visible\n");
         manager.shutdown();
@@ -776,36 +776,36 @@ int main(int argc, char** argv) {
         // Whole shell, same wiring as src/main_switch.cpp: covers the sidebar
         // and the storage footer docked at its bottom.
         auto* tabs = new MainFrame();
-        tabs->addNavTab(tr("pipensx/nav/catalog"), NavIconType::Catalog, [&] {
+        tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog, [&] {
             return new CatalogView(&manager, &catalog, &metadata, &installed,
                                    &settings, [] {}, &mods, &favorites);
         });
-        tabs->addNavTab(tr("pipensx/nav/downloads"), NavIconType::Downloads,
+        tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [&] {
             return new MainView(&manager, &metadata, &settings);
         });
-        tabs->addNavTab(tr("pipensx/nav/installed"), NavIconType::Installed,
+        tabs->addNavTab(tr("gamehubnx/nav/installed"), NavIconType::Installed,
                         [&] {
             // checkOnEntry=false: the installed-populated screens pin a
             // planted fixture state, an auto-check would overwrite it.
             return new InstalledView(&installed, &manager, &metadata,
                                      &settings, &catalog, &gameUpdates, false);
         });
-        tabs->addNavTab(tr("pipensx/nav/updates"), NavIconType::Updates,
+        tabs->addNavTab(tr("gamehubnx/nav/updates"), NavIconType::Updates,
                         [&] {
             return new InstalledView(&installed, &manager, &metadata,
                                      &settings, &catalog, &gameUpdates, false,
                                      InstalledView::Mode::Updates);
         });
-        tabs->addNavTab(tr("pipensx/nav/settings"), NavIconType::Settings,
+        tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [&] {
             return new SettingsView(&settings, &manager, &catalog, &metadata,
                                     &installed, nullptr, &mods);
         });
-        tabs->addNavTab(tr("pipensx/nav/help"), NavIconType::Help, [&] {
+        tabs->addNavTab(tr("gamehubnx/nav/help"), NavIconType::Help, [&] {
             return new HelpView(&manager, &catalog, &metadata, &installed);
         });
-        tabs->addNavTab(tr("pipensx/nav/about"), NavIconType::About,
+        tabs->addNavTab(tr("gamehubnx/nav/about"), NavIconType::About,
                         [] { return new AboutView(); });
         tabs->attachStorageFooter(&manager);
         activity = new GoldenActivity(tabs);
@@ -816,11 +816,11 @@ int main(int argc, char** argv) {
         // the gamepad kept working. Screenshots cannot see that.
         sidebarTouch = true;
         auto* tabs = new MainFrame();
-        tabs->addNavTab(tr("pipensx/nav/catalog"), NavIconType::Catalog, [&] {
+        tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog, [&] {
             return new CatalogView(&manager, &catalog, &metadata, &installed,
                                    &settings, [] {}, &mods, &favorites);
         });
-        tabs->addNavTab(tr("pipensx/nav/downloads"), NavIconType::Downloads,
+        tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [&] {
             return new MainView(&manager, &metadata, &settings);
         });
@@ -831,7 +831,7 @@ int main(int argc, char** argv) {
         // filter row after focus folds the sidebar to its icon rail.
         catalogHeaderClearance = true;
         auto* tabs = new MainFrame();
-        tabs->addNavTab(tr("pipensx/nav/catalog"), NavIconType::Catalog, [&] {
+        tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog, [&] {
             collapsedCatalog = new CatalogView(
                 &manager, &catalog, &metadata, &installed, &settings, [] {},
                 &mods, &favorites);
@@ -847,13 +847,13 @@ int main(int argc, char** argv) {
         auto* tabs = new MainFrame();
         // Tab views are built lazily, on the first draw — hintsCatalog is only
         // readable from inside the frame loop below.
-        tabs->addNavTab(tr("pipensx/nav/catalog"), NavIconType::Catalog, [&] {
+        tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog, [&] {
             hintsCatalog = new CatalogView(&manager, &catalog, &metadata,
                                            &installed, &settings, [] {}, &mods,
                                            &favorites);
             return hintsCatalog;
         });
-        tabs->addNavTab(tr("pipensx/nav/downloads"), NavIconType::Downloads,
+        tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [&] {
             return new MainView(&manager, &metadata, &settings);
         });
@@ -888,9 +888,9 @@ int main(int argc, char** argv) {
         // so it needs a shot of its own. A key is planted first: "linked" is
         // the state worth pinning, since it is the one the detail text
         // composes from the provider name.
-        pipensx::AppSettingsData values = settings.get();
+        gamehubnx::AppSettingsData values = settings.get();
         values.torboxApiKey = "golden-fixture-key";
-        values.debridProvider = pipensx::DebridProviderKind::TorBox;
+        values.debridProvider = gamehubnx::DebridProviderKind::TorBox;
         if (!settings.update(values, error))
             return fail("settings-debrid could not plant a linked key");
         activity = new GoldenActivity(new SettingsView(
@@ -898,7 +898,7 @@ int main(int argc, char** argv) {
             &mods));
         settingsDebrid = true;
     } else if (screen == "network-health") {
-        pipensx::AppSettingsData values = settings.get();
+        gamehubnx::AppSettingsData values = settings.get();
         values.torboxApiKey = "golden-fixture-key";
         values.torrserverUrl = "192.168.1.5:8090";
         values.proxyUrl = "";
@@ -913,7 +913,7 @@ int main(int argc, char** argv) {
             new HelpView(&manager, &catalog, &metadata, &installed));
     } else if (screen == "first-run" || screen == "first-run-focus") {
         auto* view = new FirstRunView(&settings, &manager,
-                                      [](pipensx::DebridProviderKind, bool) {});
+                                      [](gamehubnx::DebridProviderKind, bool) {});
         activity = new GoldenActivity(view);
         if (screen == "first-run-focus")
             firstRunFocus = view;
@@ -922,13 +922,13 @@ int main(int argc, char** argv) {
         // the activity is pushed below.
         activity = new GoldenActivity(new brls::Box());
     } else if (screen == "debrid-link") {
-        pipensx::AppSettingsData values = settings.get();
-        values.debridProvider = pipensx::DebridProviderKind::TorBox;
+        gamehubnx::AppSettingsData values = settings.get();
+        values.debridProvider = gamehubnx::DebridProviderKind::TorBox;
         values.torboxApiKey = "golden-fixture-key";
         if (!settings.update(values, error))
             return fail("debrid-link could not plant a linked key");
         activity = new GoldenActivity(new DebridLinkView(
-            &settings, &manager, pipensx::DebridProviderKind::TorBox,
+            &settings, &manager, gamehubnx::DebridProviderKind::TorBox,
             DebridLinkFixture{{"192.168.50.42", setupDiagnosticFixture},
                               /*pairingAvailable=*/true,
                               /*validationSucceeded=*/true}));
@@ -960,9 +960,9 @@ int main(int argc, char** argv) {
             "[  14100] [diagnostic] schema=1 stage=system tag=report "
             "version=1.0.0 hos=18.1.0 operation_mode=1 telemetry=0 catalog=42 "
             "installed=3 active=1 errors=1 sd_free_bytes=126976000000\n";
-        pipensx::ui::BugReportFixture fixture{
+        gamehubnx::ui::BugReportFixture fixture{
             std::move(fixtureLog),
-            pipensx::ui::SystemSnapshot{/*hos=*/0x12010000, /*mode=*/1,
+            gamehubnx::ui::SystemSnapshot{/*hos=*/0x12010000, /*mode=*/1,
                                         /*telemetry=*/false, /*catalog=*/42,
                                         /*metadata=*/38, /*installed=*/3,
                                         /*active=*/1, /*errors=*/1,
@@ -979,7 +979,7 @@ int main(int argc, char** argv) {
 
     brls::Application::pushActivity(activity);
     if (screen == "first-run-disclaimer")
-        pipensx::ui::showCatalogDisclaimer(
+        gamehubnx::ui::showCatalogDisclaimer(
             &settings, [&disclaimerOkFired] { disclaimerOkFired = true; });
     for (int i = 0; i < frames; ++i) {
         if (i == 10 && focusAfterLayout)
@@ -1151,7 +1151,7 @@ int main(int argc, char** argv) {
         std::function<void(brls::View*)> findCell = [&](brls::View* node) {
             if (cell)
                 return;
-            if (dynamic_cast<pipensx::ui::InstalledCell*>(node))
+            if (dynamic_cast<gamehubnx::ui::InstalledCell*>(node))
                 cell = node;
             if (auto* box = dynamic_cast<brls::Box*>(node))
                 for (brls::View* child : box->getChildren())
@@ -1183,8 +1183,8 @@ int main(int argc, char** argv) {
         brls::Button* candidate = nullptr;
         brls::Button* more = nullptr;
         brls::Button* later = nullptr;
-        const std::string moreLabel = tr("pipensx/installed/update_choose_more", 1);
-        const std::string laterLabel = tr("pipensx/common/later");
+        const std::string moreLabel = tr("gamehubnx/installed/update_choose_more", 1);
+        const std::string laterLabel = tr("gamehubnx/common/later");
         std::function<void(brls::View*)> findButtons = [&](brls::View* node) {
             if (auto* button = dynamic_cast<brls::Button*>(node)) {
                 if (button->getText() == "v196608" ||
@@ -1299,8 +1299,8 @@ int main(int argc, char** argv) {
             return fail("update-chooser-toggle onPick fired before Continue");
         const auto& selection = updateChooser->selection();
         const uint8_t install =
-            static_cast<uint8_t>(pipensx::FileAction::Install);
-        const uint8_t skip = static_cast<uint8_t>(pipensx::FileAction::Skip);
+            static_cast<uint8_t>(gamehubnx::FileAction::Install);
+        const uint8_t skip = static_cast<uint8_t>(gamehubnx::FileAction::Skip);
         const auto wantMask = [&](uint8_t a, uint8_t b) {
             return selection.size() == 3 && selection[0] == a &&
                    selection[1] == skip && selection[2] == b;
@@ -1337,7 +1337,7 @@ int main(int argc, char** argv) {
                 if (confirm)
                     return;
                 if (auto* button = dynamic_cast<brls::Button*>(node))
-                    if (button->getText() == tr("pipensx/common/continue"))
+                    if (button->getText() == tr("gamehubnx/common/continue"))
                         confirm = button;
                 if (auto* box = dynamic_cast<brls::Box*>(node))
                     for (brls::View* child : box->getChildren())
@@ -1374,7 +1374,7 @@ int main(int argc, char** argv) {
                     return;
                 if (auto* button = dynamic_cast<brls::Button*>(node)) {
                     const std::string& label = button->getText();
-                    if (label != tr("pipensx/common/cancel") && !label.empty())
+                    if (label != tr("gamehubnx/common/cancel") && !label.empty())
                         confirm = button;
                 }
                 if (auto* box = dynamic_cast<brls::Box*>(node))
@@ -1434,7 +1434,7 @@ int main(int argc, char** argv) {
             if (ok)
                 return;
             if (auto* button = dynamic_cast<brls::Button*>(node))
-                if (button->getText() == tr("pipensx/common/ok"))
+                if (button->getText() == tr("gamehubnx/common/ok"))
                     ok = button;
             if (auto* box = dynamic_cast<brls::Box*>(node))
                 for (brls::View* child : box->getChildren())

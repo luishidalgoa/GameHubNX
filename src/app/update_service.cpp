@@ -26,11 +26,11 @@ extern "C" {
 #include "core/sha256.h"
 }
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
-#ifndef PIPENSX_VERSION
-#define PIPENSX_VERSION "0.0.0"
+#ifndef GAMEHUBNX_VERSION
+#define GAMEHUBNX_VERSION "0.0.0"
 #endif
 
 constexpr const char* kLatestReleaseUrl =
@@ -110,7 +110,7 @@ bool configureCurl(CURL* curl, const std::string& url, TransferKind kind,
         return false;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "GameHubNX/" PIPENSX_VERSION);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "GameHubNX/" GAMEHUBNX_VERSION);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
@@ -466,7 +466,7 @@ UpdateCheckResult UpdateService::check() const {
     if (!parseRelease(body, result.release, result.error))
         return result;
     result.ok = true;
-#ifdef PIPENSX_DEV_BUILD
+#ifdef GAMEHUBNX_DEV_BUILD
     // Un build de desarrollo NO se ofrece a sustituirse por una release.
     //
     // Los artefactos del CI se compilan sin version de release, asi que se
@@ -480,7 +480,7 @@ UpdateCheckResult UpdateService::check() const {
     result.updateAvailable = false;
 #else
     result.updateAvailable = isNewerVersion(result.release.version,
-                                            PIPENSX_VERSION);
+                                            GAMEHUBNX_VERSION);
 #endif
     return result;
 }
@@ -640,4 +640,4 @@ void UpdateService::installAsync(ReleaseInfo release, InstallCallback callback) 
     });
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

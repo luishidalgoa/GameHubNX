@@ -12,13 +12,13 @@
 
 namespace {
 
-using pipensx::GameUpdateResult;
-using pipensx::GameUpdateService;
-using pipensx::GameUpdateState;
-using pipensx::InstalledTitle;
-using pipensx::IUpdateMetadataSource;
+using gamehubnx::GameUpdateResult;
+using gamehubnx::GameUpdateService;
+using gamehubnx::GameUpdateState;
+using gamehubnx::InstalledTitle;
+using gamehubnx::IUpdateMetadataSource;
 
-constexpr const char* StatePath = "/tmp/pipensx-game-updates.json";
+constexpr const char* StatePath = "/tmp/gamehubnx-game-updates.json";
 
 // Test double for the metadata index: titleId -> candidate versions.
 // Versions are decimal title versions ("0", "131072"), matching the [vN]
@@ -103,26 +103,26 @@ void testNoInstalledVersionIsCheckError() {
 void testInstalledPatchVersionString() {
     std::unordered_map<uint64_t, uint32_t> patches;
     const uint64_t app = 0x0100AAAA00000000ULL;
-    assert(pipensx::installedPatchVersionString(app, patches, false).empty());
-    assert(pipensx::installedPatchVersionString(app, patches, true) == "0");
+    assert(gamehubnx::installedPatchVersionString(app, patches, false).empty());
+    assert(gamehubnx::installedPatchVersionString(app, patches, true) == "0");
     patches[app | 0x800ULL] = 131072;
-    assert(pipensx::installedPatchVersionString(app, patches, true) ==
+    assert(gamehubnx::installedPatchVersionString(app, patches, true) ==
            "131072");
     // Incomplete scan must not invent "0" even when a partial map exists.
-    assert(pipensx::installedPatchVersionString(app, patches, false).empty());
+    assert(gamehubnx::installedPatchVersionString(app, patches, false).empty());
 }
 
 void testTitleIdParsing() {
     uint64_t value = 0;
-    assert(pipensx::InstalledTitleService::parseTitleId(
+    assert(gamehubnx::InstalledTitleService::parseTitleId(
         "0100AAAA00000800", value));
     assert(value == 0x0100AAAA00000800ULL);
-    assert(pipensx::InstalledTitleService::parseTitleId(
+    assert(gamehubnx::InstalledTitleService::parseTitleId(
         "0100aaaa00000800", value));
     assert(value == 0x0100AAAA00000800ULL);
-    assert(!pipensx::InstalledTitleService::parseTitleId(
+    assert(!gamehubnx::InstalledTitleService::parseTitleId(
         "0100AAAA0000080", value));
-    assert(!pipensx::InstalledTitleService::parseTitleId(
+    assert(!gamehubnx::InstalledTitleService::parseTitleId(
         "0100AAAA0000080Z", value));
 }
 

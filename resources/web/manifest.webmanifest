@@ -1,7 +1,7 @@
 {
-  "name": "pipensx",
-  "short_name": "pipensx",
-  "description": "Web companion for the pipensx Switch download manager",
+  "name": "gamehubnx",
+  "short_name": "gamehubnx",
+  "description": "Web companion for the gamehubnx Switch download manager",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#101418",

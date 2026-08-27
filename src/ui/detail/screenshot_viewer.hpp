@@ -15,7 +15,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // ---------------------------------------------------------------------------
 // Fullscreen screenshot pager (O6)
@@ -111,10 +111,10 @@ class ScreenshotViewerActivity : public brls::Activity {
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
-        registerAction(tr("pipensx/common/previous"), brls::BUTTON_LB,
+        registerAction(tr("gamehubnx/common/previous"), brls::BUTTON_LB,
                        [this](brls::View*) { page(-1); return true; }, false,
                        true);
-        registerAction(tr("pipensx/common/next"), brls::BUTTON_RB,
+        registerAction(tr("gamehubnx/common/next"), brls::BUTTON_RB,
                        [this](brls::View*) { page(1); return true; }, false,
                        true);
         registerAction("", brls::BUTTON_LEFT,
@@ -197,7 +197,7 @@ class ScreenshotViewerActivity : public brls::Activity {
 
     void show() {
         const std::string& url = urls_[index_];
-        frame_->setTitle(title_.empty() ? tr("pipensx/detail/screenshots")
+        frame_->setTitle(title_.empty() ? tr("gamehubnx/detail/screenshots")
                                         : title_);
         showingFull_ = false;
         awaitingFull_ = false;
@@ -206,7 +206,7 @@ class ScreenshotViewerActivity : public brls::Activity {
         const uint64_t generation = ++state_->generation;
         if (!metadata_ || url.empty()) {
             image_->clear();
-            showPlate(tr("pipensx/detail/screenshot_unavailable"));
+            showPlate(tr("gamehubnx/detail/screenshot_unavailable"));
             return;
         }
         // Already decoded at full size (paging back to a seen shot): straight
@@ -226,7 +226,7 @@ class ScreenshotViewerActivity : public brls::Activity {
             image_->setRgbaNow(card->pixels.data(), card->width, card->height);
         } else {
             image_->clear();
-            showPlate(tr("pipensx/detail/screenshot_loading"));
+            showPlate(tr("gamehubnx/detail/screenshot_loading"));
         }
         requestFull(url, generation);
     }
@@ -246,7 +246,7 @@ class ScreenshotViewerActivity : public brls::Activity {
                     return;
                 if (!bytes || bytes->pixels.empty()) {
                     image_->clear();
-                    showPlate(tr("pipensx/detail/screenshot_unavailable"));
+                    showPlate(tr("gamehubnx/detail/screenshot_unavailable"));
                     return;
                 }
                 awaitingFull_ = true;
@@ -328,7 +328,7 @@ class ScreenshotViewerActivity : public brls::Activity {
                            std::to_string(urls_.size());
         if (showingFull_ && nativeWidth > 0 && nativeHeight > 0 &&
             std::max(nativeWidth, nativeHeight) < kPreviewQualityBelow) {
-            text += "  ·  " + tr("pipensx/detail/screenshot_preview",
+            text += "  ·  " + tr("gamehubnx/detail/screenshot_preview",
                                  nativeWidth, nativeHeight);
         }
         counter_->setText(text);
@@ -353,4 +353,4 @@ class ScreenshotViewerActivity : public brls::Activity {
     bool contentReady_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

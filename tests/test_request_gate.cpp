@@ -11,7 +11,7 @@ constexpr size_t kLimit = 256 * MiB;
 constexpr uint64_t kAhead = 192 * MiB;
 constexpr uint64_t kPiece = 4 * MiB;
 
-using pipensx::RequestGate;
+using gamehubnx::RequestGate;
 
 RequestGate makeGate() {
     RequestGate gate;

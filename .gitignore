@@ -1,5 +1,5 @@
 # Build artifacts
-/pipensx
+/gamehubnx
 /tools/webserver
 /tests/test_*
 !/tests/test_*.c

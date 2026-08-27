@@ -5,7 +5,7 @@
 #include <functional>
 #include <mutex>
 
-namespace pipensx {
+namespace gamehubnx {
 
 class InstallPacer {
 public:
@@ -75,4 +75,4 @@ private:
     State state_ = State::Disabled;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -20,7 +20,7 @@ extern "C" {
 #include "core/util.h"
 }
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 namespace {
 
@@ -292,7 +292,7 @@ BugReportActivity::BugReportActivity(DownloadManager* manager,
     root->setAlignItems(brls::AlignItems::CENTER);
 
     auto* notice = centeredLabel(theme::kFontCaption, theme::textTertiary());
-    notice->setText(tr("pipensx/settings/report_notice"));
+    notice->setText(tr("gamehubnx/settings/report_notice"));
     root->addView(notice);
 
     summary_ = centeredLabel(theme::kFontSmall, theme::textSecondary());
@@ -333,7 +333,7 @@ BugReportActivity::BugReportActivity(DownloadManager* manager,
     root->addView(hint_);
 
     frame_ = new brls::AppletFrame(root);
-    frame_->setTitle(tr("pipensx/settings/report_bug"));
+    frame_->setTitle(tr("gamehubnx/settings/report_bug"));
 }
 
 std::string BugReportActivity::renderedState() {
@@ -357,7 +357,7 @@ brls::View* BugReportActivity::createContentView() {
 
 void BugReportActivity::onContentAvailable() {
     registerAction(
-        tr("pipensx/settings/report_more_detail"), brls::BUTTON_Y,
+        tr("gamehubnx/settings/report_more_detail"), brls::BUTTON_Y,
         [this](brls::View*) {
             detailed_ = !detailed_;
             renderReport();
@@ -387,7 +387,7 @@ void BugReportActivity::captureReport() {
     char freeBytes[16];
     fmt_bytes(freeBytes, sizeof(freeBytes), snapshot.freeBytes);
     summary_->setText(
-        tr("pipensx/settings/report_summary", PIPENSX_VERSION,
+        tr("gamehubnx/settings/report_summary", GAMEHUBNX_VERSION,
            std::to_string(HOSVER_MAJOR(snapshot.hos)) + "." +
                std::to_string(HOSVER_MINOR(snapshot.hos)) + "." +
                std::to_string(HOSVER_MICRO(snapshot.hos)),
@@ -467,19 +467,19 @@ void BugReportActivity::renderReport() {
     std::snprintf(id, sizeof(id), "%04X", sessionId_);
     std::string caption;
     if (tail_.empty())
-        caption = tr("pipensx/settings/report_empty");
+        caption = tr("gamehubnx/settings/report_empty");
     else if (report.truncated)
-        caption = tr("pipensx/settings/report_id_truncated", id,
+        caption = tr("gamehubnx/settings/report_id_truncated", id,
                      static_cast<int>(count));
     else if (report.filtered)
-        caption = tr("pipensx/settings/report_id_filtered", id,
+        caption = tr("gamehubnx/settings/report_id_filtered", id,
                      static_cast<int>(count));
     else
-        caption = tr("pipensx/settings/report_id", id, static_cast<int>(count));
+        caption = tr("gamehubnx/settings/report_id", id, static_cast<int>(count));
     caption_->setText(caption);
 
-    hint_->setText(detailed_ ? tr("pipensx/settings/report_hint_detailed")
-                             : tr("pipensx/settings/report_hint"));
+    hint_->setText(detailed_ ? tr("gamehubnx/settings/report_hint_detailed")
+                             : tr("gamehubnx/settings/report_hint"));
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

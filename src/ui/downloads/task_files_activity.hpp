@@ -13,16 +13,16 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 inline std::string taskFileStateText(TaskFileState state) {
     switch (state) {
-        case TaskFileState::Pending: return tr("pipensx/files/state_pending");
-        case TaskFileState::Present: return tr("pipensx/files/state_present");
-        case TaskFileState::Installed: return tr("pipensx/files/state_installed");
-        case TaskFileState::Skipped: return tr("pipensx/files/state_skipped");
-        case TaskFileState::Missing: return tr("pipensx/files/state_missing");
-        case TaskFileState::Unsafe: return tr("pipensx/files/state_unsafe");
+        case TaskFileState::Pending: return tr("gamehubnx/files/state_pending");
+        case TaskFileState::Present: return tr("gamehubnx/files/state_present");
+        case TaskFileState::Installed: return tr("gamehubnx/files/state_installed");
+        case TaskFileState::Skipped: return tr("gamehubnx/files/state_skipped");
+        case TaskFileState::Missing: return tr("gamehubnx/files/state_missing");
+        case TaskFileState::Unsafe: return tr("gamehubnx/files/state_unsafe");
     }
     return {};
 }
@@ -33,27 +33,27 @@ inline std::string deployProblemText(SwitchDeployProblem problem,
     switch (problem) {
         case SwitchDeployProblem::None: return {};
         case SwitchDeployProblem::TaskNotFound:
-            key = "pipensx/deploy/problem_task"; break;
+            key = "gamehubnx/deploy/problem_task"; break;
         case SwitchDeployProblem::NotReady:
-            key = "pipensx/deploy/problem_not_ready"; break;
+            key = "gamehubnx/deploy/problem_not_ready"; break;
         case SwitchDeployProblem::LayoutNotFound:
-            key = "pipensx/deploy/problem_layout"; break;
+            key = "gamehubnx/deploy/problem_layout"; break;
         case SwitchDeployProblem::AmbiguousLayout:
-            key = "pipensx/deploy/problem_ambiguous"; break;
+            key = "gamehubnx/deploy/problem_ambiguous"; break;
         case SwitchDeployProblem::UnsafePath:
-            key = "pipensx/deploy/problem_unsafe"; break;
+            key = "gamehubnx/deploy/problem_unsafe"; break;
         case SwitchDeployProblem::MissingSource:
-            key = "pipensx/deploy/problem_missing"; break;
+            key = "gamehubnx/deploy/problem_missing"; break;
         case SwitchDeployProblem::Conflict:
-            key = "pipensx/deploy/problem_conflict"; break;
+            key = "gamehubnx/deploy/problem_conflict"; break;
         case SwitchDeployProblem::NoSpace:
-            key = "pipensx/deploy/problem_space"; break;
+            key = "gamehubnx/deploy/problem_space"; break;
         case SwitchDeployProblem::NoRam:
-            key = "pipensx/deploy/problem_ram"; break;
+            key = "gamehubnx/deploy/problem_ram"; break;
         case SwitchDeployProblem::Busy:
-            key = "pipensx/deploy/problem_busy"; break;
+            key = "gamehubnx/deploy/problem_busy"; break;
         case SwitchDeployProblem::Io:
-            key = "pipensx/deploy/problem_io"; break;
+            key = "gamehubnx/deploy/problem_io"; break;
     }
     std::string text = tr(key);
     if (!detail.empty())
@@ -159,16 +159,16 @@ public:
         summary_ = new brls::Label();
         summary_->setFontSize(theme::kFontBody);
         summary_->setMarginBottom(10);
-        summary_->setText(tr("pipensx/files/loading"));
+        summary_->setText(tr("gamehubnx/files/loading"));
         content->addView(summary_);
 
         auto* filters = new brls::Box(brls::Axis::ROW);
-        addFilter(filters, tr("pipensx/files/filter_all"), Filter::All);
-        addFilter(filters, tr("pipensx/files/filter_sd"), Filter::Present);
-        addFilter(filters, tr("pipensx/files/filter_installed"),
+        addFilter(filters, tr("gamehubnx/files/filter_all"), Filter::All);
+        addFilter(filters, tr("gamehubnx/files/filter_sd"), Filter::Present);
+        addFilter(filters, tr("gamehubnx/files/filter_installed"),
                   Filter::Installed);
-        addFilter(filters, tr("pipensx/files/filter_skipped"), Filter::Skipped);
-        addFilter(filters, tr("pipensx/files/filter_missing"), Filter::Missing);
+        addFilter(filters, tr("gamehubnx/files/filter_skipped"), Filter::Skipped);
+        addFilter(filters, tr("gamehubnx/files/filter_missing"), Filter::Missing);
         filters->setMarginBottom(8);
         content->addView(filters);
 
@@ -183,14 +183,14 @@ public:
         recycler_->setDataSource(dataSource_);
         content->addView(recyclerHost(recycler_));
         frame_ = new brls::AppletFrame(content);
-        frame_->setTitle(tr("pipensx/files/title"));
+        frame_->setTitle(tr("gamehubnx/files/title"));
     }
 
     explicit TaskFilesActivity(TaskFileInventory inventory)
         : TaskFilesActivity(inventory.taskId, nullptr) {
         inventory_ = std::move(inventory);
-        root_->setText(tr("pipensx/files/root", inventory_.rootPath));
-        summary_->setText(tr("pipensx/files/summary",
+        root_->setText(tr("gamehubnx/files/root", inventory_.rootPath));
+        summary_->setText(tr("gamehubnx/files/summary",
                              inventory_.files.size(),
                              formatBytes(inventory_.presentBytes)));
         applyFilter();
@@ -218,8 +218,8 @@ public:
                     return;
                 }
                 inventory_ = std::move(inventory);
-                root_->setText(tr("pipensx/files/root", inventory_.rootPath));
-                summary_->setText(tr("pipensx/files/summary",
+                root_->setText(tr("gamehubnx/files/root", inventory_.rootPath));
+                summary_->setText(tr("gamehubnx/files/summary",
                                      inventory_.files.size(),
                                      formatBytes(inventory_.presentBytes)));
                 applyFilter();
@@ -236,7 +236,7 @@ public:
         if (!file->absolutePath.empty())
             text += "\n\n" + file->absolutePath;
         auto* dialog = new brls::Dialog(text);
-        dialog->addButton(tr("pipensx/common/close"), [] {});
+        dialog->addButton(tr("gamehubnx/common/close"), [] {});
         dialog->open();
     }
 
@@ -295,7 +295,7 @@ inline brls::RecyclerCell* TaskFilesDataSource::cellForRow(
     if (files_.empty()) {
         auto* cell = static_cast<TaskFilesMessageCell*>(
             recycler->dequeueReusableCell("Message"));
-        cell->setText(tr("pipensx/files/empty"));
+        cell->setText(tr("gamehubnx/files/empty"));
         return cell;
     }
     auto* cell = static_cast<TaskFileCell*>(
@@ -333,10 +333,10 @@ public:
     void setEntry(const SwitchDeployEntry& entry) {
         destination_->setText("/switch/" + entry.destinationRelativePath);
         const char* key = entry.state == SwitchDeployEntryState::Missing
-            ? "pipensx/deploy/state_copy"
+            ? "gamehubnx/deploy/state_copy"
             : entry.state == SwitchDeployEntryState::ExistingIdentical
-                ? "pipensx/deploy/state_identical"
-                : "pipensx/deploy/state_conflict";
+                ? "gamehubnx/deploy/state_identical"
+                : "gamehubnx/deploy/state_conflict";
         state_->setText(tr(key) + " · " + formatBytes(entry.size));
         state_->setTextColor(entry.state ==
                                      SwitchDeployEntryState::ExistingConflict
@@ -373,7 +373,7 @@ public:
         auto* summary = new brls::Label();
         summary->setFontSize(theme::kFontBody);
         summary->setMarginBottom(6);
-        summary->setText(tr("pipensx/deploy/summary",
+        summary->setText(tr("gamehubnx/deploy/summary",
                             inspection_.plan.files.size(),
                             formatBytes(looseCopyBytes),
                             inspection_.plan.identicalFiles,
@@ -397,7 +397,7 @@ public:
                     ? a.sourceRelativePath
                     : a.sourceRelativePath.substr(slash + 1);
                 if (a.switchFiles != 0)
-                    names += " · " + tr("pipensx/deploy/archive_files",
+                    names += " · " + tr("gamehubnx/deploy/archive_files",
                                         a.switchFiles);
                 if (a.extractable) {
                     ++ready;
@@ -408,12 +408,12 @@ public:
                 } else {
                     ++blocked;
                     names += " · " + (a.detail.empty()
-                                         ? tr("pipensx/deploy/archive_unreadable")
+                                         ? tr("gamehubnx/deploy/archive_unreadable")
                                          : a.detail);
                 }
             }
             archives->setTextColor(blocked ? theme::error() : theme::accent());
-            archives->setText(tr("pipensx/deploy/archives", ready,
+            archives->setText(tr("gamehubnx/deploy/archives", ready,
                                  formatBytes(archiveBytes)) +
                               "\n" + names);
             content->addView(archives);
@@ -423,7 +423,7 @@ public:
         warning->setTextColor(inspection_.problem == SwitchDeployProblem::None
                                   ? theme::textSecondary() : theme::error());
         warning->setText(inspection_.problem == SwitchDeployProblem::None
-            ? tr("pipensx/deploy/warning")
+            ? tr("gamehubnx/deploy/warning")
             : deployProblemText(inspection_.problem, inspection_.detail));
         warning->setMarginBottom(8);
         content->addView(warning);
@@ -453,15 +453,15 @@ public:
         copy->setStyle(&brls::BUTTONSTYLE_PRIMARY);
         if (!inspection_.canStart()) {
             if (inspection_.problem == SwitchDeployProblem::Conflict)
-                copy->setText(tr("pipensx/deploy/copy_blocked_conflict"));
+                copy->setText(tr("gamehubnx/deploy/copy_blocked_conflict"));
             else if (inspection_.problem == SwitchDeployProblem::NoSpace)
-                copy->setText(tr("pipensx/deploy/copy_blocked_space"));
+                copy->setText(tr("gamehubnx/deploy/copy_blocked_space"));
             else if (inspection_.problem == SwitchDeployProblem::NoRam)
-                copy->setText(tr("pipensx/deploy/copy_blocked_ram"));
+                copy->setText(tr("gamehubnx/deploy/copy_blocked_ram"));
             else
-                copy->setText(tr("pipensx/deploy/copy"));
+                copy->setText(tr("gamehubnx/deploy/copy"));
         } else {
-            copy->setText(tr("pipensx/deploy/copy"));
+            copy->setText(tr("gamehubnx/deploy/copy"));
         }
         copy->setState(inspection_.canStart() && deploy_
                            ? brls::ButtonState::ENABLED
@@ -488,7 +488,7 @@ public:
         content->setDefaultFocusedIndex(
             static_cast<int>(content->getChildren().size()) - 1);
         frame_ = new brls::AppletFrame(content);
-        frame_->setTitle(tr("pipensx/deploy/preview_title"));
+        frame_->setTitle(tr("gamehubnx/deploy/preview_title"));
     }
 
     brls::View* createContentView() override { return frame_; }
@@ -499,4 +499,4 @@ private:
     brls::AppletFrame* frame_;
 };
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui

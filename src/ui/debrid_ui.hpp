@@ -23,7 +23,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 inline const std::string& activeDebridKey(const AppSettingsData& values) {
     if (values.debridProvider == DebridProviderKind::TorrServer)
@@ -54,9 +54,9 @@ inline const char* debridProviderName(DebridProviderKind kind) {
 // (CAINFO may still fail when the console date is wrong).
 inline std::string formatDebridValidateError(const std::string& error) {
     if (isSslCertificateErrorMessage(error))
-        return tr("pipensx/debrid/ssl_cert_hint");
+        return tr("gamehubnx/debrid/ssl_cert_hint");
     if (error.empty())
-        return tr("pipensx/debrid/rejected");
+        return tr("gamehubnx/debrid/rejected");
     constexpr size_t kMax = 160;
     if (error.size() <= kMax)
         return error;
@@ -96,8 +96,8 @@ public:
 
         auto* explanation = new brls::Label();
         explanation->setText(provider_ == DebridProviderKind::TorrServer
-            ? tr("pipensx/debrid/link_hint_url")
-            : tr("pipensx/debrid/link_hint", debridProviderName(provider_)));
+            ? tr("gamehubnx/debrid/link_hint_url")
+            : tr("gamehubnx/debrid/link_hint", debridProviderName(provider_)));
         explanation->setFontSize(theme::kFontSmall);
         explanation->setTextColor(theme::textSecondary());
         explanation->setSingleLine(false);
@@ -148,8 +148,8 @@ public:
         }
 
         auto* enter = new brls::DetailCell();
-        enter->setText(tr("pipensx/debrid/enter_key"));
-        enter->setDetailText(tr("pipensx/debrid/enter_key_detail"));
+        enter->setText(tr("gamehubnx/debrid/enter_key"));
+        enter->setDetailText(tr("gamehubnx/debrid/enter_key_detail"));
         enter->registerClickAction([this](brls::View*) {
             openKeyboard();
             return true;
@@ -157,8 +157,8 @@ public:
         left->addView(enter);
 
         unlink_ = new brls::DetailCell();
-        unlink_->setText(tr("pipensx/debrid/unlink"));
-        unlink_->setDetailText(tr("pipensx/debrid/unlink_detail"));
+        unlink_->setText(tr("gamehubnx/debrid/unlink"));
+        unlink_->setDetailText(tr("gamehubnx/debrid/unlink_detail"));
         unlink_->registerClickAction([this](brls::View*) {
             if (saveKey({}))
                 setCheckNeutral();
@@ -173,9 +173,9 @@ public:
 
         const bool online = !pairingUrl.empty();
         summary_->setConnection(
-            !online ? tr("pipensx/setup_summary/network_unavailable")
-            : pairingAvailable ? tr("pipensx/setup_summary/pairing_available")
-                               : tr("pipensx/setup_summary/pairing_unavailable"),
+            !online ? tr("gamehubnx/setup_summary/network_unavailable")
+            : pairingAvailable ? tr("gamehubnx/setup_summary/pairing_available")
+                               : tr("gamehubnx/setup_summary/pairing_unavailable"),
             !online ? theme::warning()
                     : pairingAvailable ? theme::success() : theme::warning());
         if (fixture && fixture->validationSucceeded)
@@ -202,7 +202,7 @@ public:
                      DebridProviderKind provider) {
         auto* frame = new brls::AppletFrame(
             new DebridLinkView(settings, manager, provider));
-        frame->setTitle(tr("pipensx/debrid/link_title",
+        frame->setTitle(tr("gamehubnx/debrid/link_title",
                            debridProviderName(provider)));
         brls::Application::pushActivity(new brls::Activity(frame));
     }
@@ -236,9 +236,9 @@ private:
     void refresh() {
         const bool saved = !activeKey().empty();
         summary_->setSelected(
-            saved ? tr("pipensx/setup_summary/provider_saved",
+            saved ? tr("gamehubnx/setup_summary/provider_saved",
                        debridProviderName(provider_))
-                  : tr("pipensx/setup_summary/provider_not_saved",
+                  : tr("gamehubnx/setup_summary/provider_not_saved",
                        debridProviderName(provider_)),
             saved ? theme::success() : theme::accent());
         unlink_->setVisibility(saved ? brls::Visibility::VISIBLE
@@ -246,20 +246,20 @@ private:
     }
 
     void setCheckNeutral() {
-        summary_->setCheck(tr("pipensx/setup_summary/not_checked"),
+        summary_->setCheck(tr("gamehubnx/setup_summary/not_checked"),
                            theme::textSecondary());
     }
 
     void setCheckSuccess() {
-        summary_->setCheck(tr("pipensx/setup_summary/check_success"),
+        summary_->setCheck(tr("gamehubnx/setup_summary/check_success"),
                            theme::success());
     }
 
     void openKeyboard() {
         const std::string prompt =
             provider_ == DebridProviderKind::TorrServer
-                ? tr("pipensx/debrid/keyboard_prompt_url")
-                : tr("pipensx/debrid/keyboard_prompt",
+                ? tr("gamehubnx/debrid/keyboard_prompt_url")
+                : tr("gamehubnx/debrid/keyboard_prompt",
                      debridProviderName(provider_));
         brls::Application::getImeManager()->openForText(
             [this](std::string text) { validate(std::move(text)); }, prompt, "",
@@ -273,11 +273,11 @@ private:
             ? std::string() : text.substr(first, last - first + 1);
         if (key.empty()) {
             validationGeneration_->fetch_add(1);
-            summary_->setCheck(tr("pipensx/debrid/no_key"),
+            summary_->setCheck(tr("gamehubnx/debrid/no_key"),
                                theme::textSecondary());
             return;
         }
-        summary_->setCheck(tr("pipensx/debrid/validating"), theme::accent());
+        summary_->setCheck(tr("gamehubnx/debrid/validating"), theme::accent());
         auto alive = alive_;
         auto generation = validationGeneration_;
         const uint64_t attempt = generation->fetch_add(1) + 1;
@@ -339,8 +339,8 @@ private:
         if (!key.empty())
             stopPairing();
         brls::Application::notify(key.empty()
-            ? tr("pipensx/debrid/unlinked_notify")
-            : tr("pipensx/debrid/linked_notify"));
+            ? tr("gamehubnx/debrid/unlinked_notify")
+            : tr("gamehubnx/debrid/linked_notify"));
         refresh();
         return true;
     }
@@ -381,12 +381,12 @@ inline bool ensureDebridLinked(AppSettings* settings,
     if (!settings || !activeDebridKey(settings->get()).empty())
         return true;
     const DebridProviderKind provider = settings->get().debridProvider;
-    auto* dialog = new brls::Dialog(tr("pipensx/debrid/needs_account"));
-    dialog->addButton(tr("pipensx/debrid/link_now"),
+    auto* dialog = new brls::Dialog(tr("gamehubnx/debrid/needs_account"));
+    dialog->addButton(tr("gamehubnx/debrid/link_now"),
         [settings, manager, provider] {
             DebridLinkView::push(settings, manager, provider);
         });
-    dialog->addButton(tr("pipensx/common/cancel"), [] {});
+    dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
     dialog->open();
     return false;
 }
@@ -395,4 +395,4 @@ inline bool debridModeActive(const AppSettings* settings) {
     return settings && !settings->get().torrentingEnabled;
 }
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

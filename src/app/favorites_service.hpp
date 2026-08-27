@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 // One starred catalog entry. The title rides along with the hash so a favourite
 // that disappears from a later catalog refresh can still be named rather than
@@ -49,4 +49,4 @@ private:
     std::vector<FavoriteEntry> items_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

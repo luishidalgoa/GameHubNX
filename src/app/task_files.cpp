@@ -19,7 +19,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr int64_t kManifestVersion = 1;
@@ -546,4 +546,4 @@ bool buildTaskFileInventory(const std::string& appRoot,
     return true;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the pipensx translation catalogs under resources/i18n/.
+"""Validate the gamehubnx translation catalogs under resources/i18n/.
 
 en-US is the source of truth. Every other locale must expose exactly the same
 leaf keys with exactly the same fmt placeholder count: brls::getStr pipes every
@@ -63,7 +63,7 @@ def check_call_sites(source_keys):
     """Every tr("...") key in the C++ sources must exist in the en-US catalog.
 
     brls::internal::getRawStr falls back to returning the key itself when it
-    resolves to nothing, so a typo ships as a literal "pipensx/nav/catalog" on
+    resolves to nothing, so a typo ships as a literal "gamehubnx/nav/catalog" on
     screen instead of failing anywhere. Catch it here instead.
     """
     failures = 0
@@ -74,9 +74,9 @@ def check_call_sites(source_keys):
             text = path.read_text(encoding="utf-8", errors="replace")
             for line_number, line in enumerate(text.splitlines(), 1):
                 for key in TR_CALL.findall(line):
-                    if not key.startswith("pipensx/"):
+                    if not key.startswith("gamehubnx/"):
                         continue
-                    if key[len("pipensx/"):] not in source_keys:
+                    if key[len("gamehubnx/"):] not in source_keys:
                         rel = path.relative_to(ROOT)
                         print(f"i18n: {rel}:{line_number}: "
                               f"undefined key {key}")
@@ -107,7 +107,7 @@ def main():
                 print(f"i18n: {where}: unbalanced brace (escape it as {{{{ or }}}})")
                 failures += 1
 
-        if name == "pipensx.json":
+        if name == "gamehubnx.json":
             failures += check_call_sites(set(source))
 
         for locale_dir in sorted(I18N.iterdir()):

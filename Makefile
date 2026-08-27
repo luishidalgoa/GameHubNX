@@ -1,10 +1,10 @@
 .DEFAULT_GOAL := help
 
 CMAKE_BIN ?= cmake
-PIPENSX_METADATA_INDEX ?= $(CURDIR)/resources/catalog/game_metadata_index.json
+GAMEHUBNX_METADATA_INDEX ?= $(CURDIR)/resources/catalog/game_metadata_index.json
 MTP_DIR ?=
 NRO_SRC ?= $(CURDIR)/build-switch/gamehubnx.nro
-PIPENSX_DAEMON_HEAP_MB ?= 32
+GAMEHUBNX_DAEMON_HEAP_MB ?= 32
 DEPLOY_CLEAN ?= 0
 
 .PHONY: help pc test switch probe daemon golden clean audit deploy
@@ -15,7 +15,7 @@ help:
 	@echo "  make test     Build and run the PC test suite"
 	@echo "  make switch   Build build-switch/gamehubnx.nro"
 	@echo "  make probe    Build the sysmodule probe (src/probe/README.md)"
-	@echo "  make daemon   Build the pipensx daemon sysmodule (src/daemon/)"
+	@echo "  make daemon   Build the gamehubnx daemon sysmodule (src/daemon/)"
 	@echo "  make golden   Run deterministic UI screenshot tests"
 	@echo "  make audit    Scan the complete Git history with gitleaks"
 	@echo "  make deploy MTP_DIR='mtp://...' [DEPLOY_CLEAN=1]"
@@ -29,24 +29,24 @@ test:
 
 switch:
 	CMAKE_BIN="$(CMAKE_BIN)" \
-	PIPENSX_METADATA_INDEX="$(PIPENSX_METADATA_INDEX)" \
-	PIPENSX_DEV_BUILD="$(PIPENSX_DEV_BUILD)" \
+	GAMEHUBNX_METADATA_INDEX="$(GAMEHUBNX_METADATA_INDEX)" \
+	GAMEHUBNX_DEV_BUILD="$(GAMEHUBNX_DEV_BUILD)" \
 	$(MAKE) -f Makefile.switch
 
 # Kept out of `make switch`: the probe is an investigation artifact, not part of
 # the app's release path.
 probe: switch
-	$(CMAKE_BIN) --build build-switch --target pipensx_probe_nsp --parallel
-	$(CMAKE_BIN) --build build-switch --target pipensx_probe_client_nro --parallel
+	$(CMAKE_BIN) --build build-switch --target gamehubnx_probe_nsp --parallel
+	$(CMAKE_BIN) --build build-switch --target gamehubnx_probe_client_nro --parallel
 	@echo "Probe SD layout: $(CURDIR)/build-switch/probe/"
 
 # Also out of `make switch`: until the daemon has proven itself, it ships
 # separately and is started by hand from ovlSysmodules.
-# PIPENSX_DAEMON_HEAP_MB=64 make daemon  to re-measure the memory ceiling.
+# GAMEHUBNX_DAEMON_HEAP_MB=64 make daemon  to re-measure the memory ceiling.
 daemon: switch
 	$(CMAKE_BIN) -S . -B build-switch \
-		-DPIPENSX_DAEMON_HEAP_MB=$(PIPENSX_DAEMON_HEAP_MB) >/dev/null
-	$(CMAKE_BIN) --build build-switch --target pipensx_daemon_nsp --parallel
+		-DGAMEHUBNX_DAEMON_HEAP_MB=$(GAMEHUBNX_DAEMON_HEAP_MB) >/dev/null
+	$(CMAKE_BIN) --build build-switch --target gamehubnx_daemon_nsp --parallel
 	@echo "Daemon SD layout: $(CURDIR)/build-switch/daemon/"
 
 golden:

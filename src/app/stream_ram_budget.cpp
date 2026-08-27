@@ -11,7 +11,7 @@
 extern "C" char* fake_heap_end;
 #endif
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr uint64_t MiB = 1024 * 1024;
@@ -182,4 +182,4 @@ StreamRamBudget detectStreamRamBudget(uint64_t pieceLengthBytes) {
                                  pieceLengthBytes);
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

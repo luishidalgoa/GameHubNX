@@ -40,7 +40,7 @@ extern "C" {
 #include <typeinfo>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 // TCP listen port for runner slot 0; slot i listens on kBasePeerPort + i
@@ -2017,7 +2017,7 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
     // BEP-19 web seed: pull whole pieces over HTTP in parallel with the
     // swarm. Deterministic bandwidth independent of how few peers we can
     // reach over plaintext TCP (Bug A). Single-file torrents only — the
-    // package torrents pipensx ships are one NSP payload. Verification is
+    // package torrents gamehubnx ships are one NSP payload. Verification is
     // the engine's job (torrent_submit_web_piece re-checks the SHA-1).
     constexpr size_t kWebSeedParallel = 8;
     std::unique_ptr<WebSeedSource> webSeed;
@@ -2232,4 +2232,4 @@ void DownloadManager::shutdown() {
     workerStarted_ = false;
 }
 
-} // namespace pipensx
+} // namespace gamehubnx

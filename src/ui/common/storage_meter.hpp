@@ -9,7 +9,7 @@
 //                                                        exact size after the
 //                                                        torrent metadata lands)
 //   * pre-install screens  -> setEstimate(total, free, install, insufficient)
-// All math is done by the caller via pipensx::install_space; this is draw-only.
+// All math is done by the caller via gamehubnx::install_space; this is draw-only.
 //
 // The root box clips to its bounds and every text row is single-line, so the
 // widget can never grow past the column it was given — the sidebar footer sits
@@ -26,7 +26,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class StorageMeter : public brls::Box {
 public:
@@ -77,10 +77,10 @@ public:
         legend_->setAlignItems(brls::AlignItems::CENTER);
         legend_->setMarginLeft(16);
         legend_->setVisibility(brls::Visibility::GONE);
-        addLegendEntry(LegendDot::Kind::Used, tr("pipensx/storage/legend_used"));
+        addLegendEntry(LegendDot::Kind::Used, tr("gamehubnx/storage/legend_used"));
         installDot_ = addLegendEntry(LegendDot::Kind::Install,
-                                     tr("pipensx/storage/legend_install"));
-        addLegendEntry(LegendDot::Kind::Free, tr("pipensx/storage/legend_free"));
+                                     tr("gamehubnx/storage/legend_install"));
+        addLegendEntry(LegendDot::Kind::Free, tr("gamehubnx/storage/legend_free"));
         foot_->addView(legend_);
         addView(foot_);
     }
@@ -112,7 +112,7 @@ public:
         installDot_->setInsufficient(false);
         title_->setText(headerTitle_);  // drop any "(est.)" qualifier
         value_->setText("");
-        caption_->setText(tr("pipensx/storage/unavailable"));
+        caption_->setText(tr("gamehubnx/storage/unavailable"));
     }
 
     // Footer: just used vs free of the whole card.
@@ -124,7 +124,7 @@ public:
         bar_->setData(total, free, 0, false);
         installDot_->setInsufficient(false);
         value_->setText(formatBytesShort(free));
-        caption_->setText(tr("pipensx/storage/free", formatBytesShort(free)));
+        caption_->setText(tr("gamehubnx/storage/free", formatBytesShort(free)));
     }
 
     // Game page: what this one release will take out of the card. `exact` is
@@ -140,21 +140,21 @@ public:
         // The console font draws '~' as a raised accent, so the "still a guess"
         // marker lives in the header title rather than in front of the number.
         title_->setText(exact ? headerTitle_
-                              : tr("pipensx/storage/estimate_suffix",
+                              : tr("gamehubnx/storage/estimate_suffix",
                                    headerTitle_));
-        value_->setText(installBytes == 0 ? tr("pipensx/common/unknown")
+        value_->setText(installBytes == 0 ? tr("gamehubnx/common/unknown")
                                           : formatBytes(installBytes));
         if (insufficient) {
             const uint64_t shortfall =
                 installBytes > free ? installBytes - free : 0;
-            caption_->setText(tr("pipensx/storage/need_more",
+            caption_->setText(tr("gamehubnx/storage/need_more",
                                  formatBytes(shortfall)));
         } else if (installBytes == 0) {
-            caption_->setText(tr("pipensx/storage/free",
+            caption_->setText(tr("gamehubnx/storage/free",
                                  formatBytesShort(free)));
         } else {
             const uint64_t left = free >= installBytes ? free - installBytes : 0;
-            caption_->setText(tr("pipensx/storage/left_after",
+            caption_->setText(tr("gamehubnx/storage/left_after",
                                  formatBytesShort(left)));
         }
     }
@@ -168,25 +168,25 @@ public:
         }
         bar_->setData(total, free, installBytes, insufficient);
         installDot_->setInsufficient(insufficient);
-        value_->setText(tr("pipensx/storage/install_bytes",
+        value_->setText(tr("gamehubnx/storage/install_bytes",
                            formatBytes(installBytes)));
         const uint64_t used = total >= free ? total - free : 0;
-        std::string text = tr("pipensx/storage/caption", formatBytes(used),
+        std::string text = tr("gamehubnx/storage/caption", formatBytes(used),
                               formatBytes(installBytes), formatBytes(free));
         if (insufficient) {
             const uint64_t shortfall =
                 installBytes > free ? installBytes - free : 0;
-            text += tr("pipensx/storage/caption_need",
+            text += tr("gamehubnx/storage/caption_need",
                        formatBytes(shortfall));
         } else if (nszUnknown) {
-            text += tr("pipensx/storage/caption_nsz");
+            text += tr("gamehubnx/storage/caption_nsz");
         }
         caption_->setText(text);
     }
 
 private:
     // Colour key swatch. The colour is resolved at draw time so it follows the
-    // console light/dark theme like every other pipensx view.
+    // console light/dark theme like every other gamehubnx view.
     class LegendDot : public brls::View {
     public:
         enum class Kind { Used, Install, Free };
@@ -419,4 +419,4 @@ private:
     bool compact_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

@@ -19,7 +19,7 @@
 #include "ui/downloads/download_cell.hpp"
 #include "ui/downloads/file_picker.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class MainView;
 
@@ -117,12 +117,12 @@ public:
         // .torrent suelto, se anaden desde la tienda. El selector de ficheros y
         // openFilePicker() siguen compilados para no divergir de upstream, pero
         // ya no hay forma de llegar a ellos desde la navegacion.
-        registerAction(tr("pipensx/downloads/pause_all"), brls::BUTTON_Y,
+        registerAction(tr("gamehubnx/downloads/pause_all"), brls::BUTTON_Y,
                        [this](brls::View*) {
             pauseResumeAll();
             return true;
         });
-        registerAction(tr("pipensx/downloads/clear_completed"), brls::BUTTON_LB,
+        registerAction(tr("gamehubnx/downloads/clear_completed"), brls::BUTTON_LB,
                        [this](brls::View*) {
             clearCompleted();
             return true;
@@ -166,12 +166,12 @@ public:
             runners->push_back(std::move(run));
         };
 
-        add(tr("pipensx/common/details"), [this, taskId] { openDetails(taskId); });
+        add(tr("gamehubnx/common/details"), [this, taskId] { openDetails(taskId); });
         const SwitchDeploySnapshot deployState = deploy_ ? deploy_->snapshot()
                                                          : SwitchDeploySnapshot{};
         const bool leased = deployState.active() && deployState.taskId == taskId;
         if (leased)
-            add(tr("pipensx/deploy/cancel"), [this] { deploy_->cancel(); });
+            add(tr("gamehubnx/deploy/cancel"), [this] { deploy_->cancel(); });
 
         bool active = task.status == DownloadStatus::Queued ||
                       task.status == DownloadStatus::Checking ||
@@ -181,20 +181,20 @@ public:
                       task.status == DownloadStatus::Committing ||
                       task.status == DownloadStatus::Verifying;
         if (active)
-            add(tr("pipensx/common/pause"), [this, taskId] {
+            add(tr("gamehubnx/common/pause"), [this, taskId] {
                 manager_->pause(taskId);
                 startRefreshing(true);
             });
         if (task.status == DownloadStatus::Paused ||
             task.status == DownloadStatus::Error)
-            add(tr("pipensx/common/resume"), [this, taskId] {
+            add(tr("gamehubnx/common/resume"), [this, taskId] {
                 manager_->resume(taskId);
                 startRefreshing(true);
             });
         if (!leased && (task.status == DownloadStatus::Completed ||
                         task.status == DownloadStatus::Installed) &&
             deploy_ && taskReadyForSwitchDeploy(task)) {
-            add(tr("pipensx/deploy/copy"), [this, taskId] {
+            add(tr("gamehubnx/deploy/copy"), [this, taskId] {
                 if (!deploy_)
                     return;
                 SwitchDeployInspection inspection = deploy_->inspect(taskId);
@@ -212,7 +212,7 @@ public:
             });
         }
         if (!leased && task.status == DownloadStatus::Completed)
-            add(tr("pipensx/common/verify"), [this, taskId] {
+            add(tr("gamehubnx/common/verify"), [this, taskId] {
                 manager_->verify(taskId);
                 startRefreshing(true);
             });
@@ -233,39 +233,39 @@ public:
                 }
             if (found) {
                 if (pos > 0)
-                    add(tr("pipensx/downloads/move_up"), [this, taskId] {
+                    add(tr("gamehubnx/downloads/move_up"), [this, taskId] {
                         std::string error;
                         if (!manager_->moveTask(taskId, true, error) &&
                             !error.empty()) {
                             brls::Application::notify(tr(
-                                "pipensx/downloads/move_to_top_failed", error));
+                                "gamehubnx/downloads/move_to_top_failed", error));
                         }
                         startRefreshing(true);
                     });
                 if (pos + 1 < queuedIds.size())
-                    add(tr("pipensx/downloads/move_down"), [this, taskId] {
+                    add(tr("gamehubnx/downloads/move_down"), [this, taskId] {
                         std::string error;
                         if (!manager_->moveTask(taskId, false, error) &&
                             !error.empty()) {
                             brls::Application::notify(tr(
-                                "pipensx/downloads/move_to_top_failed", error));
+                                "gamehubnx/downloads/move_to_top_failed", error));
                         }
                         startRefreshing(true);
                     });
                 if (pos != 0)
-                    add(tr("pipensx/downloads/move_to_top"), [this, taskId] {
+                    add(tr("gamehubnx/downloads/move_to_top"), [this, taskId] {
                         std::string error;
                         if (!manager_->moveToFront(taskId, error) &&
                             !error.empty()) {
                             brls::Application::notify(tr(
-                                "pipensx/downloads/move_to_top_failed", error));
+                                "gamehubnx/downloads/move_to_top_failed", error));
                         }
                         startRefreshing(true);
                     });
             }
         }
         if (!leased && task.status != DownloadStatus::Removing)
-            add(tr("pipensx/common/remove"),
+            add(tr("gamehubnx/common/remove"),
                     [this, taskId] { openRemoveDialog(taskId); });
 
         // The Dropdown pops itself right after firing the callback, so defer
@@ -284,15 +284,15 @@ public:
 
     void openRemoveDialog(const std::string& taskId) {
         auto* dialog =
-            new brls::Dialog(tr("pipensx/downloads/remove_question"));
-        dialog->addButton(tr("pipensx/downloads/remove_keep"), [this, taskId] {
+            new brls::Dialog(tr("gamehubnx/downloads/remove_question"));
+        dialog->addButton(tr("gamehubnx/downloads/remove_keep"), [this, taskId] {
             std::string error;
             if (!manager_->remove(taskId, false, error))
                 brls::Application::notify(error);
             else
                 startRefreshing(true);
         });
-        dialog->addButton(tr("pipensx/downloads/remove_delete"), [this, taskId] {
+        dialog->addButton(tr("gamehubnx/downloads/remove_delete"), [this, taskId] {
             DownloadManager* manager = manager_;
             brls::async([manager, taskId] {
                 std::string error;
@@ -304,7 +304,7 @@ public:
             });
             startRefreshing(true);
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -336,8 +336,8 @@ private:
             return emptyState_;
         emptyState_ = new EmptyStateView();
         emptyState_->setContent(
-            tr("pipensx/downloads/empty_title"),
-            tr("pipensx/downloads/empty_body"),
+            tr("gamehubnx/downloads/empty_title"),
+            tr("gamehubnx/downloads/empty_body"),
             // Sin accion: la lista vacia solo informa. Antes ofrecia importar un
             // .torrent, que es justo lo que este fork no hace.
             "",
@@ -391,41 +391,41 @@ private:
             }
         if (!any) {
             brls::Application::notify(
-                tr("pipensx/downloads/clear_completed_none"));
+                tr("gamehubnx/downloads/clear_completed_none"));
             return;
         }
         auto* dialog =
-            new brls::Dialog(tr("pipensx/downloads/clear_completed_question"));
+            new brls::Dialog(tr("gamehubnx/downloads/clear_completed_question"));
         auto run = [this](bool deleteData) {
             std::string error;
             if (!manager_->clearCompleted(deleteData, error) && !error.empty())
                 brls::Application::notify(error);
             startRefreshing(true);
         };
-        dialog->addButton(tr("pipensx/downloads/remove_keep"),
+        dialog->addButton(tr("gamehubnx/downloads/remove_keep"),
                           [run] { run(false); });
-        dialog->addButton(tr("pipensx/downloads/remove_delete"),
+        dialog->addButton(tr("gamehubnx/downloads/remove_delete"),
                           [run] { run(true); });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
     std::string summaryText(const std::vector<DownloadTask>& tasks) const {
         if (tasks.empty())
             return {};
-        const pipensx::QueueSummary s = summarizeQueue(tasks, now_ms());
-        std::string text = tr("pipensx/downloads/summary_counts",
+        const gamehubnx::QueueSummary s = summarizeQueue(tasks, now_ms());
+        std::string text = tr("gamehubnx/downloads/summary_counts",
                               s.downloading, s.queued, s.installing);
         if (s.paused)
-            text += "   " + tr("pipensx/downloads/summary_paused", s.paused);
+            text += "   " + tr("gamehubnx/downloads/summary_paused", s.paused);
         if (s.errors)
-            text += "   " + tr("pipensx/downloads/summary_errors", s.errors);
+            text += "   " + tr("gamehubnx/downloads/summary_errors", s.errors);
         const uint64_t speed = s.downloadSpeedBps + s.installSpeedBps;
         if (speed)
             text += "\n" +
-                    tr("pipensx/downloads/summary_speed", formatSpeed(speed));
+                    tr("gamehubnx/downloads/summary_speed", formatSpeed(speed));
         if (s.etaSeconds)
-            text += "   " + tr("pipensx/downloads/summary_eta",
+            text += "   " + tr("gamehubnx/downloads/summary_eta",
                                formatEtaSeconds(s.etaSeconds));
         return text;
     }
@@ -447,8 +447,8 @@ private:
         setTextIfChanged(summary_, summaryText(next));
         updateActionHint(brls::BUTTON_Y,
                          hasPausableTask(next)
-                             ? tr("pipensx/downloads/pause_all")
-                             : tr("pipensx/downloads/resume_all"));
+                             ? tr("gamehubnx/downloads/pause_all")
+                             : tr("gamehubnx/downloads/resume_all"));
         uint64_t settingsGeneration = settings_ ? settings_->generation() : 0;
         bool settingsChanged = settingsGeneration != settingsGeneration_;
         bool structureChanged = !initialized_ || pendingReload_ ||
@@ -593,4 +593,4 @@ private:
     std::string activeDeployTask_;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

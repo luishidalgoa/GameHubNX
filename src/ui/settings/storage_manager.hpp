@@ -17,9 +17,9 @@
 #include "ui/settings/settings_cells.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
-// Storage Manager: an SD-card breakdown of pipensx-managed directories plus
+// Storage Manager: an SD-card breakdown of gamehubnx-managed directories plus
 // explicit, confirm-before-deleting cleanup actions. Each action reports the
 // space it can recover before the confirmation dialog, and the breakdown is
 // re-scanned after every change.
@@ -48,32 +48,32 @@ private:
         content->setPadding(24, 34, 24, 34);
 
         meter_ = new StorageMeter();
-        meter_->setHeader(tr("pipensx/storage/title_sd_card"));
+        meter_->setHeader(tr("gamehubnx/storage/title_sd_card"));
         content->addView(meter_);
 
-        addSection(content, tr("pipensx/storage/breakdown"));
+        addSection(content, tr("gamehubnx/storage/breakdown"));
         breakdown_ = new brls::Box(brls::Axis::COLUMN);
         breakdown_->setMarginBottom(10);
         content->addView(breakdown_);
 
-        addSection(content, tr("pipensx/storage/cleanup"));
+        addSection(content, tr("gamehubnx/storage/cleanup"));
         clearCompleted_ = actionCell(
-            tr("pipensx/storage/clear_completed"), "", [this] {
+            tr("gamehubnx/storage/clear_completed"), "", [this] {
                 confirmClearCompleted();
             });
         content->addView(clearCompleted_);
         clearImages_ = actionCell(
-            tr("pipensx/storage/clear_images"), "", [this] {
+            tr("gamehubnx/storage/clear_images"), "", [this] {
                 confirmClearImages();
             });
         content->addView(clearImages_);
         clearTorrents_ = actionCell(
-            tr("pipensx/storage/clear_torrents"), "", [this] {
+            tr("gamehubnx/storage/clear_torrents"), "", [this] {
                 confirmClearTorrents();
             });
         content->addView(clearTorrents_);
         clearTemporary_ = actionCell(
-            tr("pipensx/storage/clear_temporary"), "", [this] {
+            tr("gamehubnx/storage/clear_temporary"), "", [this] {
                 confirmClearTemporary();
             });
         content->addView(clearTemporary_);
@@ -82,7 +82,7 @@ private:
         scroll->setGrow(1);
         scroll->setContentView(content);
         frame_ = new brls::AppletFrame(scroll);
-        frame_->setTitle(tr("pipensx/storage/title"));
+        frame_->setTitle(tr("gamehubnx/storage/title"));
     }
 
     struct ScanPayload {
@@ -112,7 +112,7 @@ private:
                         : payload.completedBytes + size;
         }
         payload.orphanBytes =
-            pipensx::orphanTorrentBytes(manager_->torrentRoot(), active);
+            gamehubnx::orphanTorrentBytes(manager_->torrentRoot(), active);
         return payload;
     }
 
@@ -177,13 +177,13 @@ private:
         if (!breakdown_)
             return;
         breakdown_->clearViews();
-        addRow(tr("pipensx/storage/cat_downloads"), snapshot_.downloadsBytes);
-        addRow(tr("pipensx/storage/cat_torrents"), snapshot_.torrentBytes);
-        addRow(tr("pipensx/storage/cat_images"), snapshot_.imageCacheBytes);
-        addRow(tr("pipensx/storage/cat_metadata"), snapshot_.metadataCacheBytes);
-        addRow(tr("pipensx/storage/cat_temporary"), snapshot_.temporaryBytes);
-        addRow(tr("pipensx/storage/cat_icons"), snapshot_.iconsBytes);
-        addRow(tr("pipensx/storage/cat_other"), snapshot_.otherBytes);
+        addRow(tr("gamehubnx/storage/cat_downloads"), snapshot_.downloadsBytes);
+        addRow(tr("gamehubnx/storage/cat_torrents"), snapshot_.torrentBytes);
+        addRow(tr("gamehubnx/storage/cat_images"), snapshot_.imageCacheBytes);
+        addRow(tr("gamehubnx/storage/cat_metadata"), snapshot_.metadataCacheBytes);
+        addRow(tr("gamehubnx/storage/cat_temporary"), snapshot_.temporaryBytes);
+        addRow(tr("gamehubnx/storage/cat_icons"), snapshot_.iconsBytes);
+        addRow(tr("gamehubnx/storage/cat_other"), snapshot_.otherBytes);
     }
 
     void addRow(const std::string& label, uint64_t bytes) {
@@ -211,23 +211,23 @@ private:
     }
 
     std::string recoverableDetail(uint64_t bytes) {
-        return bytes == 0 ? tr("pipensx/storage/nothing_to_recover")
-                          : tr("pipensx/storage/recoverable", formatBytes(bytes));
+        return bytes == 0 ? tr("gamehubnx/storage/nothing_to_recover")
+                          : tr("gamehubnx/storage/recoverable", formatBytes(bytes));
     }
 
     std::string completedDownloadsDetail() {
         if (!hasFinished_)
-            return tr("pipensx/storage/nothing_to_recover");
-        return tr("pipensx/storage/recoverable", formatBytes(completedBytes_));
+            return tr("gamehubnx/storage/nothing_to_recover");
+        return tr("gamehubnx/storage/recoverable", formatBytes(completedBytes_));
     }
 
     void confirmClearCompleted() {
         if (!hasFinished_) {
             brls::Application::notify(
-                tr("pipensx/storage/nothing_to_recover"));
+                tr("gamehubnx/storage/nothing_to_recover"));
             return;
         }
-        confirm(tr("pipensx/storage/clear_completed_confirm",
+        confirm(tr("gamehubnx/storage/clear_completed_confirm",
                    formatBytes(completedBytes_)), [this] { clearCompleted(); });
     }
 
@@ -241,7 +241,7 @@ private:
 
     void confirmClearTemporary() {
         if (manager_->hasActiveTransfer()) {
-            brls::Application::notify(tr("pipensx/storage/busy_transfer"));
+            brls::Application::notify(tr("gamehubnx/storage/busy_transfer"));
             return;
         }
         confirmAction(snapshot_.temporaryBytes, [this] { clearTemporary(); });
@@ -250,18 +250,18 @@ private:
     void confirmAction(uint64_t bytes, const std::function<void()>& action) {
         if (bytes == 0) {
             brls::Application::notify(
-                tr("pipensx/storage/nothing_to_recover"));
+                tr("gamehubnx/storage/nothing_to_recover"));
             return;
         }
-        confirm(tr("pipensx/storage/confirm_recover", formatBytes(bytes)),
+        confirm(tr("gamehubnx/storage/confirm_recover", formatBytes(bytes)),
                 action);
     }
 
     void confirm(const std::string& message,
                  const std::function<void()>& action) {
         auto* dialog = new brls::Dialog(message);
-        dialog->addButton(tr("pipensx/common/clear"), [action] { action(); });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/clear"), [action] { action(); });
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -273,7 +273,7 @@ private:
                 brls::Application::notify(error);
             return;
         }
-        brls::Application::notify(tr("pipensx/storage/cleared"));
+        brls::Application::notify(tr("gamehubnx/storage/cleared"));
         refresh();
     }
 
@@ -284,7 +284,7 @@ private:
             brls::Application::notify(error);
             return;
         }
-        brls::Application::notify(tr("pipensx/storage/cleared"));
+        brls::Application::notify(tr("gamehubnx/storage/cleared"));
         refresh();
     }
 
@@ -303,13 +303,13 @@ private:
             brls::Application::notify(error);
             return;
         }
-        brls::Application::notify(tr("pipensx/storage/cleared"));
+        brls::Application::notify(tr("gamehubnx/storage/cleared"));
         refresh();
     }
 
     void clearTemporary() {
         if (manager_->hasActiveTransfer()) {
-            brls::Application::notify(tr("pipensx/storage/busy_transfer"));
+            brls::Application::notify(tr("gamehubnx/storage/busy_transfer"));
             return;
         }
         std::string error;
@@ -320,7 +320,7 @@ private:
             brls::Application::notify(error);
             return;
         }
-        brls::Application::notify(tr("pipensx/storage/cleared"));
+        brls::Application::notify(tr("gamehubnx/storage/cleared"));
         refresh();
     }
 
@@ -343,4 +343,4 @@ private:
     bool refreshPending_ = false;
 };
 
-} // namespace pipensx::ui
+} // namespace gamehubnx::ui

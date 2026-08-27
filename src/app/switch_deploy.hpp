@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 enum class SwitchDeployProblem {
     None,
@@ -167,4 +167,4 @@ private:
     std::optional<PendingOffer> pendingOffer_;
 };
 
-} // namespace pipensx
+} // namespace gamehubnx

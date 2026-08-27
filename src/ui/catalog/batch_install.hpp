@@ -24,7 +24,7 @@
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 class BatchInstallActivity;
 
@@ -65,18 +65,18 @@ public:
         title_->setTextColor(item.selected ? theme::textPrimary()
                                            : theme::textDisabled());
         title_->setText(item.entry.title);
-        std::string meta = tr("pipensx/batch/item_selected",
+        std::string meta = tr("gamehubnx/batch/item_selected",
                               formatBytes(item.space.requiredBytes));
         if (item.space.packageFiles)
-            meta += tr("pipensx/batch/item_packages", item.space.packageFiles);
+            meta += tr("gamehubnx/batch/item_packages", item.space.packageFiles);
         if (item.space.certainty ==
             SpaceEstimateCertainty::CompressedUnknown) {
-            meta += tr("pipensx/batch/item_nsz");
+            meta += tr("gamehubnx/batch/item_nsz");
         }
         meta_->setText(meta);
     }
 
-    void setFailure(const pipensx::BatchItemFailure& failure) {
+    void setFailure(const gamehubnx::BatchItemFailure& failure) {
         icon_->setKind(ActionIconKind::Error);
         title_->setTextColor(theme::textPrimary());
         title_->setText(failure.entry.title);
@@ -199,11 +199,11 @@ public:
         status_->setFontSize(17);
         status_->setMarginBottom(12);
         status_->setTextColor(theme::textSecondary());
-        status_->setText(tr("pipensx/batch/preparing"));
+        status_->setText(tr("gamehubnx/batch/preparing"));
         content->addView(status_);
 
         meter_ = new StorageMeter();
-        meter_->setHeader(tr("pipensx/batch/sd_card"));
+        meter_->setHeader(tr("gamehubnx/batch/sd_card"));
         meter_->setLegendVisible(true);
         meter_->setMarginBottom(12);
         content->addView(meter_);
@@ -232,7 +232,7 @@ public:
         selectAll->setGrow(1);
         selectAll->setHeight(48);
         selectAll->setMarginRight(10);
-        selectAll->setText(tr("pipensx/batch/select_ready"));
+        selectAll->setText(tr("gamehubnx/batch/select_ready"));
         selectAll->registerClickAction([this](brls::View*) {
             setAllPrepared(true);
             return true;
@@ -242,7 +242,7 @@ public:
         clear->setStyle(&brls::BUTTONSTYLE_DEFAULT);
         clear->setGrow(1);
         clear->setHeight(48);
-        clear->setText(tr("pipensx/common/clear"));
+        clear->setText(tr("gamehubnx/common/clear"));
         clear->registerClickAction([this](brls::View*) {
             setAllPrepared(false);
             return true;
@@ -254,12 +254,12 @@ public:
         destination_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
         destination_->setHeight(48);
         destination_->setMarginTop(8);
-        destination_->setText(tr("pipensx/batch/destination",
+        destination_->setText(tr("gamehubnx/batch/destination",
                                  installDestinationLabel(target_)));
         destination_->registerClickAction([this](brls::View*) {
-            target_ = target_ == pipensx::install::InstallStorageTarget::Nand
-                ? pipensx::install::InstallStorageTarget::SdCard
-                : pipensx::install::InstallStorageTarget::Nand;
+            target_ = target_ == gamehubnx::install::InstallStorageTarget::Nand
+                ? gamehubnx::install::InstallStorageTarget::SdCard
+                : gamehubnx::install::InstallStorageTarget::Nand;
             refreshSummary();
             return true;
         });
@@ -268,7 +268,7 @@ public:
         enqueue_ = new brls::Button();
         enqueue_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
         enqueue_->setHeight(58);
-        enqueue_->setText(tr("pipensx/batch/add_to_queue"));
+        enqueue_->setText(tr("gamehubnx/batch/add_to_queue"));
         enqueue_->registerClickAction([this](brls::View*) {
             enqueuePrepared();
             return true;
@@ -284,7 +284,7 @@ public:
         downloads->setGrow(1);
         downloads->setHeight(54);
         downloads->setMarginRight(10);
-        downloads->setText(tr("pipensx/batch/view_downloads"));
+        downloads->setText(tr("gamehubnx/batch/view_downloads"));
         downloads->registerClickAction([this](brls::View*) {
             auto callback = viewDownloads_;
             brls::delay(100, [callback] {
@@ -299,7 +299,7 @@ public:
         resultBack_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
         resultBack_->setGrow(1);
         resultBack_->setHeight(54);
-        resultBack_->setText(tr("pipensx/batch/back_to_catalog"));
+        resultBack_->setText(tr("gamehubnx/batch/back_to_catalog"));
         resultBack_->registerClickAction([](brls::View*) {
             brls::Application::popActivity();
             return true;
@@ -308,7 +308,7 @@ public:
         content->addView(resultControls_);
 
         frame_ = new brls::AppletFrame(content);
-        frame_->setTitle(tr("pipensx/batch/frame_title"));
+        frame_->setTitle(tr("gamehubnx/batch/frame_title"));
     }
 
     ~BatchInstallActivity() override {
@@ -351,10 +351,10 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
-        cancelAction_ = registerAction(tr("pipensx/common/cancel"), brls::BUTTON_Y,
+        cancelAction_ = registerAction(tr("gamehubnx/common/cancel"), brls::BUTTON_Y,
                                        [this](brls::View*) {
             cancelled_->store(true);
-            status_->setText(tr("pipensx/batch/cancelling"));
+            status_->setText(tr("gamehubnx/batch/cancelling"));
             return true;
         });
         startPreparation();
@@ -381,23 +381,23 @@ private:
         brls::async([this, alive, cancelled, installer, provider, entries,
                      debridMode, selection] {
             auto progress = [this, alive](
-                                const pipensx::BatchPrepareProgress& value) {
+                                const gamehubnx::BatchPrepareProgress& value) {
                 std::string stage;
                 switch (value.magnet.stage) {
-                    case pipensx::MagnetProgress::Stage::FindingPeers:
-                        stage = tr("pipensx/batch/stage_peers");
+                    case gamehubnx::MagnetProgress::Stage::FindingPeers:
+                        stage = tr("gamehubnx/batch/stage_peers");
                         break;
-                    case pipensx::MagnetProgress::Stage::Connecting:
-                        stage = tr("pipensx/batch/stage_connecting");
+                    case gamehubnx::MagnetProgress::Stage::Connecting:
+                        stage = tr("gamehubnx/batch/stage_connecting");
                         break;
-                    case pipensx::MagnetProgress::Stage::FetchingMetadata:
-                        stage = tr("pipensx/batch/stage_metadata");
+                    case gamehubnx::MagnetProgress::Stage::FetchingMetadata:
+                        stage = tr("gamehubnx/batch/stage_metadata");
                         break;
-                    case pipensx::MagnetProgress::Stage::Validating:
-                        stage = tr("pipensx/batch/stage_validating");
+                    case gamehubnx::MagnetProgress::Stage::Validating:
+                        stage = tr("gamehubnx/batch/stage_validating");
                         break;
                 }
-                std::string text = tr("pipensx/batch/progress", value.index,
+                std::string text = tr("gamehubnx/batch/progress", value.index,
                                       value.total, value.title, stage);
                 brls::sync([this, alive, text] {
                     if (alive->load())
@@ -415,7 +415,7 @@ private:
                     return;
                 prepared_ = prepared;
                 if (prepared_->cancelled()) {
-                    status_->setText(tr("pipensx/batch/cancelled"));
+                    status_->setText(tr("gamehubnx/batch/cancelled"));
                     return;
                 }
                 dataSource_->setPreparation(prepared_);
@@ -427,7 +427,7 @@ private:
                     cancelAction_ = ACTION_NONE;
                 }
                 queueAction_ = registerAction(
-                    tr("pipensx/batch/add_to_queue"), brls::BUTTON_RB,
+                    tr("gamehubnx/batch/add_to_queue"), brls::BUTTON_RB,
                     [this](brls::View*) {
                         enqueuePrepared();
                         return true;
@@ -472,21 +472,21 @@ private:
         for (const PreparedCatalogInstall& item : prepared_->items())
             selected += item.selected ? 1 : 0;
         const auto estimate = prepared_->selectedSpace();
-        storage_ = pipensx::queryStorageSpace(manager_->rootPath());
-        packageStorage_ = pipensx::queryInstallStorageSpace(
+        storage_ = gamehubnx::queryStorageSpace(manager_->rootPath());
+        packageStorage_ = gamehubnx::queryInstallStorageSpace(
             target_, manager_->rootPath());
-        const auto check = pipensx::assessTransferSpace(
+        const auto check = gamehubnx::assessTransferSpace(
             estimate, storage_, packageStorage_);
 
-        std::string text = tr("pipensx/batch/ready_selected", selected);
+        std::string text = tr("gamehubnx/batch/ready_selected", selected);
         if (!prepared_->failures().empty())
-            text += tr("pipensx/batch/failed_count",
+            text += tr("gamehubnx/batch/failed_count",
                        prepared_->failures().size());
-        text += tr("pipensx/batch/selected_bytes",
+        text += tr("gamehubnx/batch/selected_bytes",
                    formatBytes(estimate.requiredBytes));
         if (estimate.certainty ==
             SpaceEstimateCertainty::CompressedUnknown) {
-            text += tr("pipensx/batch/nsz_note");
+            text += tr("gamehubnx/batch/nsz_note");
         }
         if (!storage_.available && !storage_.error.empty())
             text += "\n" + storage_.error;
@@ -494,7 +494,7 @@ private:
 
         meter_->setHeader(storageMeterHeader(target_));
         if (destination_)
-            destination_->setText(tr("pipensx/batch/destination",
+            destination_->setText(tr("gamehubnx/batch/destination",
                                      installDestinationLabel(target_)));
         const StorageSpaceSnapshot& meterStorage =
             estimate.packageFiles > 0 ? packageStorage_ : storage_;
@@ -512,7 +512,7 @@ private:
             check.status != InstallSpaceCheckStatus::Insufficient;
         enqueue_->setState(enabled ? brls::ButtonState::ENABLED
                                    : brls::ButtonState::DISABLED);
-        enqueue_->setText(tr("pipensx/batch/add_n_to_queue", selected));
+        enqueue_->setText(tr("gamehubnx/batch/add_n_to_queue", selected));
     }
 
     void enqueuePrepared() {
@@ -521,21 +521,21 @@ private:
         const auto estimate = prepared_->selectedSpace();
         if (estimate.selectedFiles == 0 || estimate.overflow) {
             refreshSummary();
-            brls::Application::notify(tr("pipensx/batch/select_one_ready"));
+            brls::Application::notify(tr("gamehubnx/batch/select_one_ready"));
             return;
         }
-        storage_ = pipensx::queryStorageSpace(manager_->rootPath());
-        packageStorage_ = pipensx::queryInstallStorageSpace(
+        storage_ = gamehubnx::queryStorageSpace(manager_->rootPath());
+        packageStorage_ = gamehubnx::queryInstallStorageSpace(
             target_, manager_->rootPath());
-        const auto check = pipensx::assessTransferSpace(
+        const auto check = gamehubnx::assessTransferSpace(
             estimate, storage_, packageStorage_);
         if (check.status == InstallSpaceCheckStatus::Insufficient) {
             refreshSummary();
-            brls::Application::notify(tr("pipensx/batch/no_space"));
+            brls::Application::notify(tr("gamehubnx/batch/no_space"));
             return;
         }
 
-        pipensx::BatchEnqueueResult result =
+        gamehubnx::BatchEnqueueResult result =
             debridMode_ && debridProvider_
                 ? installer_->enqueueViaDebrid(
                       *prepared_, *manager_, settings_->get().debridProvider,
@@ -552,24 +552,24 @@ private:
         if (completion_)
             completion_(remaining_);
         enqueueFinished_ = true;
-        std::string message = tr("pipensx/batch/added",
+        std::string message = tr("gamehubnx/batch/added",
                                  result.taskIds.size());
         const size_t failures = prepared_->failures().size() +
                                 result.failures.size();
         if (failures)
-            message += tr("pipensx/batch/added_failed", failures);
+            message += tr("gamehubnx/batch/added_failed", failures);
         if (result.skipped)
-            message += tr("pipensx/batch/added_skipped", result.skipped);
+            message += tr("gamehubnx/batch/added_skipped", result.skipped);
         if (!remaining_.empty())
-            message += tr("pipensx/batch/retry_note");
+            message += tr("gamehubnx/batch/retry_note");
         size_t shown = 0;
-        for (const pipensx::BatchItemFailure& failure :
+        for (const gamehubnx::BatchItemFailure& failure :
              prepared_->failures()) {
             if (shown++ == 3)
                 break;
             message += "\n" + failure.entry.title + ": " + failure.error;
         }
-        for (const pipensx::BatchItemFailure& failure : result.failures) {
+        for (const gamehubnx::BatchItemFailure& failure : result.failures) {
             if (shown++ == 3)
                 break;
             message += "\n" + failure.entry.title + ": " + failure.error;
@@ -579,8 +579,8 @@ private:
         controls_->setVisibility(brls::Visibility::GONE);
         resultControls_->setVisibility(brls::Visibility::VISIBLE);
         resultBack_->setText(remaining_.empty()
-                                 ? tr("pipensx/batch/back_to_catalog")
-                                 : tr("pipensx/batch/back_to_selected"));
+                                 ? tr("gamehubnx/batch/back_to_catalog")
+                                 : tr("gamehubnx/batch/back_to_selected"));
         if (queueAction_ != ACTION_NONE) {
             unregisterAction(queueAction_);
             queueAction_ = ACTION_NONE;
@@ -596,7 +596,7 @@ private:
     std::unordered_set<std::string> remaining_;
     // Memoria elegida para esta tanda. Arranca en el ajuste global pero se
     // cambia aqui mismo, antes de encolar, sin tocar el ajuste.
-    pipensx::install::InstallStorageTarget target_;
+    gamehubnx::install::InstallStorageTarget target_;
     std::shared_ptr<std::atomic<bool>> alive_;
     std::shared_ptr<std::atomic<bool>> cancelled_;
     std::shared_ptr<CatalogBatchInstaller> installer_;
@@ -624,4 +624,4 @@ private:
     bool shopOnly_ = false;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

@@ -10,7 +10,7 @@ description: >
   src/install, src/platform, src/main_switch.cpp, vendor/libnx-ext.
 ---
 
-# libnx in pipensx
+# libnx in gamehubnx
 
 Two rules carry almost all the weight: **read the header instead of recalling
 the signature**, and **know which of the two builds will see your call**.
@@ -41,7 +41,7 @@ semantics, and the NCA/CNMT/ticket formats behind `package_stream.cpp`. The head
 ## 2. Most sources compile twice, and the second build is easy to forget
 
 `CORE_SOURCES`, `APP_SERVICE_SOURCES` and `UI_SOURCES` in `CMakeLists.txt` are
-linked into **both** `pipensx` (aarch64, real libnx) and `golden_runner` (PC,
+linked into **both** `gamehubnx` (aarch64, real libnx) and `golden_runner` (PC,
 no libnx at all). Only `src/main_switch.cpp`, `src/install/install_backend_switch.cpp`,
 `src/platform/switch_*` and the vendored ipcext are Switch-only.
 
@@ -52,7 +52,7 @@ do not invent a fourth:
 already do it (`src/app/install_space.cpp`, `src/app/stream_ram_budget.cpp`,
 `src/app/update_service.cpp`, `src/ui/settings/settings_view.hpp`,
 `src/core/util.c`, `src/install/package_stream.cpp`, …). `__SWITCH__` is set
-by `target_compile_definitions(pipensx PRIVATE __SWITCH__)` and is absent for
+by `target_compile_definitions(gamehubnx PRIVATE __SWITCH__)` and is absent for
 `golden_runner`.
 
 **b. Unconditional `#include <switch.h>`, resolved by the PC shim.** Only
@@ -82,12 +82,12 @@ on pattern (a).
   (`src/core/util.h:41`), or the user-facing
   `"Unable to query SD storage (0x%08x)."` form.
 - Never `assert`/abort on a bad `Result`. This is homebrew running on someone's
-  console — degrade and report. (Same reason `pipensx_utp` is built `NDEBUG`.)
+  console — degrade and report. (Same reason `gamehubnx_utp` is built `NDEBUG`.)
 
 ## 4. Verify with both builds
 
 ```
-make            # Switch: build-switch/pipensx.nro
+make            # Switch: build-switch/gamehubnx.nro
 make golden     # PC: compiles the shared sources against the shim, then renders
 ```
 

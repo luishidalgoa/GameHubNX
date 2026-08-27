@@ -20,7 +20,7 @@
 #include "ui/settings/settings_cells.hpp"
 #include "ui/theme.hpp"
 
-namespace pipensx::ui {
+namespace gamehubnx::ui {
 
 // Advanced settings — the rare / troubleshooting controls that used to crowd the
 // bottom of SettingsView. Pushed as its own activity so the main list stays
@@ -39,28 +39,28 @@ public:
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(24, 34, 24, 34);
 
-        addSection(content, tr("pipensx/settings/section_network"));
-        proxy_ = actionCell(tr("pipensx/settings/proxy"), "",
+        addSection(content, tr("gamehubnx/settings/section_network"));
+        proxy_ = actionCell(tr("gamehubnx/settings/proxy"), "",
             [this] { editProxy(); });
         content->addView(proxy_);
         refreshProxyDetail();
         auto* proxyNote = new brls::Label();
-        proxyNote->setText(tr("pipensx/settings/proxy_note"));
+        proxyNote->setText(tr("gamehubnx/settings/proxy_note"));
         proxyNote->setFontSize(16);
         proxyNote->setTextColor(theme::textSecondary());
         proxyNote->setMarginBottom(10);
         content->addView(proxyNote);
 
-        addSection(content, tr("pipensx/settings/section_diagnostics"));
+        addSection(content, tr("gamehubnx/settings/section_diagnostics"));
         auto* description = new brls::Label();
-        description->setText(tr("pipensx/settings/diagnostics_note"));
+        description->setText(tr("gamehubnx/settings/diagnostics_note"));
         description->setFontSize(16);
         description->setTextColor(theme::textSecondary());
         description->setMarginBottom(10);
         content->addView(description);
 
         extendedTelemetry_ = new brls::BooleanCell();
-        extendedTelemetry_->init(tr("pipensx/settings/extended_telemetry"),
+        extendedTelemetry_->init(tr("gamehubnx/settings/extended_telemetry"),
             settings_->get().extendedTelemetry,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
@@ -72,26 +72,26 @@ public:
                 }
                 telemetry_set_enabled(enabled ? 1 : 0);
                 brls::Application::notify(enabled
-                    ? tr("pipensx/settings/telemetry_on")
-                    : tr("pipensx/settings/telemetry_off"));
+                    ? tr("gamehubnx/settings/telemetry_on")
+                    : tr("gamehubnx/settings/telemetry_off"));
             });
         content->addView(extendedTelemetry_);
 
-        content->addView(actionCell(tr("pipensx/settings/capture_snapshot"),
-            tr("pipensx/settings/capture_snapshot_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/capture_snapshot"),
+            tr("gamehubnx/settings/capture_snapshot_detail"),
             [this] { captureSnapshot(); }));
-        content->addView(actionCell(tr("pipensx/settings/clear_log"),
-            tr("pipensx/settings/clear_log_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/clear_log"),
+            tr("gamehubnx/settings/clear_log_detail"),
             [this] { confirmClearLog(); }));
-        content->addView(actionCell(tr("pipensx/settings/clear_artwork"),
-            tr("pipensx/settings/clear_artwork_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/clear_artwork"),
+            tr("gamehubnx/settings/clear_artwork_detail"),
             [this] { confirmClearArtwork(); }));
-        content->addView(actionCell(tr("pipensx/settings/reset"),
-            tr("pipensx/settings/reset_detail"),
+        content->addView(actionCell(tr("gamehubnx/settings/reset"),
+            tr("gamehubnx/settings/reset_detail"),
             [this] { confirmReset(); }));
 
         auto* path = new brls::Label();
-        path->setText(tr("pipensx/settings/log_path", LogPath));
+        path->setText(tr("gamehubnx/settings/log_path", LogPath));
         path->setFontSize(15);
         path->setTextColor(theme::textTertiary());
         path->setMarginTop(18);
@@ -102,7 +102,7 @@ public:
         scroll->setContentView(content);
 
         frame_ = new brls::AppletFrame(scroll);
-        frame_->setTitle(tr("pipensx/settings/advanced"));
+        frame_->setTitle(tr("gamehubnx/settings/advanced"));
     }
 
     brls::View* createContentView() override {
@@ -113,15 +113,15 @@ private:
     void refreshProxyDetail() {
         const std::string& url = settings_->get().proxyUrl;
         proxy_->setDetailText(url.empty()
-            ? tr("pipensx/settings/proxy_direct") : url);
+            ? tr("gamehubnx/settings/proxy_direct") : url);
     }
 
     void editProxy() {
         brls::Application::getImeManager()->openForText(
             [this](std::string text) {
-                if (!pipensx::isValidProxyUrl(text)) {
+                if (!gamehubnx::isValidProxyUrl(text)) {
                     brls::Application::notify(
-                        tr("pipensx/settings/proxy_invalid"));
+                        tr("gamehubnx/settings/proxy_invalid"));
                     return;
                 }
                 AppSettingsData values = settings_->get();
@@ -129,11 +129,11 @@ private:
                 if (!persist(values, "proxy_url"))
                     return;
                 // Takes effect on the next request, not the next launch.
-                pipensx::applyProxySetting(text);
+                gamehubnx::applyProxySetting(text);
                 refreshProxyDetail();
             },
-            tr("pipensx/settings/proxy"),
-            tr("pipensx/settings/proxy_detail"), 128,
+            tr("gamehubnx/settings/proxy"),
+            tr("gamehubnx/settings/proxy_detail"), 128,
             settings_->get().proxyUrl, brls::KEYBOARD_DISABLE_NONE);
     }
 
@@ -153,33 +153,33 @@ private:
         extendedTelemetry_->setOn(values.extendedTelemetry, false);
         telemetry_set_enabled(values.extendedTelemetry ? 1 : 0);
         // A reset clears the proxy, so the environment has to follow it.
-        pipensx::applyProxySetting(values.proxyUrl);
+        gamehubnx::applyProxySetting(values.proxyUrl);
         refreshProxyDetail();
     }
 
     void captureSnapshot() {
         writeSystemSnapshot(manager_, catalog_, metadata_, installed_, "manual");
-        brls::Application::notify(tr("pipensx/settings/snapshot_written"));
+        brls::Application::notify(tr("gamehubnx/settings/snapshot_written"));
     }
 
     void confirmClearLog() {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/settings/clear_log_question"));
-        dialog->addButton(tr("pipensx/settings/clear_log"), [] {
+            tr("gamehubnx/settings/clear_log_question"));
+        dialog->addButton(tr("gamehubnx/settings/clear_log"), [] {
             if (!clearApplicationLog())
                 brls::Application::notify(
-                    tr("pipensx/settings/clear_log_failed"));
+                    tr("gamehubnx/settings/clear_log_failed"));
             else
-                brls::Application::notify(tr("pipensx/settings/clear_log_done"));
+                brls::Application::notify(tr("gamehubnx/settings/clear_log_done"));
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
     void confirmClearArtwork() {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/settings/clear_artwork_question"));
-        dialog->addButton(tr("pipensx/settings/clear_artwork_action"), [this] {
+            tr("gamehubnx/settings/clear_artwork_question"));
+        dialog->addButton(tr("gamehubnx/settings/clear_artwork_action"), [this] {
             std::string error;
             if (!metadata_->clearImageCache(error)) {
                 diagnostic_error("metadata", "clear_cache", "error=%s",
@@ -187,17 +187,17 @@ private:
                 brls::Application::notify(error);
             } else {
                 brls::Application::notify(
-                    tr("pipensx/settings/clear_artwork_done"));
+                    tr("gamehubnx/settings/clear_artwork_done"));
             }
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
     void confirmReset() {
         auto* dialog = new brls::Dialog(
-            tr("pipensx/settings/reset_question"));
-        dialog->addButton(tr("pipensx/settings/reset_action"), [this] {
+            tr("gamehubnx/settings/reset_question"));
+        dialog->addButton(tr("gamehubnx/settings/reset_action"), [this] {
             std::string error;
             if (!settings_->reset(error)) {
                 diagnostic_error("settings", "reset", "error=%s",
@@ -208,9 +208,9 @@ private:
             applyOwnValues();
             if (onReset_)
                 onReset_();
-            brls::Application::notify(tr("pipensx/settings/reset_done"));
+            brls::Application::notify(tr("gamehubnx/settings/reset_done"));
         });
-        dialog->addButton(tr("pipensx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
         dialog->open();
     }
 
@@ -225,4 +225,4 @@ private:
     brls::DetailCell* proxy_ = nullptr;
 };
 
-}  // namespace pipensx::ui
+}  // namespace gamehubnx::ui

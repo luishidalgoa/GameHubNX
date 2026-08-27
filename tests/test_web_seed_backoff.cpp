@@ -140,7 +140,7 @@ int main() {
     for (uint64_t i = 0; i < total; ++i)
         g_payload[i] = (uint8_t)(i * 31 + 7);
 
-    pipensx::WebSeedSource::BackoffPolicy fastBackoff;
+    gamehubnx::WebSeedSource::BackoffPolicy fastBackoff;
     fastBackoff.maxConsecutiveFailures = 3;
     fastBackoff.baseBackoffSec = 0;
     fastBackoff.maxBackoffSec = 5;
@@ -155,7 +155,7 @@ int main() {
 
     // ---- Test 1: consecutive failures lead to dead source ----
     {
-        pipensx::WebSeedSource src(url, "file.bin", pieceLength, total,
+        gamehubnx::WebSeedSource src(url, "file.bin", pieceLength, total,
                                    numPieces, 2, fastBackoff);
 
         assert(src.enqueue(0));
@@ -164,7 +164,7 @@ int main() {
 
         int failures = 0;
         for (int spins = 0; spins < 500 && failures < 3; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 assert(!c.ok);
                 failures++;
@@ -181,7 +181,7 @@ int main() {
 
     // ---- Test 2: dead source revives after timeout ----
     {
-        pipensx::WebSeedSource src(url, "file.bin", pieceLength, total,
+        gamehubnx::WebSeedSource src(url, "file.bin", pieceLength, total,
                                    numPieces, 2, fastBackoff);
 
         assert(src.enqueue(0));
@@ -190,7 +190,7 @@ int main() {
 
         int failures = 0;
         for (int spins = 0; spins < 500 && failures < 3; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 assert(!c.ok);
                 failures++;
@@ -218,7 +218,7 @@ int main() {
 
         uint32_t drained = 0;
         for (int spins = 0; spins < 500 && drained < numPieces; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 assert(c.ok);
                 drained++;
@@ -231,17 +231,17 @@ int main() {
 
     // ---- Test 3: backoff rejects immediate retry, then permits it later ----
     {
-        pipensx::WebSeedSource::BackoffPolicy retryBackoff = fastBackoff;
+        gamehubnx::WebSeedSource::BackoffPolicy retryBackoff = fastBackoff;
         retryBackoff.baseBackoffSec = 1;
         g_responseMode.store(0);
 
-        pipensx::WebSeedSource src(url, "file.bin", pieceLength, total,
+        gamehubnx::WebSeedSource src(url, "file.bin", pieceLength, total,
                                    numPieces, 1, retryBackoff);
 
         assert(src.enqueue(0));
         bool sawFailure = false;
         for (int spins = 0; spins < 500 && !sawFailure; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 assert(!c.ok);
                 sawFailure = true;
@@ -258,7 +258,7 @@ int main() {
 
     // ---- Test 4: success resets the failure counter ----
     {
-        pipensx::WebSeedSource src(url, "file.bin", pieceLength, total,
+        gamehubnx::WebSeedSource src(url, "file.bin", pieceLength, total,
                                    numPieces, 1, fastBackoff);
 
         g_responseMode.store(2);
@@ -269,7 +269,7 @@ int main() {
         int fails = 0;
         int successes = 0;
         for (int spins = 0; spins < 500 && fails < 2; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 if (c.ok)
                     successes++;
@@ -285,7 +285,7 @@ int main() {
         // The next completed piece succeeds and resets the consecutive-failure
         // counter before it reaches the threshold.
         for (int spins = 0; spins < 500 && successes < 1; ++spins) {
-            pipensx::WebSeedSource::Completed c;
+            gamehubnx::WebSeedSource::Completed c;
             if (src.popCompleted(c)) {
                 assert(c.ok);
                 successes++;

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace pipensx {
+namespace gamehubnx {
 
 struct CatalogRefreshBatch {
     bool catalogOk = false;
@@ -35,4 +35,4 @@ CatalogRefreshAdoption adoptCatalogRefresh(
     CatalogRefreshBatch batch, ModIndexService* mods = nullptr,
     const std::string& catalogSourceUrl = {});
 
-} // namespace pipensx
+} // namespace gamehubnx

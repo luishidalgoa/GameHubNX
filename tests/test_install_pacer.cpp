@@ -15,7 +15,7 @@ struct FakeClock {
     bool cancelOnSleep = false;
     bool cancelled = false;
 
-    pipensx::InstallPacer::Clock callbacks() {
+    gamehubnx::InstallPacer::Clock callbacks() {
         return {
             [this] { return now; },
             [this](uint64_t milliseconds) {
@@ -28,7 +28,7 @@ struct FakeClock {
     }
 };
 
-void establishTenMiBSource(pipensx::InstallPacer& pacer, FakeClock& clock) {
+void establishTenMiBSource(gamehubnx::InstallPacer& pacer, FakeClock& clock) {
     pacer.observeSource(5 * MiB / 2, clock.now);
     clock.now += 500;
     pacer.observeSource(5 * MiB / 2, clock.now);
@@ -37,7 +37,7 @@ void establishTenMiBSource(pipensx::InstallPacer& pacer, FakeClock& clock) {
 
 void testNspPacesInInstalledBytes() {
     FakeClock clock;
-    pipensx::InstallPacer pacer(256 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(256 * MiB, clock.callbacks());
     establishTenMiBSource(pacer, clock);
     pacer.beginPackage(false);
     pacer.setBufferedBytes(60 * MiB);
@@ -45,12 +45,12 @@ void testNspPacesInInstalledBytes() {
     assert(pacer.waitForWrite(4 * MiB, [] { return false; }));
     assert(clock.slept == 200);
     assert(pacer.limitBytesPerSecond() == 10 * MiB);
-    assert(pacer.state() == pipensx::InstallPacer::State::Running);
+    assert(pacer.state() == gamehubnx::InstallPacer::State::Running);
 }
 
 void testOccupancyChangesLimitAndState() {
     FakeClock clock;
-    pipensx::InstallPacer pacer(256 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(256 * MiB, clock.callbacks());
     establishTenMiBSource(pacer, clock);
     pacer.beginPackage(false);
     pacer.setBufferedBytes(60 * MiB);
@@ -60,18 +60,18 @@ void testOccupancyChangesLimitAndState() {
     assert(pacer.waitForWrite(1, [] { return false; }));
     assert(pacer.limitBytesPerSecond() >= 7 * MiB - 1);
     assert(pacer.limitBytesPerSecond() <= 7 * MiB + 1);
-    assert(pacer.state() == pipensx::InstallPacer::State::Recovering);
+    assert(pacer.state() == gamehubnx::InstallPacer::State::Recovering);
 
     pacer.setBufferedBytes(120 * MiB);
     assert(pacer.waitForWrite(1, [] { return false; }));
     assert(pacer.limitBytesPerSecond() >= 15 * MiB - 1);
     assert(pacer.limitBytesPerSecond() <= 15 * MiB + 1);
-    assert(pacer.state() == pipensx::InstallPacer::State::Draining);
+    assert(pacer.state() == gamehubnx::InstallPacer::State::Draining);
 }
 
 void testNszExpansionRaisesSustainableRate() {
     FakeClock clock;
-    pipensx::InstallPacer pacer(256 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(256 * MiB, clock.callbacks());
     establishTenMiBSource(pacer, clock);
     pacer.beginPackage(true);
     pacer.setBufferedBytes(60 * MiB);
@@ -84,17 +84,17 @@ void testNszExpansionRaisesSustainableRate() {
 
 void testCompletePackageBypassesPacing() {
     FakeClock clock;
-    pipensx::InstallPacer pacer(64 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(64 * MiB, clock.callbacks());
     pacer.beginPackage(true);
     pacer.setSourceComplete(true);
     assert(pacer.waitForWrite(32 * MiB, [] { return false; }));
     assert(clock.slept == 0);
-    assert(pacer.state() == pipensx::InstallPacer::State::Disabled);
+    assert(pacer.state() == gamehubnx::InstallPacer::State::Disabled);
 }
 
 void testSourceMeasurementFreezesDuringBackpressure() {
     FakeClock clock;
-    pipensx::InstallPacer pacer(256 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(256 * MiB, clock.callbacks());
     establishTenMiBSource(pacer, clock);
     pacer.setSourceMeasurementEnabled(false, clock.now);
     clock.now += 10000;
@@ -106,7 +106,7 @@ void testSourceMeasurementFreezesDuringBackpressure() {
 void testPrebufferWaitIsCancellable() {
     FakeClock clock;
     clock.cancelOnSleep = true;
-    pipensx::InstallPacer pacer(64 * MiB, clock.callbacks());
+    gamehubnx::InstallPacer pacer(64 * MiB, clock.callbacks());
     pacer.beginPackage(false);
     assert(!pacer.waitForWrite(1, [&clock] { return clock.cancelled; }));
     assert(clock.slept == 50);

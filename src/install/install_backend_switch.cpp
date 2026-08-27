@@ -23,7 +23,7 @@ extern "C" {
 #include <utility>
 #include <vector>
 
-namespace pipensx::install {
+namespace gamehubnx::install {
 namespace {
 
 constexpr const char* TempRoot = GHNX_PATH("install-temp");
@@ -1346,6 +1346,6 @@ std::unique_ptr<InstallBackend> createInstallBackend(
     return std::make_unique<SwitchInstallBackend>(workingRoot, target);
 }
 
-} // namespace pipensx::install
+} // namespace gamehubnx::install
 
 #endif

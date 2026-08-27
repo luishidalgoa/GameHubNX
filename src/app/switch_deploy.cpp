@@ -23,7 +23,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace pipensx {
+namespace gamehubnx {
 namespace {
 
 constexpr size_t kCopyBufferBytes = 256 * 1024;
@@ -322,7 +322,7 @@ bool copyFile(const SwitchDeployEntry& entry, const std::string& appRoot,
         error = "Unable to create the destination directory.";
         return false;
     }
-    const std::string temporary = parent + "/.pipensx-part-" +
+    const std::string temporary = parent + "/.gamehubnx-part-" +
         taskId.substr(0, std::min<size_t>(8, taskId.size()));
     if (!saveJob(appRoot, taskId, temporary)) {
         error = "Unable to save the copy recovery journal.";
@@ -557,7 +557,7 @@ SwitchDeployInspection inspectSwitchDeploy(TaskFileInventory inventory,
         if (destinationParts.empty() ||
             asciiEqual(destinationParts.front(), GHNX_APP_DIR_NAME)) {
             setProblem(result, SwitchDeployProblem::UnsafePath,
-                       "Writing inside the pipensx application directory is forbidden.");
+                       "Writing inside the gamehubnx application directory is forbidden.");
             return result;
         }
         std::string layoutPath;
@@ -1067,4 +1067,4 @@ void SwitchDeployService::cleanupInterruptedJob() {
     std::remove(jobPath(appRoot_).c_str());
 }
 
-} // namespace pipensx
+} // namespace gamehubnx
