@@ -673,8 +673,18 @@ bool CatalogService::fetchPlatforms(std::vector<gamehub::ShopPlatform>& out,
     }
     const std::string url = std::string(gamehub::kCatalogUrl) + "/platforms";
     std::string body;
-    if (!httpGet(url, body, error, gamehub::kCatalogUrl))
+    if (!httpGet(url, body, error, gamehub::kCatalogUrl)) {
+        // Un 404 aqui no es una averia: es una tienda anterior a estos
+        // endpoints, que es el caso de cualquiera que no haya actualizado
+        // todavia. Se responde "no hay plataformas" y la pantalla lo cuenta con
+        // sus palabras, en vez de escupir un HTTP 404 que no le dice nada a
+        // nadie.
+        if (error.find("HTTP 404") != std::string::npos) {
+            error.clear();
+            return true;
+        }
         return false;
+    }
     return gamehub::parsePlatforms(body, out, error);
 }
 
@@ -700,8 +710,13 @@ bool CatalogService::fetchPlatformIndex(const std::string& slug,
     const std::string url =
         std::string(gamehub::kCatalogUrl) + "/platform/" + slug;
     std::string body;
-    if (!httpGet(url, body, error, gamehub::kCatalogUrl))
+    if (!httpGet(url, body, error, gamehub::kCatalogUrl)) {
+        // Aqui un 404 SI es raro --el slug lo acaba de dar el propio servidor--
+        // asi que se cuenta como lo que es: esa plataforma ya no esta.
+        if (error.find("HTTP 404") != std::string::npos)
+            error = "gamehub: the server no longer serves that platform";
         return false;
+    }
     return gamehub::parsePlatformIndex(body, slug, out, error);
 }
 
