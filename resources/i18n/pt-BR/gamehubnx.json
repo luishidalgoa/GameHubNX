@@ -752,5 +752,13 @@
         "changed": "Será instalado em {}",
         "too_late": "A instalação já começou: a memória não pode mudar",
         "free": "  ({} livres)"
+    },
+    "platforms": {
+        "title": "Plataformas",
+        "games": "{} jogos",
+        "native": "Nativa",
+        "native_hint": "Instala no console",
+        "emulated_hint": "Baixa para o cartão SD para um emulador",
+        "empty": "Sem jogos ainda"
     }
 }

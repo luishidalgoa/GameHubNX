@@ -309,6 +309,21 @@ void test_lista_de_plataformas() {
     assert(out[1].emulator == "Eden");
 }
 
+void test_icono_de_plataforma_solo_del_servidor() {
+    const std::string json = R"({"files":[
+      {"slug":"gba","gh_icon":"https://gamehub.hdglabs.com/api/covers/proxy/icons/gba.webp?fmt=jpg"},
+      {"slug":"psp","gh_icon":"https://evil.example.com/icons/psp.jpg"}
+    ]})";
+    std::vector<gamehub::ShopPlatform> out;
+    std::string err;
+    assert(gamehub::parsePlatforms(json, out, err));
+    assert(out.size() == 2);
+    assert(!out[0].iconUrl.empty());
+    // Un indice manipulado no va a hacer que la consola pida imagenes a
+    // cualquier sitio: la plataforma sigue siendo utilizable, sin icono.
+    assert(out[1].iconUrl.empty());
+}
+
 void test_plataforma_sin_nombre_usa_el_slug() {
     // Peor rotulo, pero la plataforma sigue siendo utilizable: lo unico que
     // hace falta para pedirle el indice es el slug.
@@ -409,6 +424,7 @@ int main() {
     test_clasificacion_de_title_id();
     test_complemento_apunta_a_su_juego();
     test_lista_de_plataformas();
+    test_icono_de_plataforma_solo_del_servidor();
     test_plataforma_sin_nombre_usa_el_slug();
     test_plataforma_sin_slug_se_salta();
     test_indice_de_plataforma_marca_sus_entradas();

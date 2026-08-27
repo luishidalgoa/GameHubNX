@@ -18,6 +18,8 @@ enum class CatalogHealth {
     Dead,
 };
 
+namespace gamehub { struct ShopPlatform; }
+
 struct CatalogEntry {
     std::string infoHash;
     std::string title;
@@ -165,6 +167,20 @@ public:
     // Devuelve exito, no fallo: un fallo pintaria un aviso en pantalla y eso
     // tambien saldria en la captura.
     static void setNetworkEnabled(bool enabled);
+
+    // Que plataformas ofrece la tienda (/api/shop/platforms), y el indice de
+    // una de ellas (/api/shop/platform/<slug>).
+    //
+    // Bloquean: se llaman desde un hilo de trabajo, como fetchLatest. Devuelven
+    // false y llenan `error` cuando la tienda no contesta o contesta algo que
+    // no es un indice; un servidor anterior a esos endpoints da 404 y eso NO es
+    // un fallo que haya que ensenar como error, solo una tienda sin
+    // plataformas.
+    bool fetchPlatforms(std::vector<gamehub::ShopPlatform>& out,
+                        std::string& error) const;
+    bool fetchPlatformIndex(const std::string& slug,
+                            std::vector<CatalogEntry>& out,
+                            std::string& error) const;
     // UI-thread only: adopt a freshly fetched batch as the live catalogue.
     // entries() is read unsynchronised by the render thread every frame, so
     // entries_ may only be reassigned here — never from a fetch worker.

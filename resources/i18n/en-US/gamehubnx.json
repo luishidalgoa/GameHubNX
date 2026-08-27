@@ -752,5 +752,13 @@
         "changed": "Will install to {}",
         "too_late": "Already installing: the storage cannot be changed now",
         "free": "  ({} free)"
+    },
+    "platforms": {
+        "title": "Platforms",
+        "games": "{} games",
+        "native": "Native",
+        "native_hint": "Installs on the console",
+        "emulated_hint": "Downloads to the SD card for an emulator",
+        "empty": "No games yet"
     }
 }

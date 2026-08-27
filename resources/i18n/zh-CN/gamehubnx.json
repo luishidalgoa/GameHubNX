@@ -752,5 +752,13 @@
         "changed": "将安装到 {}",
         "too_late": "已开始安装：无法更改存储位置",
         "free": "  (剩余 {})"
+    },
+    "platforms": {
+        "title": "平台",
+        "games": "{} 个游戏",
+        "native": "原生",
+        "native_hint": "安装到主机",
+        "emulated_hint": "下载到 SD 卡供模拟器使用",
+        "empty": "暂无游戏"
     }
 }

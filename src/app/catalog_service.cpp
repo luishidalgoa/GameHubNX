@@ -665,6 +665,46 @@ void CatalogService::setNetworkEnabled(bool enabled) {
     gCatalogNetworkEnabled.store(enabled, std::memory_order_relaxed);
 }
 
+bool CatalogService::fetchPlatforms(std::vector<gamehub::ShopPlatform>& out,
+                                   std::string& error) const {
+    if (!gCatalogNetworkEnabled.load(std::memory_order_relaxed)) {
+        error.clear();
+        return true;   // arnes de capturas: sin red, sin plataformas
+    }
+    const std::string url = std::string(gamehub::kCatalogUrl) + "/platforms";
+    std::string body;
+    if (!httpGet(url, body, error, gamehub::kCatalogUrl))
+        return false;
+    return gamehub::parsePlatforms(body, out, error);
+}
+
+bool CatalogService::fetchPlatformIndex(const std::string& slug,
+                                        std::vector<CatalogEntry>& out,
+                                        std::string& error) const {
+    if (slug.empty()) {
+        error = "gamehub: platform index needs a slug";
+        return false;
+    }
+    if (!gCatalogNetworkEnabled.load(std::memory_order_relaxed)) {
+        error.clear();
+        return true;
+    }
+    // El slug viene del propio servidor y es [a-z0-9-], pero se comprueba igual
+    // antes de pegarlo a una URL: confiar en la forma de un dato remoto es como
+    // se cuelan las rutas raras.
+    for (char c : slug)
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) {
+            error = "gamehub: platform slug has unexpected characters";
+            return false;
+        }
+    const std::string url =
+        std::string(gamehub::kCatalogUrl) + "/platform/" + slug;
+    std::string body;
+    if (!httpGet(url, body, error, gamehub::kCatalogUrl))
+        return false;
+    return gamehub::parsePlatformIndex(body, slug, out, error);
+}
+
 bool CatalogService::fetchLatest(std::vector<CatalogEntry>& parsed,
                                  std::string& error,
                                  const std::string& sourceUrl) {

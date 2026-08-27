@@ -235,6 +235,16 @@ bool parsePlatforms(const std::string& json, std::vector<ShopPlatform>& out,
         if (emuIt != f.end() && emuIt->is_string())
             p.emulator = emuIt->get<std::string>();
 
+        // Mismo filtro que las caratulas: solo del servidor del usuario. Un
+        // indice manipulado no va a hacer que la consola pida imagenes a
+        // cualquier sitio.
+        const auto iconIt = f.find("gh_icon");
+        if (iconIt != f.end() && iconIt->is_string()) {
+            const std::string icon = iconIt->get<std::string>();
+            if (isTrustedUrl(icon))
+                p.iconUrl = icon;
+        }
+
         out.push_back(std::move(p));
     }
     return true;

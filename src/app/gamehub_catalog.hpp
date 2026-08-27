@@ -95,6 +95,10 @@ struct ShopPlatform {
     // estado de toda la interfaz.
     bool native = false;
     std::string emulator;   // recomendado por el servidor, puede venir vacio
+    // Icono publicado por el servidor (gh_icon), ya en JPEG. Es el mismo que se
+    // ve en la web de GameHub: dibujar glifos propios aqui acabaria ensenando
+    // una cosa distinta en cada sitio.
+    std::string iconUrl;
 };
 
 // Parsea /api/shop/platforms. Misma tolerancia que parseCatalog: una entrada
