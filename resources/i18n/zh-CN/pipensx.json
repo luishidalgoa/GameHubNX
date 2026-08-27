@@ -173,6 +173,7 @@
     "status_removing": "正在移除",
     "resolving": "解析中…",
     "shop_preparing": "正在准备下载…",
+    "shop_queued": "已加入队列。",
     "shop_unavailable": "服务器无法提供此文件。",
     "cancel_hint": "   （按 Y 取消）",
     "finding_peers": "正在寻找节点…",
@@ -201,6 +202,7 @@
   },
   "torrent": {
     "title": "选择种子文件",
+    "title_shop": "选择要安装的文件",
     "frame_title": "选择文件",
     "empty": "此种子中没有文件",
     "kind_cartridge": "XCI 卡带转储",

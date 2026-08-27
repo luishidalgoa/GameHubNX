@@ -173,6 +173,7 @@
     "status_removing": "Removing",
     "resolving": "Resolving...",
     "shop_preparing": "Preparing the download...",
+    "shop_queued": "Added to the queue.",
     "shop_unavailable": "The server could not serve this file.",
     "cancel_hint": "   (Y to cancel)",
     "finding_peers": "Finding peers...",
@@ -201,6 +202,7 @@
   },
   "torrent": {
     "title": "Choose torrent files",
+    "title_shop": "Choose files to install",
     "frame_title": "Select files",
     "empty": "No files in this torrent",
     "kind_cartridge": "XCI cartridge dump",

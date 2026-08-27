@@ -173,6 +173,7 @@
     "status_removing": "Removendo",
     "resolving": "Resolviendo...",
     "shop_preparing": "Preparando la descarga...",
+    "shop_queued": "Añadido a la cola.",
     "shop_unavailable": "El servidor no pudo servir este fichero.",
     "cancel_hint": "   (Y para cancelar)",
     "finding_peers": "Buscando peers...",
@@ -201,6 +202,7 @@
   },
   "torrent": {
     "title": "Elegir archivos del torrent",
+    "title_shop": "Elegir qué instalar",
     "frame_title": "Selecionar archivos",
     "empty": "Nenhum archivo en este torrent",
     "kind_cartridge": "Volcado de cartucho XCI",
