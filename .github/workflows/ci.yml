@@ -100,10 +100,18 @@ jobs:
       - name: Build gamehubnx.nro
         run: make switch
 
+      # El .elf va con el .nro a proposito. Un crash report de Atmosphere trae
+      # la pila como "pipensx + 0x2154d8", y sin el binario con simbolos del
+      # MISMO build eso no se traduce a nada: addr2line necesita este fichero
+      # exacto. Guardarlo cuesta un artefacto y ahorra adivinar.
+      #
+      #   aarch64-none-elf-addr2line -f -C -e gamehubnx.elf 0x2154d8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gamehubnx-nro-ci
-          path: build-switch/gamehubnx.nro
+          path: |
+            build-switch/gamehubnx.nro
+            build-switch/pipensx.elf
           if-no-files-found: error
           retention-days: 7
 
