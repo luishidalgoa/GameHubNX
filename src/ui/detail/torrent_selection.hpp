@@ -308,12 +308,18 @@ public:
                              StreamSelection initialSelection,
                              std::vector<uint8_t> initialPeers = {},
                              DebridImport debridImport = {},
-                             std::function<void()> abandon = {})
+                             std::function<void()> abandon = {},
+                             // Rotulo de la cabecera. Por defecto habla de un
+                             // torrent, que es de donde viene esta pantalla;
+                             // una entrada de la tienda pasa el suyo, porque
+                             // ahi no hay torrent que valga.
+                             const char* titleKey = "pipensx/torrent/title")
         : manager_(manager), path_(std::move(path)),
           preview_(std::move(preview)), preferred_(preferred),
           initialSelection_(initialSelection),
           initialPeers_(std::move(initialPeers)),
-          debridImport_(std::move(debridImport)), abandon_(std::move(abandon)) {
+          debridImport_(std::move(debridImport)), abandon_(std::move(abandon)),
+          titleKey_(titleKey) {
         refreshStorageSnapshots();
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setGrow(1);
@@ -323,7 +329,7 @@ public:
 
         title_ = new brls::Label();
         title_->setFontSize(26);
-        title_->setText(tr("pipensx/torrent/title"));
+        title_->setText(tr(titleKey_));
         content->addView(title_);
 
         // Counts on the left, icon key on the right. Sharing one row with the
@@ -743,6 +749,7 @@ private:
     std::vector<uint8_t> initialPeers_;
     DebridImport debridImport_;
     std::function<void()> abandon_;
+    const char* titleKey_ = "pipensx/torrent/title";
     // Queried once at construction instead of once per A press: on Switch this
     // is an nsGetStorageSize IPC. confirmSelection() re-queries before it
     // commits, so a stale reading can never let an oversized install through.

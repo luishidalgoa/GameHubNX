@@ -1713,13 +1713,31 @@ private:
                dailyRefreshDue(now_ms(), settings_->get().lastModsRefreshMs);
     }
 
+    // Cierto cuando el catalogo en memoria trae algun complemento. Se para en
+    // el primero: no hay que contarlos, solo saber si lo cargado es el
+    // catalogo completo o unicamente el indice raiz.
+    bool catalogHasAddOns() const {
+        for (const CatalogEntry& entry : catalog_->entries())
+            if (!entry.directUrl.empty() &&
+                !gamehub::isBaseTitleId(entry.titleId))
+                return true;
+        return false;
+    }
+
     void refreshCatalogIfDue() {
         // Bundled dumps do not count. Auto-refresh when this console has never
         // pulled the catalogue, or the last pull was not today.
         const uint64_t wallSec =
             settings_ ? settings_->get().lastCatalogRefreshWallSec : 0;
+        // Los DLC y las actualizaciones llegan de sub-indices, y hasta este
+        // cambio no se cacheaban: una consola que venga de una version
+        // anterior arranca con el catalogo raiz y sin un solo complemento, y
+        // esperar a manana para pedirlos deja la ficha sin poder decir si el
+        // juego tiene DLC. Si no hay ni uno cargado, toca refrescar.
+        const bool sinComplementos = catalog_ && !catalogHasAddOns();
         const bool catalogDue =
-            wallSec == 0 || !isLocalToday(static_cast<int64_t>(wallSec));
+            wallSec == 0 || sinComplementos ||
+            !isLocalToday(static_cast<int64_t>(wallSec));
         const bool metadataDue = metadata_ && settings_ &&
             dailyRefreshDue(now_ms(), settings_->get().lastMetadataRefreshMs);
         refreshSources(catalogDue, catalogDue || metadataDue, false);

@@ -173,6 +173,7 @@
     "status_removing": "Suppression",
     "resolving": "Résolution...",
     "shop_preparing": "Préparation du téléchargement...",
+    "shop_queued": "Ajouté à la file.",
     "shop_unavailable": "Le serveur n'a pas pu fournir ce fichier.",
     "cancel_hint": "   (Y pour annuler)",
     "finding_peers": "Recherche de pairs...",
@@ -201,6 +202,7 @@
   },
   "torrent": {
     "title": "Choisir les fichiers du torrent",
+    "title_shop": "Choisir quoi installer",
     "frame_title": "Sélectionner les fichiers",
     "empty": "Aucun fichier dans ce torrent",
     "kind_cartridge": "Dump de cartouche XCI",

@@ -972,9 +972,12 @@ private:
             preview.packageCount = package ? 1u : 0u;
             preview.cartridgeCount = isCartridgeName(file.path) ? 1u : 0u;
             // Sin callback de abandono: no se creo nada en ningun servidor.
+            // Y con rotulo propio: esta pantalla nacio para elegir dentro de un
+            // torrent y su cabecera lo decia, cosa que aqui no viene a cuento.
             brls::Application::pushActivity(new TorrentSelectionActivity(
                 manager_, "", std::move(preview), import.mode,
-                settings_->get().streamSelection, {}, import));
+                settings_->get().streamSelection, {}, import,
+                {}, "pipensx/torrent/title_shop"));
             return;
         }
 
@@ -984,7 +987,10 @@ private:
             operationMessage_ = importError;
             brls::Application::notify(importError);
         } else {
-            statusLabel_->setText(tr("pipensx/debrid/queued"));
+            // Clave propia: la de debrid promete que "los metadatos pueden
+            // seguir obteniendose", y en una descarga directa no queda nada
+            // pendiente -- el nombre y el tamano se supieron antes de encolar.
+            statusLabel_->setText(tr("pipensx/detail/shop_queued"));
             if (onChange_)
                 onChange_();
         }

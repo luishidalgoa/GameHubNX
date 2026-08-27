@@ -173,6 +173,7 @@
     "status_removing": "Удаление",
     "resolving": "Получение...",
     "shop_preparing": "Подготовка загрузки...",
+    "shop_queued": "Добавлено в очередь.",
     "shop_unavailable": "Сервер не смог передать этот файл.",
     "cancel_hint": "   (Y — отмена)",
     "finding_peers": "Поиск пиров...",
@@ -201,6 +202,7 @@
   },
   "torrent": {
     "title": "Выбор файлов раздачи",
+    "title_shop": "Выбор файлов для установки",
     "frame_title": "Выбор файлов",
     "empty": "В раздаче нет файлов",
     "kind_cartridge": "Дамп картриджа XCI",
