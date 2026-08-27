@@ -386,9 +386,9 @@ private:
     void updateAllNow() {
         if (refreshInFlight_)
             return;
-        refreshCatalogNow([this] {
-            refreshMetadataNow([this] { refreshModsNow(); });
-        });
+        // Los metadatos ya no se descargan: viajan dentro de la NRO. La
+        // cadena salta ese paso y va del catalogo a los mods.
+        refreshCatalogNow([this] { refreshModsNow(); });
     }
 
     void refreshCatalogNow(std::function<void()> onDone = {}) {
@@ -422,41 +422,6 @@ private:
                 brls::Application::notify(
                     tr("pipensx/catalog/updated_catalog",
                        catalog_->entries().size()));
-                if (onDone)
-                    onDone();
-            });
-        });
-    }
-
-    void refreshMetadataNow(std::function<void()> onDone = {}) {
-        if (refreshInFlight_ || !metadata_)
-            return;
-        refreshInFlight_ = true;
-        brls::Application::notify(tr("pipensx/catalog/updating_artwork"));
-        auto alive = alive_;
-        GameMetadataService* metadata = metadata_;
-        brls::async([this, alive, metadata, onDone = std::move(onDone)]()
-                        mutable {
-            MetadataSnapshot snapshot;
-            std::string error;
-            bool ok = metadata->fetchLatest(snapshot, error);
-            brls::sync([this, alive, ok, snapshot = std::move(snapshot),
-                        error = std::move(error),
-                        onDone = std::move(onDone)]() mutable {
-                if (!alive->load())
-                    return;
-                refreshInFlight_ = false;
-                if (!ok) {
-                    diagnostic_error("metadata", "settings_refresh",
-                                     "error=%s", error.c_str());
-                    brls::Application::notify(error);
-                    return;
-                }
-                metadata_->adopt(std::move(snapshot));
-                metadata_->dropMemoryImageCache();
-                recordRefreshTime(false, true);
-                brls::Application::notify(
-                    tr("pipensx/catalog/updated_artwork", metadata_->size()));
                 if (onDone)
                     onDone();
             });

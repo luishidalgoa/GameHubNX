@@ -1907,7 +1907,10 @@ private:
     }
 
     void refreshSources(bool fetchCatalog, bool fetchMetadata, bool notify) {
-        fetchMetadata = fetchMetadata && metadata_;
+        // El indice de metadatos ya no se descarga: viaja dentro de la NRO.
+        // Se conserva el parametro para no tocar las llamadas, pero esta rama
+        // nunca se activa.
+        fetchMetadata = false;
         // The ModCD table rides along with every catalogue refresh, plus its
         // own daily/first-run fetch: one 30 KB request, never per card.
         const bool fetchMods =
@@ -1932,23 +1935,15 @@ private:
             brls::Application::notify(updating);
         auto alive = alive_;
         CatalogService* catalog = catalog_;
-        GameMetadataService* metadata = metadata_;
         ModIndexService* mods = mods_;
         const std::string catalogSourceUrl =
             effectiveCatalogSourceUrl(settings_->get().catalogSourceUrl);
         uint64_t startedMs = now_ms();
-        brls::async([this, alive, catalog, metadata, mods, startedMs,
+        brls::async([this, alive, catalog, mods, startedMs,
                      fetchCatalog, fetchMetadata, fetchMods, heavy, notify,
                      catalogSourceUrl] {
             CatalogRefreshBatch batch;
-            std::thread metadataFetch;
             std::thread modsFetch;
-            if (fetchMetadata) {
-                metadataFetch = std::thread([&] {
-                    batch.metadataOk = metadata->fetchLatest(
-                        batch.metadata, batch.metadataError);
-                });
-            }
             if (fetchMods) {
                 modsFetch = std::thread([&] {
                     batch.modsOk = mods->fetchLatest(batch.mods,
@@ -1959,8 +1954,6 @@ private:
                 batch.catalogOk = catalog->fetchLatest(
                     batch.catalogEntries, batch.catalogError, catalogSourceUrl);
             }
-            if (metadataFetch.joinable())
-                metadataFetch.join();
             if (modsFetch.joinable())
                 modsFetch.join();
             if (fetchCatalog) {

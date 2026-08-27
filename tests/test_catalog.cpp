@@ -489,71 +489,6 @@ void testMetadataLoadPrefersVerifiedRuntimeCache() {
     rmdir(root.c_str());
 }
 
-void testMetadataFetchVerifiesBeforeAdoptAndFallsBackToCache() {
-    const std::string root = "/tmp/pipensx-metadata-fetch-" +
-        std::to_string(static_cast<long long>(getpid()));
-    mkdir(root.c_str(), 0755);
-    const std::string manifestUrl =
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/manifest.json";
-    const std::string indexUrl =
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/game_metadata_index.json";
-    const std::string index =
-        "[{\"infoHash\":\"E21269D03D34B557F63CE915DEA14F765C9C9798\","
-        "\"titleId\":\"0100230005A52000\",\"name\":\"Runtime\"}]";
-    const std::string manifest =
-        "{\"schemaVersion\":1,\"generatedAt\":\"2026-07-09T00:00:00Z\","
-        "\"langegenCommit\":\"langegen-sha\",\"titledbCommit\":\"titledb-sha\","
-        "\"index\":{\"url\":\"" + indexUrl +
-        "\",\"bytes\":103,\"sha256\":\"75b92238836d44279c24060d060e49f5"
-        "b76e8049ca7fade0b736078433c4de80\",\"entries\":1}}";
-    bool failIndex = false;
-    GameMetadataService::MetadataFetcher fetcher =
-        [&](const std::string& url, size_t, std::vector<uint8_t>& bytes,
-            std::string& error) {
-            if (url == manifestUrl) {
-                bytes.assign(manifest.begin(), manifest.end());
-                return true;
-            }
-            if (url == indexUrl && !failIndex) {
-                bytes.assign(index.begin(), index.end());
-                return true;
-            }
-            error = "simulated index failure";
-            return false;
-        };
-
-    {
-        GameMetadataService metadata(root, root + "/missing.json",
-                                     manifestUrl, fetcher);
-        MetadataSnapshot snapshot;
-        std::string error;
-        assert(metadata.fetchLatest(snapshot, error));
-        assert(metadata.size() == 0);
-
-        failIndex = true;
-        MetadataSnapshot cached;
-        assert(metadata.fetchLatest(cached, error));
-        assert(metadata.size() == 0);
-        assert(cached.items.size() == 1);
-        assert(cached.items[0].name == "Runtime");
-        metadata.adopt(std::move(cached));
-        assert(metadata.size() == 1);
-        assert(metadata.findByInfoHash(
-            "E21269D03D34B557F63CE915DEA14F765C9C9798"));
-    }
-
-    unlink((root + "/catalog/metadata/manifest.json").c_str());
-    unlink((root + "/catalog/metadata/"
-            "75b92238836d44279c24060d060e49f5b76e8049ca7fade0b736078433c4de80"
-            ".json").c_str());
-    rmdir((root + "/catalog/metadata").c_str());
-    rmdir((root + "/catalog/images").c_str());
-    rmdir((root + "/catalog").c_str());
-    rmdir(root.c_str());
-}
-
 void testMetadataLoadFallsBackWhenRuntimeCacheIsCorrupt() {
     const std::string root = "/tmp/pipensx-metadata-corrupt-" +
         std::to_string(static_cast<long long>(getpid()));
@@ -1324,20 +1259,6 @@ void testTrustedSourceAllowlist() {
     assert(!CatalogService::isTrustedSource(
         "https://evil.example.com/repo/catalog.json", kCustom));
 
-    assert(GameMetadataService::isTrustedSource(
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/"
-        "data/manifest.json"));
-    assert(GameMetadataService::isTrustedSource(
-        "https://github.com/i3sey/pipensx-metadata/releases/latest/"
-        "download/manifest.json"));
-    assert(!GameMetadataService::isTrustedSource(
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata.evil/"
-        "data/manifest.json"));
-    assert(GameMetadataService::isTrustedRedirect(
-        "https://release-assets.githubusercontent.com/github-production-"
-        "release-asset/file"));
-    assert(!GameMetadataService::isTrustedRedirect(
-        "https://release-assets.githubusercontent.com.evil.example/file"));
 }
 
 // The Langegen switch_games.json shape: magnet under "magnet", cover under
@@ -1492,7 +1413,6 @@ int main() {
     testMetadataSnapshotAcceptsVerifiedIndex();
     testMetadataSnapshotRejectsTamperedIndex();
     testMetadataLoadPrefersVerifiedRuntimeCache();
-    testMetadataFetchVerifiesBeforeAdoptAndFallsBackToCache();
     testMetadataLoadFallsBackWhenRuntimeCacheIsCorrupt();
     testModIndexTableParsing();
     testModIndexTitleIdNormalization();

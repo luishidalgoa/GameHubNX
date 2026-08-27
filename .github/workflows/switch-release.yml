@@ -51,9 +51,10 @@ jobs:
 
       - name: Refresh bundled catalog snapshots
         # Every public build ships an offline first-launch snapshot of the
-        # Langegen torrent catalog and the pipensx-metadata index (see
-        # resources/catalog/*.json, CMakeLists.txt PIPENSX_CATALOG_SNAPSHOT /
-        # PIPENSX_METADATA_INDEX). Pull the latest of each into the checkout
+        # Langegen torrent catalog (see resources/catalog/*.json,
+        # CMakeLists.txt PIPENSX_CATALOG_SNAPSHOT). El indice de metadatos ya
+        # no se refresca aqui: se empaqueta el que este commiteado, que es lo
+        # que hace que la app no dependa de ningun repo ajeno. Pull the latest
         # right before building so releases don't ship stale data committed
         # weeks ago. Never fails the build: a bad download or a response that
         # doesn't parse as JSON just falls back to the checked-in snapshot.
@@ -92,8 +93,6 @@ jobs:
 
           fetch "https://raw.githubusercontent.com/Langegen/switch-games/refs/heads/main/switch_games.json" \
             resources/catalog/switch_games.json
-          fetch "https://github.com/i3sey/pipensx-metadata/releases/latest/download/game_metadata_index.json" \
-            resources/catalog/game_metadata_index.json
 
       - name: Build gamehubnx.nro
         env:

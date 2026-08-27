@@ -45,9 +45,6 @@ constexpr size_t kImageWorkerCount = 2;
 // arriving, they just stop competing with the swarm for the link. Ceiling is
 // per fetch, so the real worst case is this times kImageWorkerCount.
 constexpr long kThrottledImageBytesPerSecond = 128 * 1024;
-constexpr const char* kDefaultMetadataIndexUrl =
-    "https://github.com/i3sey/pipensx-metadata/releases/latest/download/"
-    "game_metadata_index.json";
 
 #ifdef __SWITCH__
 std::atomic<bool> imageRelayLogged{false};
@@ -488,60 +485,14 @@ std::string manifestIndexSha(const std::string& json) {
     return sha;
 }
 
-bool fetchTrustedMetadata(const std::string& url, size_t limit,
-                          std::vector<uint8_t>& data, std::string& error,
-                          const std::atomic<bool>* stopping = nullptr) {
-    std::string effectiveUrl;
-    if (!httpGetOnce(url, limit, data, error, true, &effectiveUrl, true,
-                     stopping))
-        return false;
-    if (!GameMetadataService::isTrustedRedirect(effectiveUrl)) {
-        data.clear();
-        error = "Metadata download redirected to an untrusted host.";
-        return false;
-    }
-    return true;
-}
-
-void pruneIndexCache(const std::string& root, const std::string& keepSha) {
-    DIR* directory = opendir(root.c_str());
-    if (!directory)
-        return;
-    while (dirent* entry = readdir(directory)) {
-        std::string name = entry->d_name;
-        if (name.size() != 69 || name.substr(64) != ".json" ||
-            name.compare(0, 64, keepSha) == 0)
-            continue;
-        const bool isHash = std::all_of(
-            name.begin(), name.begin() + 64, [](unsigned char c) {
-                return std::isxdigit(c) != 0;
-            });
-        if (isHash)
-            unlink((root + "/" + name).c_str());
-    }
-    closedir(directory);
-}
-
 } // namespace
 
 GameMetadataService::GameMetadataService(std::string rootPath,
-                                         std::string bundledPath,
-                                         std::string manifestUrl,
-                                         MetadataFetcher metadataFetcher)
+                                         std::string bundledPath)
     : rootPath_(std::move(rootPath)),
       cacheRoot_(rootPath_ + "/catalog/metadata"),
       imageRoot_(rootPath_ + "/catalog/images"),
-      bundledPath_(std::move(bundledPath)),
-      manifestUrl_(std::move(manifestUrl)),
-      metadataFetcher_(std::move(metadataFetcher)) {
-    if (!metadataFetcher_) {
-        metadataFetcher_ = [this](const std::string& url, size_t limit,
-                                  std::vector<uint8_t>& data,
-                                  std::string& error) {
-            return fetchTrustedMetadata(url, limit, data, error,
-                                        &stoppingRequested_);
-        };
-    }
+      bundledPath_(std::move(bundledPath)) {
     makeDirectories(cacheRoot_);
     makeDirectories(imageRoot_);
     imageWorkers_.reserve(kImageWorkerCount);
@@ -601,30 +552,6 @@ bool GameMetadataService::parseIndex(const std::string& json,
     return true;
 }
 
-bool GameMetadataService::isTrustedSource(const std::string& url) {
-    static const char* const prefixes[] = {
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/",
-        "https://github.com/i3sey/pipensx-metadata/releases/",
-    };
-    for (const char* prefix : prefixes)
-        if (url.rfind(prefix, 0) == 0)
-            return true;
-    return false;
-}
-
-bool GameMetadataService::isTrustedRedirect(const std::string& url) {
-    static const char* const prefixes[] = {
-        "https://raw.githubusercontent.com/i3sey/pipensx-metadata/",
-        "https://github.com/i3sey/pipensx-metadata/releases/",
-        "https://release-assets.githubusercontent.com/",
-        "https://objects.githubusercontent.com/",
-    };
-    for (const char* prefix : prefixes)
-        if (url.rfind(prefix, 0) == 0)
-            return true;
-    return false;
-}
-
 bool GameMetadataService::prepareSnapshot(const std::string& manifestJson,
                                           const std::string& indexJson,
                                           MetadataSnapshot& snapshot,
@@ -660,7 +587,7 @@ bool GameMetadataService::prepareSnapshot(const std::string& manifestJson,
     manifest.titledbCommit = stringValue(root, "titledbCommit");
     manifest.indexUrl = index.contains("url") && index["url"].is_string()
         ? index["url"].get<std::string>()
-        : kDefaultMetadataIndexUrl;
+        : std::string();
     manifest.indexSha256 = index["sha256"].get<std::string>();
     manifest.indexBytes = index["bytes"].get<size_t>();
     manifest.entryCount = index["entries"].get<size_t>();
@@ -670,7 +597,6 @@ bool GameMetadataService::prepareSnapshot(const std::string& manifestJson,
                    });
     if (manifest.generatedAt.empty() || manifest.langegenCommit.empty() ||
         manifest.titledbCommit.empty() ||
-        !isTrustedSource(manifest.indexUrl) ||
         manifest.indexBytes == 0 || manifest.indexBytes > kMaxIndexBytes ||
         manifest.indexBytes != indexJson.size() ||
         manifest.indexSha256.size() != 64 || manifest.entryCount == 0) {
@@ -862,76 +788,6 @@ void GameMetadataService::adopt(MetadataSnapshot snapshot) {
     manifest_ = std::move(snapshot.manifest);
     recomputePlayerSummary();
     rebuildTitleIdIndex();
-}
-
-bool GameMetadataService::fetchLatest(MetadataSnapshot& snapshot,
-                                      std::string& error) const {
-    snapshot = {};
-    auto useCachedAfterFailure = [&](const std::string& refreshError) {
-        std::string cacheError;
-        MetadataSnapshot cached;
-        if (loadCachedSnapshot(cached, cacheError)) {
-            snapshot = std::move(cached);
-            error.clear();
-            log_msg("[metadata] refresh failed (%s); using cached index\n",
-                    refreshError.c_str());
-            return true;
-        }
-        error = refreshError;
-        if (!cacheError.empty())
-            error += " Cached metadata: " + cacheError;
-        return false;
-    };
-    if (!isTrustedSource(manifestUrl_)) {
-        error = "Metadata manifest URL is not trusted.";
-        return false;
-    }
-    std::vector<uint8_t> manifestBytes;
-    if (!metadataFetcher_(manifestUrl_, kMaxManifestBytes, manifestBytes,
-                          error))
-        return useCachedAfterFailure(error);
-    const std::string manifestJson(
-        reinterpret_cast<const char*>(manifestBytes.data()),
-        manifestBytes.size());
-    nlohmann::json root =
-        nlohmann::json::parse(manifestJson, nullptr, false);
-    if (root.is_discarded() || !root.is_object() ||
-        !root.contains("index") || !root["index"].is_object() ||
-        !root["index"].contains("bytes") ||
-        !root["index"]["bytes"].is_number_unsigned()) {
-        return useCachedAfterFailure(
-            "Metadata manifest index fields are invalid.");
-    }
-    const nlohmann::json& index = root["index"];
-    const std::string indexUrl =
-        index.contains("url") && index["url"].is_string()
-            ? index["url"].get<std::string>()
-            : kDefaultMetadataIndexUrl;
-    const size_t expectedBytes = index["bytes"].get<size_t>();
-    if (!isTrustedSource(indexUrl) || expectedBytes == 0 ||
-        expectedBytes > kMaxIndexBytes) {
-        return useCachedAfterFailure(
-            "Metadata index URL or size is not trusted.");
-    }
-    std::vector<uint8_t> indexBytes;
-    if (!metadataFetcher_(indexUrl, kMaxIndexBytes, indexBytes, error))
-        return useCachedAfterFailure(error);
-    const std::string indexJson(
-        reinterpret_cast<const char*>(indexBytes.data()), indexBytes.size());
-    if (!prepareSnapshot(manifestJson, indexJson, snapshot, error))
-        return useCachedAfterFailure(error);
-
-    const std::string indexPath =
-        cacheRoot_ + "/" + snapshot.manifest.indexSha256 + ".json";
-    if (!writeAtomic(indexPath, snapshot.indexData, error))
-        return useCachedAfterFailure(error);
-    if (!writeAtomic(cacheRoot_ + "/manifest.json", manifestBytes, error))
-        return useCachedAfterFailure(error);
-    pruneIndexCache(cacheRoot_, snapshot.manifest.indexSha256);
-    log_msg("[metadata] cached %zu game matches from %s\n",
-            snapshot.items.size(), snapshot.manifest.generatedAt.c_str());
-    error.clear();
-    return true;
 }
 
 const GameMetadata*
