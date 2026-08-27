@@ -373,7 +373,7 @@ UpdateService::UpdateService(std::string targetPath,
       helperPath_([this] {
           const size_t slash = targetPath_.find_last_of('/');
           return targetPath_.substr(0, slash == std::string::npos ? 0 : slash + 1) +
-                 "gamehubnx-updater.nro";
+                 GHNX_UPDATER_NAME;
       }()),
       helperSourcePath_(std::move(helperSourcePath)),
       metadataFetcher_(std::move(metadataFetcher)),
