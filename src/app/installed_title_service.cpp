@@ -217,6 +217,46 @@ bool InstalledTitleService::refresh(std::string& error) {
     std::unordered_map<uint64_t, uint32_t> patchVersions;
     std::unordered_set<std::string> dlcIds;
     bool patchMetaComplete = true;
+    // Un registro de aplicacion sobrevive a su contenido: si el titulo se
+    // archiva o se borra el contenido a mano, el menu HOME lo sigue listando
+    // y nsListApplicationRecord tambien. Cruzamos con las metas Application
+    // de ncm para no dar por instalado lo que ya no esta en ninguna memoria.
+    std::unordered_set<uint64_t> applicationMetas;
+    bool applicationMetaComplete = false;
+    const auto collectApplicationMetas =
+        [](NcmContentMetaDatabase& database,
+           std::unordered_set<uint64_t>& out) -> bool {
+        constexpr s32 MaxApplications = 8192;
+        s32 total = 0;
+        s32 written = 0;
+        Result rc = ncmContentMetaDatabaseList(
+            &database, &total, &written, nullptr, 0,
+            NcmContentMetaType_Application, 0, 0, 0xFFFFFFFFFFFFFFFFULL,
+            NcmContentInstallType_Unknown);
+        if (R_FAILED(rc)) {
+            diagnostic_error("installed", "ncm_app_list", "result=0x%08x", rc);
+            return false;
+        }
+        if (total > MaxApplications) {
+            diagnostic_error("installed", "ncm_app_truncate", "count=%d",
+                             total);
+            total = MaxApplications;
+        }
+        if (total <= 0)
+            return true;
+        std::vector<NcmContentMetaKey> keys(static_cast<size_t>(total));
+        rc = ncmContentMetaDatabaseList(
+            &database, &total, &written, keys.data(),
+            static_cast<s32>(keys.size()), NcmContentMetaType_Application, 0,
+            0, 0xFFFFFFFFFFFFFFFFULL, NcmContentInstallType_Unknown);
+        if (R_FAILED(rc)) {
+            diagnostic_error("installed", "ncm_app_list", "result=0x%08x", rc);
+            return false;
+        }
+        for (s32 index = 0; index < written; ++index)
+            out.insert(keys[static_cast<size_t>(index)].id);
+        return true;
+    };
     {
         constexpr s32 MaxPatches = 8192;
         constexpr s32 MaxDlc = 32768;
@@ -234,6 +274,8 @@ bool InstalledTitleService::refresh(std::string& error) {
                 patchMetaComplete = false;
                 continue;
             }
+            if (collectApplicationMetas(database, applicationMetas))
+                applicationMetaComplete = true;
             s32 total = 0;
             s32 written = 0;
             Result rc = ncmContentMetaDatabaseList(
@@ -306,12 +348,33 @@ bool InstalledTitleService::refresh(std::string& error) {
             }
             ncmContentMetaDatabaseClose(&database);
         }
+
+        // El cartucho es opcional: sin cartucho dentro la apertura falla y
+        // simplemente no aporta ids. No toca patchMetaComplete porque los
+        // parches nunca viven ahi.
+        NcmContentMetaDatabase gameCard;
+        if (R_SUCCEEDED(ncmOpenContentMetaDatabase(&gameCard,
+                                                   NcmStorageId_GameCard))) {
+            collectApplicationMetas(gameCard, applicationMetas);
+            ncmContentMetaDatabaseClose(&gameCard);
+        }
     }
 
     std::vector<InstalledTitle> next;
     next.reserve(records.size());
     auto control = std::make_unique<NsApplicationControlData>();
+    size_t ghosts = 0;
     for (const NsApplicationRecord& record : records) {
+        // Sin meta Application no hay contenido en ninguna memoria: es un
+        // registro huerfano del menu HOME, no un titulo instalado. Solo
+        // filtramos si pudimos leer al menos un almacenamiento; si ncm fallo
+        // preferimos sobrar a vaciar la biblioteca entera.
+        if (applicationMetaComplete &&
+            applicationMetas.find(record.application_id) ==
+                applicationMetas.end()) {
+            ++ghosts;
+            continue;
+        }
         InstalledTitle title;
         title.applicationId = record.application_id;
         title.titleId = formatTitleId(record.application_id);
@@ -368,6 +431,9 @@ bool InstalledTitleService::refresh(std::string& error) {
         ++generation_;
     }
     log_msg("[installed] loaded %zu applications\n", count);
+    if (ghosts > 0)
+        log_msg("[installed] %zu registros sin contenido descartados\n",
+                ghosts);
     telemetry_log("installed", "system",
                   "event=refresh count=%zu duration_ms=%llu", count,
                   static_cast<unsigned long long>(now_ms() - startedMs));

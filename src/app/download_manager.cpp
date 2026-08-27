@@ -615,6 +615,7 @@ bool DownloadManager::importTorrentActions(
         hasSkipped |= action == actionValue(FileAction::Skip);
     if (preview.pieceCount > 0 && directoryEmpty(dataPath) && !hasSkipped)
         task.resumeBitfield.assign((preview.pieceCount + 7) / 8, 0);
+    task.installTarget = installTarget_.load(std::memory_order_relaxed);
     tasks_.push_back(std::move(task));
     taskId = preview.infoHash;
 
@@ -693,6 +694,9 @@ bool DownloadManager::importDebrid(const DebridImport& import,
     task.packageCount = import.mode == TransferMode::StreamInstall
                         ? import.packageCount : 0;
     task.fileSelection = import.fileSelection;
+    task.installTarget = import.hasInstallTarget
+        ? import.installTarget
+        : installTarget_.load(std::memory_order_relaxed);
     tasks_.push_back(std::move(task));
     taskId = import.infoHash;
 
@@ -819,6 +823,29 @@ bool DownloadManager::pause(const std::string& taskId) {
     std::string ignored;
     saveLocked(ignored);
     condition_.notify_all();
+    return true;
+}
+
+bool DownloadManager::setTaskInstallTarget(
+    const std::string& taskId, install::InstallStorageTarget target) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    DownloadTask* task = findLocked(taskId);
+    if (!task)
+        return false;
+    // Solo mientras no haya empezado a escribir en una memoria: en cuanto el
+    // backend instala o hace commit, cambiar el destino dejaria la mitad en
+    // cada sitio.
+    if (task->status != DownloadStatus::Queued &&
+        task->status != DownloadStatus::Checking &&
+        task->status != DownloadStatus::Fetching &&
+        task->status != DownloadStatus::Downloading &&
+        task->status != DownloadStatus::Paused)
+        return false;
+    if (task->installTarget == target)
+        return true;
+    task->installTarget = target;
+    std::string ignored;
+    saveLocked(ignored);
     return true;
 }
 
@@ -1159,6 +1186,8 @@ bool DownloadManager::saveLocked(std::string& error) const {
         state << "9:debrid-id" << bstr(task.debridId);
         state << "5:error" << bstr(task.error);
         state << "2:id" << bstr(task.id);
+        state << "14:install-target" << bint(
+            task.installTarget == install::InstallStorageTarget::Nand ? 1 : 0);
         state << "8:metainfo" << bstr(task.metainfoPath);
         state << "4:mode" << bstr(persistedMode(task.mode));
         state << "4:name" << bstr(task.name);
@@ -1278,6 +1307,15 @@ void DownloadManager::load() {
             if (dictionaryInteger(item, "packages-done", packagesDone))
                 task.packagesInstalled =
                     static_cast<uint32_t>(packagesDone);
+        }
+        uint64_t persistedTarget = 0;
+        if (dictionaryInteger(item, "install-target", persistedTarget)) {
+            task.installTarget = persistedTarget == 1
+                ? install::InstallStorageTarget::Nand
+                : install::InstallStorageTarget::SdCard;
+        } else {
+            task.installTarget =
+                installTarget_.load(std::memory_order_relaxed);
         }
         if (version.ival >= 3) {
             std::string selection;
@@ -1586,6 +1624,7 @@ void DownloadManager::schedulerMain() {
         // Fast resume: consume the trusted bitfield and persist the disarmed
         // state before the engine touches anything — a crash from here on
         // must fall back to a full scan.
+        claim.installTarget = task->installTarget;
         claim.resumeBitfield = std::move(task->resumeBitfield);
         task->resumeBitfield.clear();
         std::string ignored;
@@ -1684,7 +1723,7 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     spec.torrentPath = claim.metainfoPath;
     spec.dataPath = claim.dataPath;
     spec.workingRoot = rootPath_;
-    spec.installTarget = installTarget_.load(std::memory_order_relaxed);
+    spec.installTarget = claim.installTarget;
     spec.mode = claim.mode;
     spec.fileSelection = claim.fileSelection;
     spec.packagesInstalled = claim.packagesInstalled;
@@ -1890,7 +1929,7 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
             metainfo, activeId, rootPath_,
             mode == TransferMode::StreamInstall, fileSelection,
             packagesInstalled,
-            installTarget_.load(std::memory_order_relaxed),
+            claim.installTarget,
             arbiter_,
             [this, activeId](uint32_t completed,
                              const std::string& package,

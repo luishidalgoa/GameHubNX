@@ -446,6 +446,7 @@
     "sd_card": "Tarjeta SD",
     "select_ready": "Seleccionar listos",
     "add_to_queue": "Añadir a la cola",
+    "destination": "Instalar en: {}",
     "add_n_to_queue": "Añadir {} a la cola",
     "view_downloads": "Ver descargas",
     "back_to_catalog": "Volver al catálogo",

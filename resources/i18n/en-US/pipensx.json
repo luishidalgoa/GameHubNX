@@ -446,6 +446,7 @@
     "sd_card": "SD card",
     "select_ready": "Select ready",
     "add_to_queue": "Add to queue",
+    "destination": "Install to: {}",
     "add_n_to_queue": "Add {} to queue",
     "view_downloads": "View downloads",
     "back_to_catalog": "Back to catalog",

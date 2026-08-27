@@ -446,6 +446,7 @@
     "sd_card": "SD-карта",
     "select_ready": "Выбрать готовые",
     "add_to_queue": "В очередь",
+    "destination": "Установить в: {}",
     "add_n_to_queue": "В очередь: {}",
     "view_downloads": "К загрузкам",
     "back_to_catalog": "В каталог",

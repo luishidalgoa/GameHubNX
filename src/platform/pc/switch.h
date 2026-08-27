@@ -190,6 +190,7 @@ static inline Result nacpGetLanguageEntry(NacpStruct* nacp,
 /* ---- ncm (installed title version) ---- */
 
 typedef enum {
+    NcmStorageId_GameCard = 2,
     NcmStorageId_BuiltInUser = 4,
     NcmStorageId_SdCard = 5,
 } NcmStorageId;
