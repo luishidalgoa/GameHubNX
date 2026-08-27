@@ -746,6 +746,9 @@
   },
     "install_target": {
         "question": "要安装到哪里？",
+        "change": "更改存储位置",
+        "changed": "将安装到 {}",
+        "too_late": "已开始安装：无法更改存储位置",
         "free": "  (剩余 {})"
     }
 }

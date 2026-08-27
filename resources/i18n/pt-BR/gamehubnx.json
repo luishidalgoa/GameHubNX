@@ -746,6 +746,9 @@
   },
     "install_target": {
         "question": "Onde você quer instalar?",
+        "change": "Mudar memória",
+        "changed": "Será instalado em {}",
+        "too_late": "A instalação já começou: a memória não pode mudar",
         "free": "  ({} livres)"
     }
 }

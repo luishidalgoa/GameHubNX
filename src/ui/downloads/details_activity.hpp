@@ -7,6 +7,7 @@
 #include <borealis.hpp>
 
 #include "app/download_manager.hpp"
+#include "ui/common/install_target_dialog.hpp"
 #include "ui/common/progress_bar.hpp"
 #include "ui/common/speed_graph.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -103,6 +104,12 @@ public:
                                         &brls::BUTTONSTYLE_DEFAULT);
         removeButton_ = addActionButton(sidebar, tr("gamehubnx/common/remove"),
                                         &brls::BUTTONSTYLE_DEFAULT);
+        // Cambiar de memoria con la descarga ya en marcha: el destino va por
+        // tarea y no se consume hasta que el runner la coge, asi que se puede
+        // bajar ahora y decidir donde instalar despues.
+        targetButton_ = addActionButton(sidebar,
+                                        tr("gamehubnx/install_target/change"),
+                                        &brls::BUTTONSTYLE_DEFAULT);
 
         auto* gap = new brls::Box();
         gap->setHeight(12);
@@ -124,6 +131,23 @@ public:
         });
         removeButton_->registerClickAction([this](brls::View*) {
             openRemoveDialog();
+            return true;
+        });
+        targetButton_->registerClickAction([this](brls::View*) {
+            const std::string taskId = taskId_;
+            DownloadManager* manager = manager_;
+            askInstallTarget(manager->rootPath(),
+                             [manager, taskId](
+                                 install::InstallStorageTarget target) {
+                // Puede fallar si entre la pregunta y la respuesta la tarea ha
+                // empezado a instalar; en ese caso el destino ya esta en uso y
+                // se avisa en vez de mentir diciendo que cambio.
+                brls::Application::notify(
+                    manager->setTaskInstallTarget(taskId, target)
+                        ? tr("gamehubnx/install_target/changed",
+                             installDestinationLabel(target))
+                        : tr("gamehubnx/install_target/too_late"));
+            });
             return true;
         });
         filesButton_->registerClickAction([this](brls::View*) {
@@ -586,6 +610,16 @@ private:
         setButtonAvailable(verifyButton_, !leased && canVerify);
         setButtonAvailable(removeButton_,
                            !leased && task.status != DownloadStatus::Removing);
+        // Solo mientras no haya empezado a escribir en una memoria: es la
+        // misma condicion que aplica setTaskInstallTarget.
+        const bool canRetarget =
+            !leased && task.mode == TransferMode::StreamInstall &&
+            (task.status == DownloadStatus::Queued ||
+             task.status == DownloadStatus::Checking ||
+             task.status == DownloadStatus::Fetching ||
+             task.status == DownloadStatus::Downloading ||
+             task.status == DownloadStatus::Paused);
+        setButtonAvailable(targetButton_, canRetarget);
         setButtonAvailable(filesButton_, deploy_ != nullptr);
         const bool busyElsewhere = deploy.active() && deploy.taskId != taskId_;
         const bool packageBusy =
@@ -678,6 +712,7 @@ private:
     brls::Label* status_;
     brls::Button* pauseButton_;
     brls::Button* verifyButton_;
+    brls::Button* targetButton_;
     brls::Button* removeButton_;
     ProgressBar* progressBar_;
     brls::Label* progress_;

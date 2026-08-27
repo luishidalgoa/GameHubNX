@@ -746,6 +746,9 @@
   },
     "install_target": {
         "question": "Where do you want to install it?",
+        "change": "Change storage",
+        "changed": "Will install to {}",
+        "too_late": "Already installing: the storage cannot be changed now",
         "free": "  ({} free)"
     }
 }
