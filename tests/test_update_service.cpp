@@ -44,10 +44,10 @@ extern "C" int __wrap_rename(const char* oldPath, const char* newPath) {
 std::string releaseJson(const std::string& version, bool checksum = true) {
     return "{\"draft\":false,\"prerelease\":false,\"tag_name\":\"" +
            version + "\",\"assets\":[{\"name\":\"gamehubnx.nro\","
-           "\"browser_download_url\":\"https://github.com/i3sey/pipensx/"
+           "\"browser_download_url\":\"https://github.com/luishidalgoa/GameHubNX/"
            "releases/download/" + version + "/gamehubnx.nro\"}" +
            (checksum ? ",{\"name\":\"gamehubnx.nro.sha256\","
-            "\"browser_download_url\":\"https://github.com/i3sey/pipensx/"
+            "\"browser_download_url\":\"https://github.com/luishidalgoa/GameHubNX/"
             "releases/download/" + version + "/gamehubnx.nro.sha256\"}" : "") +
            "]}";
 }
@@ -88,8 +88,8 @@ void testStagedReadyRecoversInterruptedRestart() {
         HelperSource);
     assert(!service.stagedReady());
     pipensx::ReleaseInfo release{"v1.2.3",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro.sha256"};
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
     assert(service.install(release, error));
     // The app quit before chain-loading the helper: the staged download must
@@ -120,8 +120,8 @@ void testInstallVerifiesBeforeStaging() {
                   std::string&) { write(path, payload); return true; },
         HelperSource);
     pipensx::ReleaseInfo release{"v1.2.3",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro.sha256"};
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
     assert(service.install(release, error));
     std::ifstream installed("/tmp/pipensx-update-test.nro.update",
@@ -215,8 +215,8 @@ void testTransientNetworkFailuresAreRetried() {
             return true;
         }, HelperSource);
     pipensx::ReleaseInfo release{"v9.9.9",
-        "https://github.com/i3sey/pipensx/releases/download/v9.9.9/gamehubnx.nro",
-        "https://github.com/i3sey/pipensx/releases/download/v9.9.9/gamehubnx.nro.sha256"};
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v9.9.9/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v9.9.9/gamehubnx.nro.sha256"};
     std::string error;
     assert(installService.install(release, error));
     assert(checksumAttempts == 3);
@@ -243,8 +243,8 @@ void testInstallNeverTouchesRunningNro() {
                   std::string&) { write(path, payload); return true; },
         HelperSource);
     pipensx::ReleaseInfo release{"v1.2.3",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro.sha256"};
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
     emulateSwitchRename = true;
     const bool installed = service.install(release, error);
@@ -307,8 +307,8 @@ void testHelperPublishFailurePreservesPreviousHelper() {
                   std::string&) { write(path, payload); return true; },
         HelperSource);
     pipensx::ReleaseInfo release{"v1.2.3",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro",
-        "https://github.com/i3sey/pipensx/releases/download/v1.2.3/gamehubnx.nro.sha256"};
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
     std::string error;
     failHelperPublish = true;
     const bool installed = service.install(release, error);
