@@ -447,7 +447,6 @@
     "sd_card": "SD-карта",
     "select_ready": "Выбрать готовые",
     "add_to_queue": "В очередь",
-    "destination": "Установить в: {}",
     "add_n_to_queue": "В очередь: {}",
     "view_downloads": "К загрузкам",
     "back_to_catalog": "В каталог",
@@ -744,5 +743,9 @@
     "install_completed": "«{}» установлено.",
     "download_failed": "Загрузка «{}» не удалась.",
     "install_failed": "Установка «{}» не удалась."
-  }
+  },
+    "install_target": {
+        "question": "Куда установить?",
+        "free": "  (свободно: {})"
+    }
 }

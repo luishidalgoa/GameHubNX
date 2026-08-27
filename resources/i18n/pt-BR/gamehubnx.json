@@ -447,7 +447,6 @@
     "sd_card": "Cartão SD",
     "select_ready": "Selecionar prontos",
     "add_to_queue": "Adicionar à fila",
-    "destination": "Instalar em: {}",
     "add_n_to_queue": "Adicionar {} à fila",
     "view_downloads": "Ver downloads",
     "back_to_catalog": "Voltar ao catálogo",
@@ -744,5 +743,9 @@
     "install_completed": "{} instalado.",
     "download_failed": "Download de {} falhou.",
     "install_failed": "Instalação de {} falhou."
-  }
+  },
+    "install_target": {
+        "question": "Onde você quer instalar?",
+        "free": "  ({} livres)"
+    }
 }

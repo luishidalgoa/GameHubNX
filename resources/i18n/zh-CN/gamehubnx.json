@@ -447,7 +447,6 @@
     "sd_card": "SD 卡",
     "select_ready": "选择就绪项",
     "add_to_queue": "添加到队列",
-    "destination": "安装到：{}",
     "add_n_to_queue": "将 {} 添加到队列",
     "view_downloads": "查看下载",
     "back_to_catalog": "返回目录",
@@ -744,5 +743,9 @@
     "install_completed": "{} 已安装。",
     "download_failed": "{} 下载失败。",
     "install_failed": "{} 安装失败。"
-  }
+  },
+    "install_target": {
+        "question": "要安装到哪里？",
+        "free": "  (剩余 {})"
+    }
 }

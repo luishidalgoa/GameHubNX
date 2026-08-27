@@ -18,6 +18,7 @@
 #include "app/installed_title_service.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/action_icon.hpp"
+#include "ui/common/install_target_dialog.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/debrid_ui.hpp"
@@ -250,21 +251,6 @@ public:
         row->addView(clear);
         controls_->addView(row);
 
-        destination_ = new brls::Button();
-        destination_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
-        destination_->setHeight(48);
-        destination_->setMarginTop(8);
-        destination_->setText(tr("gamehubnx/batch/destination",
-                                 installDestinationLabel(target_)));
-        destination_->registerClickAction([this](brls::View*) {
-            target_ = target_ == gamehubnx::install::InstallStorageTarget::Nand
-                ? gamehubnx::install::InstallStorageTarget::SdCard
-                : gamehubnx::install::InstallStorageTarget::Nand;
-            refreshSummary();
-            return true;
-        });
-        controls_->addView(destination_);
-
         enqueue_ = new brls::Button();
         enqueue_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
         enqueue_->setHeight(58);
@@ -422,6 +408,10 @@ private:
                 recyclerHost_->setVisibility(brls::Visibility::VISIBLE);
                 controls_->setVisibility(brls::Visibility::VISIBLE);
                 recycler_->reloadData();
+                // reloadData() recicla las celdas; si el foco estaba en una de
+                // ellas, Borealis se queda apuntando a lo liberado porque
+                // giveFocus(nullptr) no limpia nada. Se reancla a mano.
+                brls::Application::giveFocus(recycler_);
                 if (cancelAction_ != ACTION_NONE) {
                     unregisterAction(cancelAction_);
                     cancelAction_ = ACTION_NONE;
@@ -493,9 +483,6 @@ private:
         status_->setText(text);
 
         meter_->setHeader(storageMeterHeader(target_));
-        if (destination_)
-            destination_->setText(tr("gamehubnx/batch/destination",
-                                     installDestinationLabel(target_)));
         const StorageSpaceSnapshot& meterStorage =
             estimate.packageFiles > 0 ? packageStorage_ : storage_;
         if (meterStorage.available)
@@ -515,7 +502,23 @@ private:
         enqueue_->setText(tr("gamehubnx/batch/add_n_to_queue", selected));
     }
 
+    // Pregunta el destino y, con la respuesta, encola. Si el usuario cierra
+    // el modal con B no se encola nada, que es lo seguro.
     void enqueuePrepared() {
+        if (!prepared_ || enqueueFinished_)
+            return;
+        auto alive = alive_;
+        askInstallTarget(manager_->rootPath(),
+                         [this, alive](install::InstallStorageTarget target) {
+            if (!alive->load())
+                return;
+            target_ = target;
+            refreshSummary();
+            enqueueWithTarget();
+        });
+    }
+
+    void enqueueWithTarget() {
         if (!prepared_ || enqueueFinished_)
             return;
         const auto estimate = prepared_->selectedSpace();
@@ -612,7 +615,6 @@ private:
     BatchInstallDataSource* dataSource_ = nullptr;
     brls::Box* controls_ = nullptr;
     brls::Button* enqueue_ = nullptr;
-    brls::Button* destination_ = nullptr;
     brls::Box* resultControls_ = nullptr;
     brls::Button* resultBack_ = nullptr;
     brls::ActionIdentifier cancelAction_ = ACTION_NONE;

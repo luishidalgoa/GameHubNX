@@ -447,7 +447,6 @@
     "sd_card": "SD card",
     "select_ready": "Select ready",
     "add_to_queue": "Add to queue",
-    "destination": "Install to: {}",
     "add_n_to_queue": "Add {} to queue",
     "view_downloads": "View downloads",
     "back_to_catalog": "Back to catalog",
@@ -744,5 +743,9 @@
     "install_completed": "{} installed.",
     "download_failed": "{} download failed.",
     "install_failed": "{} install failed."
-  }
+  },
+    "install_target": {
+        "question": "Where do you want to install it?",
+        "free": "  ({} free)"
+    }
 }

@@ -30,6 +30,7 @@
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/busy_pulse.hpp"
+#include "ui/common/install_target_dialog.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
@@ -951,6 +952,18 @@ private:
     // este fork ya no existe, y por ahi se pedia vincular una cuenta ajena para
     // bajar un fichero del servidor de casa.
     void startShopInstall(TransferMode mode, bool forcePicker) {
+        auto alive = alive_;
+        askInstallTarget(manager_->rootPath(),
+                         [this, alive, mode,
+                          forcePicker](install::InstallStorageTarget target) {
+            if (!alive->load())
+                return;
+            installTarget_ = target;
+            beginShopInstall(mode, forcePicker);
+        });
+    }
+
+    void beginShopInstall(TransferMode mode, bool forcePicker) {
         setBusy(true);
         operationMessage_.clear();
         cancelled_->store(false);
@@ -1020,6 +1033,8 @@ private:
         import.fileSelection = {static_cast<uint8_t>(
             package ? FileAction::Install : FileAction::Download)};
         import.packageCount = package ? 1u : 0u;
+        import.hasInstallTarget = true;
+        import.installTarget = installTarget_;
 
         if (forcePicker) {
             TorrentPreview preview;
@@ -1374,6 +1389,9 @@ private:
     ChangeCallback onChange_;
     CloseCallback onClose_;
     std::shared_ptr<std::atomic<bool>> alive_;
+    // Destino elegido en el modal, consumido al construir el DebridImport.
+    install::InstallStorageTarget installTarget_ =
+        install::InstallStorageTarget::SdCard;
     std::shared_ptr<std::atomic<bool>> cancelled_;
     brls::AppletFrame* frame_ = nullptr;
     InstallButton* primary_ = nullptr;
