@@ -176,6 +176,7 @@ public:
                         [](const CatalogEntry& entry) {
                             return entry.isDirectDownload();
                         });
+        shopOnly_ = shopOnly;
         debridMode_ = shopOnly || debridModeActive(settings_);
         if (shopOnly) {
             debridProvider_ = std::make_shared<GameHubProvider>();
@@ -296,18 +297,37 @@ public:
     ~BatchInstallActivity() override {
         alive_->store(false);
         cancelled_->store(true);
-        if (debridMode_ && !enqueueFinished_ && prepared_ && debridProvider_) {
-            std::vector<std::string> ids;
-            for (const PreparedCatalogInstall& item : prepared_->items())
-                if (!item.debridId.empty())
-                    ids.push_back(item.debridId);
-            auto provider = debridProvider_;
+        // La tienda no crea nada en ningun servidor --el "handle" de
+        // GameHubProvider ES la URL-- asi que aqui no hay nada que limpiar y
+        // lanzar un hilo para llamar a un no-op solo puede salir mal.
+        if (shopOnly_ || !debridMode_ || enqueueFinished_ || !prepared_ ||
+            !debridProvider_)
+            return;
+
+        std::vector<std::string> ids;
+        for (const PreparedCatalogInstall& item : prepared_->items())
+            if (!item.debridId.empty())
+                ids.push_back(item.debridId);
+        if (ids.empty())
+            return;
+
+        auto provider = debridProvider_;
+        // Un destructor es noexcept: cualquier excepcion que se escape de aqui
+        // va derecha a std::terminate. Y crear un hilo en Switch puede fallar
+        // --el log del usuario trae "std::terminate: St12system_error: Function
+        // not implemented" justo al volver atras desde esta pantalla--, asi que
+        // el constructor de std::thread SI puede lanzar. Perder la limpieza
+        // remota es aceptable; matar la app al pulsar B no lo es.
+        try {
             std::thread([provider, ids] {
                 for (const std::string& id : ids) {
                     std::string ignored;
                     provider->remove(id, ignored);
                 }
             }).detach();
+        } catch (const std::exception& error) {
+            log_msg("[batch] no pude lanzar la limpieza remota: %s\n",
+                    error.what());
         }
     }
 
@@ -569,6 +589,9 @@ private:
     brls::ActionIdentifier queueAction_ = ACTION_NONE;
     bool enqueueFinished_ = false;
     bool debridMode_ = false;
+    /* Cierto cuando toda la seleccion es de la tienda. Entonces no hay nada que
+       limpiar en ningun servidor y el destructor se ahorra el hilo. */
+    bool shopOnly_ = false;
 };
 
 }  // namespace pipensx::ui
