@@ -89,6 +89,20 @@ public:
             markUpdateChecked();
         content->addView(updateAction_);
 
+        // El explorador va ARRIBA, no enterrado entre los ajustes.
+        //
+        // Estaba el octavo de la lista y el usuario no lo encontro --dos veces
+        // dijo que no estaba, estandolo--. Que exista y que se encuentre no es
+        // lo mismo, y una funcion que nadie halla vale igual que no tenerla.
+        //
+        // Su sitio de verdad es una pestana propia, como en cualquier gestor de
+        // ficheros. No esta ahi porque la barra lateral ya va justa de alto
+        // --es el #27-- y una septima pestana lo empeoraria; el arreglo de esa
+        // barra existe y esta aparcado. Mientras tanto, arriba del todo.
+        content->addView(actionCell(tr("gamehubnx/settings/browser"),
+            tr("gamehubnx/settings/browser_detail"),
+            [this] { openFileBrowser(); }));
+
         addSection(content, tr("gamehubnx/settings/section_catalog"));
         catalogFilter_ = new brls::SelectorCell();
         catalogFilter_->init(tr("gamehubnx/settings/visible_releases"),
@@ -273,13 +287,6 @@ public:
         content->addView(actionCell(tr("gamehubnx/settings/storage"),
             tr("gamehubnx/settings/storage_detail"),
             [this] { openStorage(); }));
-
-        // El explorador vive aqui y no en una pestana propia: la barra lateral
-        // ya va justa de alto --es el problema de #27-- y meterle una septima
-        // la empeoraria. Ademas se usa para arreglar algo puntual, no a diario.
-        content->addView(actionCell(tr("gamehubnx/settings/browser"),
-            tr("gamehubnx/settings/browser_detail"),
-            [this] { openFileBrowser(); }));
 
         content->addView(actionCell(tr("gamehubnx/settings/network_health"),
             tr("gamehubnx/settings/network_health_detail"),
