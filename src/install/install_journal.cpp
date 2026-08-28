@@ -294,6 +294,28 @@ bool saveInstallJournal(const std::string& path,
         std::remove(tmp.c_str());
         return false;
     }
+    // Hay que dejar el destino libre antes de renombrar.
+    //
+    // En la tarjeta de la consola rename() NO sobrescribe: si el destino ya
+    // existe, falla. Y esto es un journal, que por definicion se reescribe cada
+    // pocos megabytes, asi que el PRIMER punto de retorno se guardaba --no
+    // habia fichero-- y todos los demas fallaban en silencio.
+    //
+    // El sintoma en el aparato: una instalacion con 503 MB puestos que al
+    // reanudar volvia a 8 MiB, una y otra vez, porque 8 MiB era el unico punto
+    // que se llego a escribir. Sale en su log:
+    //
+    //   [debrid] sin punto de retorno (no se pudo escribir el journal)
+    //            en 16777216 bytes
+    //
+    // Afecta a las DOS rutas de instalacion, la de torrent y la de enlace
+    // directo, porque las dos guardan por aqui.
+    //
+    // Queda una ventana de microsegundos entre el borrado y el renombrado en la
+    // que no hay journal. Se asume: perderlo cuesta repetir un tramo, que es
+    // exactamente lo que pasa hoy en CADA punto. El fichero temporal esta
+    // completo y verificado antes de tocar nada.
+    std::remove(path.c_str());
     if (std::rename(tmp.c_str(), path.c_str()) != 0) {
         std::remove(tmp.c_str());
         return false;
