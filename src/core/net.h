@@ -54,6 +54,11 @@ socket_t net_accept(socket_t listener, struct sockaddr_in *peer);
 /* Local port a socket is bound to, 0 on error (for port-0 listeners). */
 uint16_t net_local_port(socket_t fd);
 
+/* Local IPv4 address of a socket, in host byte order; 0 on error.
+   For an accepted connection this is the address the peer is actually
+   talking to, which is what FTP's PASV reply has to advertise. */
+uint32_t net_local_ipv4(socket_t fd);
+
 /* Set socket nonblocking */
 int net_set_nonblock(socket_t fd);
 

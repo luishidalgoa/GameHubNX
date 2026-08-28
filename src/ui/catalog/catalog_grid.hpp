@@ -29,7 +29,64 @@ namespace grid {
 
 inline constexpr int kColumns = 5;
 inline constexpr float kCardWidth = 180.0f;
-inline constexpr float kCoverHeight = 180.0f;
+
+// EL HUECO DE LA PORTADA NO ES FIJO, y esa era la raiz del problema.
+//
+// Era un cuadrado de 180x180. Con arte apaisado --DS, media 3DS-- se llena el
+// ancho de la columna y queda bien; con arte vertical --SNES, casi todo GBA,
+// 2:3-- el alto se agota antes que el ancho, la portada se queda en 120 px y
+// la reja sale con huecos de 60 px entre tarjetas y el arte pequeno. Medido en
+// tests/golden/rom-covers-*.png, que es donde se ve de un vistazo.
+//
+// Ahora el hueco toma la forma del arte de la consola que se esta mirando, asi
+// que la portada llena SIEMPRE el ancho de su columna y las tarjetas quedan
+// igual de grandes en todas las plataformas. Por defecto sigue siendo el
+// cuadrado de antes, que es lo que le va bien al catalogo de Switch.
+inline constexpr float kCoverHeightDefault = 180.0f;
+// Los topes existen para que una imagen rarisima --un panoramico, un recorte
+// altisimo-- no descuadre la reja entera.
+inline constexpr float kCoverHeightMin = 140.0f;
+inline constexpr float kCoverHeightMax = 288.0f;
+
+// Aviso de "he decodificado una portada y mide asi".
+//
+// Lo instala la pantalla que aloja la reja --hoy solo la de ROMs-- y le sirve
+// para darle al hueco la forma del arte de esa consola. Va por aqui, y no como
+// parametro de la tarjeta, porque quien decide la forma es la reja entera y no
+// cada celda: el alto de fila tiene que ser el mismo para todas.
+inline std::function<void(float)>& artworkAspectReporter() {
+    static std::function<void(float)> reporter;
+    return reporter;
+}
+
+inline float& coverSlotHeightRef() {
+    static float value = kCoverHeightDefault;
+    return value;
+}
+inline float coverSlotHeight() { return coverSlotHeightRef(); }
+
+// El hueco para arte de esta proporcion: el ancho de la tarjeta es lo que
+// manda, y el alto sale de ahi. Devuelve true si el valor ha cambiado, para
+// que quien llame sepa si tiene que rehacer la reja.
+inline bool setCoverSlotAspect(float aspect) {
+    if (aspect <= 0.0f)
+        return false;
+    float height = kCardWidth / aspect;
+    if (height < kCoverHeightMin)
+        height = kCoverHeightMin;
+    if (height > kCoverHeightMax)
+        height = kCoverHeightMax;
+    if (height == coverSlotHeightRef())
+        return false;
+    coverSlotHeightRef() = height;
+    return true;
+}
+inline bool resetCoverSlot() {
+    if (coverSlotHeightRef() == kCoverHeightDefault)
+        return false;
+    coverSlotHeightRef() = kCoverHeightDefault;
+    return true;
+}
 // Langegen/games covers are Nintendo box-art images (~393x640), not square
 // eShop icons. Render them at their natural portrait aspect inside the same
 // 180px card slot so they do not get stretched/cropped like square icons.
@@ -45,7 +102,7 @@ inline constexpr float kGameCoverWidth = 112.0f;
 /// de 180 y se subia encima de la vecina. Escalando por el lado que se queda
 /// corto, la portada llena lo que puede sin salirse ni dejar bandas.
 inline float gameCoverWidth() {
-    const float porAlto = kCoverHeight * coverAspect();
+    const float porAlto = coverSlotHeight() * coverAspect();
     return porAlto > kCardWidth ? kCardWidth : porAlto;
 }
 
@@ -54,20 +111,23 @@ inline float gameCoverWidth() {
 inline float gameCoverHeight() {
     const float aspecto = coverAspect();
     if (aspecto <= 0.0f)
-        return kCoverHeight;
+        return coverSlotHeight();
     const float porAncho = gameCoverWidth() / aspecto;
-    return porAncho > kCoverHeight ? kCoverHeight : porAncho;
+    return porAncho > coverSlotHeight() ? coverSlotHeight() : porAncho;
 }
 // Cover + name line (17px) + sub line (15px) + inner margins.
-inline constexpr float kCardHeight = 232.0f;
-inline constexpr float kRowHeight = 248.0f;
+inline constexpr float kCardTextHeight = 52.0f;
+inline constexpr float kRowGap = 16.0f;
+inline float cardHeight() { return coverSlotHeight() + kCardTextHeight; }
+inline float rowHeight() { return cardHeight() + kRowGap; }
 // RecyclerFrame positions cells independently of its outer padding on some
 // backends. Keep a real first row so the shelf never enters the filter header.
 inline constexpr float kTopInsetHeight = 24.0f;
 inline constexpr int kShelfItems = 12;
 inline constexpr float kShelfSpacing = 2 * theme::kSpacingUnit;
 // Shelf title (21px) + margin + card strip + bottom breathing room.
-inline constexpr float kShelfHeight = 284.0f;
+inline constexpr float kShelfExtraHeight = 52.0f;
+inline float shelfHeight() { return rowHeight() + kShelfExtraHeight; }
 // UI_PLAN F5: minimum cards for an optional shelf (New / Updated / genre)
 // to appear at all; "Popular" is exempt — it never hides silently.
 inline constexpr int kMinShelfItems = 4;
@@ -107,13 +167,13 @@ public:
     GameCard() : brls::Box(brls::Axis::COLUMN) {
         setFocusable(true);
         setWidth(grid::kCardWidth);
-        setHeight(grid::kCardHeight);
+        setHeight(grid::cardHeight());
         setCornerRadius(theme::kRadiusMedium);
 
         // Cover box doubles as the placeholder tile until art arrives.
         cover_ = new brls::Box();
         cover_->setWidth(grid::kCardWidth);
-        cover_->setHeight(grid::kCoverHeight);
+        cover_->setHeight(grid::coverSlotHeight());
         cover_->setCornerRadius(theme::kRadiusMedium);
         cover_->setBackgroundColor(theme::surface());
         cover_->setAlignItems(brls::AlignItems::CENTER);
@@ -126,7 +186,7 @@ public:
         cover_->addView(placeholder_);
         image_ = new AsyncRgbaImage();
         image_->setWidth(grid::kCardWidth);
-        image_->setHeight(grid::kCoverHeight);
+        image_->setHeight(grid::coverSlotHeight());
         image_->setPositionType(brls::PositionType::ABSOLUTE);
         image_->setPositionTop(0);
         image_->setPositionLeft(0);
@@ -269,6 +329,8 @@ public:
                 return;
             ownAspect_ = aspecto;
             applyZoom(focused_);
+            if (iconPreserveAspect_ && grid::artworkAspectReporter())
+                grid::artworkAspectReporter()(aspecto);
         });
         // Sin arte tampoco se ensancha: una tarjeta con la inicial de relleno
         // al lado de otras con portada 2:3 rompia la reja visualmente.
@@ -326,15 +388,15 @@ private:
         const float aspecto = ownAspect_ > 0.0f ? ownAspect_ : coverAspect();
         if (aspecto <= 0.0f) {
             width = grid::kCardWidth;
-            height = grid::kCoverHeight;
+            height = grid::coverSlotHeight();
             return;
         }
-        width = grid::kCoverHeight * aspecto;
+        width = grid::coverSlotHeight() * aspecto;
         if (width > grid::kCardWidth)
             width = grid::kCardWidth;
         height = width / aspecto;
-        if (height > grid::kCoverHeight)
-            height = grid::kCoverHeight;
+        if (height > grid::coverSlotHeight())
+            height = grid::coverSlotHeight();
     }
 
     void applyZoom(bool focused) {
@@ -345,20 +407,20 @@ private:
         const float baseWidth = iconPreserveAspect_ ? fitWidth
                                                     : grid::kCardWidth;
         const float baseHeight = iconPreserveAspect_ ? fitHeight
-                                                     : grid::kCoverHeight;
+                                                     : grid::coverSlotHeight();
         // El RECUADRO, no solo la imagen. Se quedaba con los 180 de la tarjeta
         // mientras el arte se dibujaba a 120 centrado dentro: el resultado eran
         // dos bandas de fondo a los lados de cada portada. Ahora el plato mide
         // lo que la portada y se centra en el hueco de la tarjeta, que sigue
         // midiendo lo mismo para que las columnas no bailen.
         const float plateWidth = posterPlate_ ? fitWidth : grid::kCardWidth;
-        const float plateHeight = posterPlate_ ? fitHeight : grid::kCoverHeight;
+        const float plateHeight = posterPlate_ ? fitHeight : grid::coverSlotHeight();
         cover_->setWidth(plateWidth);
         cover_->setHeight(plateHeight);
         cover_->setMarginLeft((grid::kCardWidth - plateWidth) / 2.0f);
         // Centrada tambien a lo alto: con una portada apaisada sobra hueco en
         // la tarjeta, y pegarla arriba dejaria las filas descuadradas.
-        cover_->setMarginTop((grid::kCoverHeight - plateHeight) / 2.0f);
+        cover_->setMarginTop((grid::coverSlotHeight() - plateHeight) / 2.0f);
         image_->setDimensions(baseWidth * zoom, baseHeight * zoom);
         image_->setPositionTop(-(zoom - 1.0f) * baseHeight / 2.0f);
         // El desplazamiento es DENTRO del plato, asi que se mide contra su
@@ -414,7 +476,7 @@ public:
         : focusColumn_(std::move(focusColumn)) {
         setFocusable(false);
         setAxis(brls::Axis::ROW);
-        setHeight(grid::kRowHeight);
+        setHeight(grid::rowHeight());
         setJustifyContent(brls::JustifyContent::SPACE_BETWEEN);
         setLineBottom(0);
         setLineColor(brls::TRANSPARENT);
@@ -462,7 +524,7 @@ public:
     // reads it back, so focus restore survives the cell being recycled.
     explicit HorizontalShelf(std::shared_ptr<std::string> focusHash)
         : brls::Box(brls::Axis::ROW), focusHash_(std::move(focusHash)) {
-        setHeight(grid::kCardHeight);
+        setHeight(grid::cardHeight());
         setClipsToBounds(true);
         content_ = new brls::Box(brls::Axis::ROW);
         // The strip is translated manually. Keep its Yoga bounds at the full
@@ -573,7 +635,7 @@ public:
     explicit ShelfCell(std::shared_ptr<std::string> focusHash) {
         setFocusable(false);
         setAxis(brls::Axis::COLUMN);
-        setHeight(grid::kShelfHeight);
+        setHeight(grid::shelfHeight());
         setAlignItems(brls::AlignItems::STRETCH);
         setLineBottom(0);
         setLineColor(brls::TRANSPARENT);

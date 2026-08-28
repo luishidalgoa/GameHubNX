@@ -549,6 +549,60 @@ int main(int argc, char** argv) {
             return fail("shelf-scroll fixture did not create enough cards");
         focusAfterLayout = strip->getChildren()[8];
         activity = new GoldenActivity(content);
+    } else if (screen == "rom-covers-portrait" ||
+               screen == "rom-covers-landscape") {
+        // La reja de ROMs con arte de las proporciones que sirve el servidor
+        // de verdad: SNES y buena parte de GBA son 1200x1800 (vertical), DS y
+        // media 3DS son ~1200x1025 (apaisada), y hay GBA cuadrado.
+        //
+        // Esta pantalla no existia, y por eso el ajuste de las portadas se
+        // rompio tres veces sin que nada lo detectara: el catalogo de Switch
+        // --lo unico cubierto-- tiene arte de una sola forma, asi que no
+        // distingue entre "se ajusta a la imagen" y "usa el valor por
+        // defecto", que casualmente se le parece.
+        auto* content = new brls::Box(brls::Axis::COLUMN);
+        content->setPadding(32, 32, 32, 32);
+
+        auto* heading = new brls::Label();
+        heading->setText("ROM covers");
+        heading->setFontSize(theme::kFontTitle);
+        heading->setMarginBottom(16);
+        content->addView(heading);
+
+        // Dos filas de kColumns, como la reja de verdad: arriba una consola
+        // de arte vertical (SNES) y abajo una de apaisado (DS). Puestas una
+        // encima de otra se ve de un vistazo lo que cada una hace con el
+        // hueco de su columna.
+        const char* fixtureNames[] = {"cover-portrait.jpg",
+                                      "cover-landscape.jpg"};
+        const char* labels[] = {"SNES 2:3", "DS 1.17"};
+        // El hueco toma la forma del arte de la consola, como hace la
+        // pantalla de ROMs de verdad. Con --screen rom-covers-portrait se
+        // mira SNES y con rom-covers-landscape, DS.
+        const bool vertical = screen == "rom-covers-portrait";
+        grid::setCoverSlotAspect(vertical ? 1200.0f / 1800.0f
+                                          : 1200.0f / 1025.0f);
+        for (int fila = 0; fila < 1; ++fila) {
+            auto* row = new brls::Box(brls::Axis::ROW);
+            row->setMarginBottom(12);
+            for (int i = 0; i < grid::kColumns; ++i) {
+                GridCardInfo card;
+                card.entryIndex = i;
+                card.infoHash = std::string("rom-fixture-") +
+                                std::to_string(card.entryIndex);
+                card.title = labels[vertical ? 0 : 1];
+                card.sub = "Fixture";
+                card.iconUrl =
+                    (fixtures / fixtureNames[vertical ? 0 : 1]).string();
+                card.iconPreserveAspect = true;
+                auto* cell = new GameCard();
+                cell->setCard(card, &metadata, [](int) {}, nullptr);
+                cell->setMarginRight(grid::kShelfSpacing);
+                row->addView(cell);
+            }
+            content->addView(row);
+        }
+        activity = new GoldenActivity(content);
     } else if (screen == "shelf-header") {
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(32, 32, 32, 32);

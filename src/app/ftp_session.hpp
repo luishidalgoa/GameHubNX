@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
+#include <cstdio>
 #include <cctype>
 #include <string>
 #include <vector>
@@ -20,6 +22,33 @@ namespace gamehubnx {
 // esta el explorador de ficheros de la propia aplicacion, que pide confirmacion
 // y no esta expuesto a la red. Si algun dia hace falta subir, se anade a
 // proposito y no de rebote.
+// La respuesta a PASV: "227 Entering Passive Mode (a,b,c,d,p1,p2)".
+//
+// Vive fuera de la clase y del transporte porque es exactamente el trozo que
+// se equivoco sin que nadie lo notara: se anunciaba 0.0.0.0 dando por hecho
+// que el cliente reutilizaria la direccion de la conexion de control. curl lo
+// hace y las pruebas pasaban; FileZilla se conecta a lo que se le diga y moria
+// con WSAEADDRNOTAVAIL. Aqui se puede comprobar sin sockets.
+//
+// `ip` va en orden de maquina (0xC0A80010 = 192.168.0.16). Devuelve false con
+// una direccion que no sirve para conectarse, para poder responder un error en
+// vez de anunciar algo invalido.
+inline bool formatPasvReply(uint32_t ip, uint16_t port, std::string& out) {
+    if (ip == 0 || port == 0)
+        return false;
+    char text[64];
+    std::snprintf(text, sizeof(text),
+                  "227 Entering Passive Mode (%u,%u,%u,%u,%u,%u)",
+                  static_cast<unsigned>((ip >> 24) & 0xff),
+                  static_cast<unsigned>((ip >> 16) & 0xff),
+                  static_cast<unsigned>((ip >> 8) & 0xff),
+                  static_cast<unsigned>(ip & 0xff),
+                  static_cast<unsigned>(port >> 8),
+                  static_cast<unsigned>(port & 0xff));
+    out = text;
+    return true;
+}
+
 class FtpSession {
 public:
     // Que tiene que hacer el transporte despues de responder.

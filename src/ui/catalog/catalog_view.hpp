@@ -119,8 +119,8 @@ public:
             return 100;
         if (heroIndex_ >= 0 && index.row == 1)
             return grid::kHeroHeight;
-        return index.row < headerRowCount() ? grid::kShelfHeight
-                                            : grid::kRowHeight;
+        return index.row < headerRowCount() ? grid::shelfHeight()
+                                            : grid::rowHeight();
     }
     brls::RecyclerCell* cellForRow(brls::RecyclerFrame* recycler,
                                     brls::IndexPath index) override;
@@ -230,7 +230,7 @@ public:
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
         recycler_->setPadding(6, 32, 6, 32);
-        recycler_->estimatedRowHeight = grid::kRowHeight;
+        recycler_->estimatedRowHeight = grid::rowHeight();
         recycler_->registerCell("TopInset", [] { return new TopInsetCell(); });
         recycler_->registerCell("GridRow", [column = focusColumn_] {
             return new GridRowCell(column);
