@@ -541,9 +541,27 @@ int main(int argc, char** argv) {
             [](brls::View* view) {
                 if (!view)
                     return;
-                log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f\n",
+                // Desglosado, no solo el total. Dos filas hermanas de la misma
+                // lista salieron con x=34 y x=68, y con el total a secas no se
+                // puede saber cual de los sumandos sobra: View::getX() suma la
+                // x del padre, el left que calcula Yoga, la traslacion y ---si
+                // la vista esta desacoplada--- el origen desacoplado. Y detach()
+                // solo marca un flag: no le dice a Yoga que el nodo sea
+                // absoluto, asi que Yoga le sigue asignando un left propio y
+                // los dos pueden sumarse.
+                brls::View* parent = view->getParent();
+                // getX() = padre->getX() + getLocalX(), y getLocalX() es la
+                // suma de los tres terminos locales: el left que calcula Yoga,
+                // la traslacion y --si la vista esta desacoplada-- el origen
+                // desacoplado. Separar padre de local basta para discriminar:
+                // dos filas hermanas comparten padre, asi que si una sale
+                // corrida la diferencia esta en su parte local.
+                log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f "
+                        "| padre=%.0f local=%.0f desacoplada=%d\n",
                         view->describe().c_str(), view->getX(), view->getY(),
-                        view->getWidth(), view->getHeight());
+                        view->getWidth(), view->getHeight(),
+                        parent ? parent->getX() : 0.0f, view->getLocalX(),
+                        view->isDetached() ? 1 : 0);
             });
 
         startupStage("push MainActivity");
