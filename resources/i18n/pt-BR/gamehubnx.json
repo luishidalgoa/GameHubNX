@@ -755,6 +755,16 @@
         "free": "  ({} livres)"
     },
     "platforms": {
+        "format_warning": "o emulador não abre este formato",
+        "format_warning_named": "{} não abre este formato",
+        "games_unplayable": "{} jogos · {} que o {} não abre",
+        "games_unplayable_plain": "{} jogos · {} que o emulador não abre",
+        "where": "Onde salvar a ROM?",
+        "to_emulator": "Pasta do emulador",
+        "to_downloads": "Deixar em downloads",
+        "tico_missing": "Não encontro a pasta do tico no cartão: o emulador não vai vê-la ali.",
+        "ask_destination": "Perguntar onde salvar cada ROM",
+        "ask_destination_hint": "Sem isso vão direto para a pasta do tico.",
         "saved_to": "Salvo em",
         "path_unverified": "Esta pasta não está confirmada para o tico: verifique se o emulador a lê.",
         "downloading": "Baixando {}",

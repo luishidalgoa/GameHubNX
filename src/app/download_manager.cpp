@@ -30,6 +30,7 @@ extern "C" {
 #include <deque>
 #include <dirent.h>
 #include <fstream>
+#include <set>
 #include <functional>
 #include <map>
 #include <memory>
@@ -117,6 +118,103 @@ bool directoryEmpty(const std::string& path) {
     }
     closedir(dir);
     return empty;
+}
+
+// Mueve a `destination` todo lo que haya en `source`, y borra `source` si
+// queda vacio. Devuelve false y llena `error` al primer fichero que no pueda.
+//
+// rename() primero porque en la misma tarjeta es instantaneo y no duplica
+// bytes: una ROM de PSP son gigabytes y copiarlos para borrarlos despues
+// llenaria la SD y tardaria una eternidad. Solo si rename falla --tipicamente
+// porque origen y destino estan en volumenes distintos-- se copia.
+bool moveDirectoryContents(const std::string& source,
+                           const std::string& destination,
+                           std::string& error) {
+    if (!makeDirectories(destination)) {
+        error = "No se pudo crear " + destination;
+        return false;
+    }
+    DIR* dir = opendir(source.c_str());
+    if (!dir) {
+        error = "No se pudo abrir " + source;
+        return false;
+    }
+    bool ok = true;
+    while (struct dirent* entry = readdir(dir)) {
+        const std::string name = entry->d_name;
+        if (name == "." || name == "..")
+            continue;
+        const std::string from = source + "/" + name;
+        const std::string to = destination + "/" + name;
+        struct stat st {};
+        // Solo ficheros: una descarga de la tienda es un fichero suelto, y
+        // recorrer arboles aqui seria trabajo sin caso de uso.
+        if (stat(from.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+            continue;
+        if (rename(from.c_str(), to.c_str()) == 0)
+            continue;
+        std::ifstream in(from, std::ios::binary);
+        std::ofstream out(to, std::ios::binary | std::ios::trunc);
+        if (!in || !out) {
+            error = "No se pudo escribir " + to;
+            ok = false;
+            break;
+        }
+        out << in.rdbuf();
+        out.flush();
+        if (!out.good()) {
+            error = "Se corto la copia de " + name;
+            unlink(to.c_str());
+            ok = false;
+            break;
+        }
+        in.close();
+        out.close();
+        unlink(from.c_str());
+    }
+    closedir(dir);
+    // La carpeta de trabajo se va con su contenido: dejarla vacia es lo que
+    // llena downloads/ de carpetas huerfanas.
+    if (ok && directoryEmpty(source))
+        rmdir(source.c_str());
+    return ok;
+}
+
+// Borra las carpetas de trabajo vacias que quedan en downloads/.
+//
+// Una instalacion en streaming crea su carpeta, va metiendo los paquetes en la
+// consola segun llegan y termina sin nada dentro; la carpeta se queda. Se
+// acumulan una por juego instalado y no las mira nadie.
+//
+// Solo se borran las VACIAS: una con contenido puede ser una descarga a medias
+// o un fichero que el usuario quiere, y eso no se toca. Al arrancar, que es
+// cuando no hay ninguna tarea escribiendo.
+void sweepEmptyDownloadDirs(const std::string& root,
+                            const std::set<std::string>& inUse) {
+    DIR* dir = opendir(root.c_str());
+    if (!dir)
+        return;
+    size_t removed = 0;
+    while (struct dirent* entry = readdir(dir)) {
+        const std::string name = entry->d_name;
+        if (name == "." || name == "..")
+            continue;
+        const std::string path = root + "/" + name;
+        struct stat st {};
+        if (stat(path.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+            continue;
+        // Una tarea viva puede tener su carpeta vacia todavia --recien
+        // encolada, sin escribir nada-- y borrarsela seria quitarle el sitio
+        // donde va a bajar.
+        if (inUse.count(path))
+            continue;
+        if (directoryEmpty(path) && rmdir(path.c_str()) == 0)
+            ++removed;
+    }
+    closedir(dir);
+    if (removed)
+        log_msg("[downloads] %zu carpetas de trabajo vacias borradas\n",
+                removed);
 }
 
 // Remove stray resolve temp files left by a cancelled update-file chooser:
@@ -444,6 +542,15 @@ DownloadManager::DownloadManager(std::string rootPath, bool startWorker)
     // B-dismissed update-file choosers leave orphaned resolve temp files.
     sweepTempTorrents(rootPath_, "_update_tmp_");
     load();
+    // Despues de load(): hace falta saber que carpetas siguen siendo de alguna
+    // tarea antes de borrar ninguna.
+    {
+        std::set<std::string> inUse;
+        for (const DownloadTask& task : tasks_)
+            if (!task.dataPath.empty())
+                inUse.insert(task.dataPath);
+        sweepEmptyDownloadDirs(downloadRoot_, inUse);
+    }
     if (startWorker) {
         workerStarted_ = true;
         worker_ = std::thread(&DownloadManager::schedulerMain, this);
@@ -708,6 +815,7 @@ bool DownloadManager::importDebrid(const DebridImport& import,
     task.installTarget = import.hasInstallTarget
         ? import.installTarget
         : installTarget_.load(std::memory_order_relaxed);
+    task.destinationDir = import.destinationDir;
     tasks_.push_back(std::move(task));
     taskId = import.infoHash;
 
@@ -1195,6 +1303,7 @@ bool DownloadManager::saveLocked(std::string& error) const {
         state << "9:completed" << bint(task.completedBytes);
         state << "4:data" << bstr(task.dataPath);
         state << "9:debrid-id" << bstr(task.debridId);
+        state << "11:destination" << bstr(task.destinationDir);
         state << "5:error" << bstr(task.error);
         state << "2:id" << bstr(task.id);
         state << "14:install-target" << bint(
@@ -1319,6 +1428,7 @@ void DownloadManager::load() {
                 task.packagesInstalled =
                     static_cast<uint32_t>(packagesDone);
         }
+        dictionaryString(item, "destination", task.destinationDir);
         uint64_t persistedTarget = 0;
         if (dictionaryInteger(item, "install-target", persistedTarget)) {
             task.installTarget = persistedTarget == 1
@@ -1839,6 +1949,47 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
             result == DebridRunResult::Finished ? "finished"
                 : result == DebridRunResult::Stopped ? "stopped" : "FAILED",
             runError.empty() ? "" : ": ", runError.c_str());
+
+    // Mover el fichero a su carpeta definitiva, FUERA del lock: es E/S sobre la
+    // tarjeta y con mutex_ cogido congelaria cada snapshot() que hace la UI.
+    //
+    // Sin esto la pantalla de ROMs mentia: anunciaba la carpeta del emulador y
+    // el fichero se quedaba en downloads/, donde ningun emulador mira.
+    if (result == DebridRunResult::Finished) {
+        std::string dataPath;
+        std::string destination;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            DownloadTask* task = findLocked(activeId);
+            if (task && task->mode == TransferMode::DownloadOnly &&
+                !task->destinationDir.empty()) {
+                dataPath = task->dataPath;
+                destination = task->destinationDir;
+            }
+        }
+        if (!destination.empty()) {
+            std::string moveError;
+            if (moveDirectoryContents(dataPath, destination, moveError)) {
+                log_msg("[roms] %s -> %s\n", dataPath.c_str(),
+                        destination.c_str());
+            } else {
+                // El fichero esta bajado y entero; lo unico que fallo fue
+                // moverlo. Se marca error para que se vea y se diga donde
+                // quedo, en vez de dar por buena una descarga que el usuario
+                // no va a encontrar.
+                std::lock_guard<std::mutex> lock(mutex_);
+                if (DownloadTask* task = findLocked(activeId)) {
+                    task->status = DownloadStatus::Error;
+                    task->error = moveError + " (el fichero esta en " +
+                                  dataPath + ")";
+                    std::string ignored;
+                    saveLocked(ignored);
+                }
+                log_msg("[roms] no se pudo mover a %s: %s\n",
+                        destination.c_str(), moveError.c_str());
+            }
+        }
+    }
 
     // Decided under the lock, acted on outside it: the account cleanup below
     // is a full HTTPS round trip, and holding mutex_ across it freezes every

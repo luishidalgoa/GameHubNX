@@ -79,9 +79,16 @@ public:
                         std::string& error,
                         uint32_t resolveWindowMsOverride = UINT32_MAX);
 
+    // Espera antes de cada intento, en milisegundos y una entrada por intento
+    // --la primera es 0, que el primero no espera--. Vacio deja la escalera de
+    // produccion. Las pruebas la ponen a cero: comprobar que se reintenta no
+    // deberia costar casi un minuto de reloj.
+    void setRetryWaits(std::vector<int> waitsMs);
+
 private:
     DebridProvider& provider_;
     RangeFetcher fetcher_;
+    std::vector<int> retryWaits_;
 };
 
 } // namespace gamehubnx

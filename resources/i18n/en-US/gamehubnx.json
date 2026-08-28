@@ -755,6 +755,16 @@
         "free": "  ({} free)"
     },
     "platforms": {
+        "format_warning": "the emulator cannot open this format",
+        "format_warning_named": "{} can't open this format",
+        "games_unplayable": "{} games · {} that {} can't open",
+        "games_unplayable_plain": "{} games · {} the emulator can't open",
+        "where": "Where should the ROM go?",
+        "to_emulator": "Emulator folder",
+        "to_downloads": "Leave it in downloads",
+        "tico_missing": "tico's folder is not on the card: leaving the ROM there means the emulator will not see it.",
+        "ask_destination": "Ask where to save each ROM",
+        "ask_destination_hint": "Without this they go straight to tico's folder.",
         "saved_to": "Saved to",
         "path_unverified": "This folder is not confirmed for tico: check that the emulator reads it.",
         "downloading": "Downloading {}",

@@ -755,6 +755,16 @@
         "free": "  ({} libres)"
     },
     "platforms": {
+        "format_warning": "l'émulateur n'ouvre pas ce format",
+        "format_warning_named": "{} n'ouvre pas ce format",
+        "games_unplayable": "{} jeux · {} que {} n'ouvre pas",
+        "games_unplayable_plain": "{} jeux · {} que l'émulateur n'ouvre pas",
+        "where": "Où mettre la ROM ?",
+        "to_emulator": "Dossier de l'émulateur",
+        "to_downloads": "La laisser dans les téléchargements",
+        "tico_missing": "Le dossier de tico est introuvable sur la carte : l'émulateur ne la verra pas.",
+        "ask_destination": "Demander où enregistrer chaque ROM",
+        "ask_destination_hint": "Sans cela, elles vont directement dans le dossier de tico.",
         "saved_to": "Enregistré dans",
         "path_unverified": "Ce dossier n'est pas confirmé pour tico : vérifiez que l'émulateur le lit.",
         "downloading": "Téléchargement de {}",

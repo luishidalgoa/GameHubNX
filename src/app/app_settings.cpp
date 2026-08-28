@@ -122,6 +122,8 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
                       values.lastModsRefreshMs, error) ||
         !readString(root, "stream_selection", selection, error) ||
         !readString(root, "install_location", install, error) ||
+        !readBool(root, "ask_rom_destination", values.askRomDestination,
+                  error) ||
         !readBool(root, "show_completed_downloads",
                   values.showCompletedDownloads, error) ||
         !readBool(root, "extended_telemetry", values.extendedTelemetry,
@@ -236,6 +238,7 @@ std::string serializeSettings(const AppSettingsData& values) {
     root["last_mods_refresh_ms"] = values.lastModsRefreshMs;
     root["stream_selection"] = streamSelectionName(values.streamSelection);
     root["install_location"] = installLocationName(values.installLocation);
+    root["ask_rom_destination"] = values.askRomDestination;
     root["show_completed_downloads"] = values.showCompletedDownloads;
     root["extended_telemetry"] = values.extendedTelemetry;
     root["check_for_updates_on_launch"] = values.checkForUpdatesOnLaunch;
@@ -394,6 +397,7 @@ bool AppSettingsData::operator==(const AppSettingsData& other) const {
            lastModsRefreshMs == other.lastModsRefreshMs &&
            streamSelection == other.streamSelection &&
            installLocation == other.installLocation &&
+           askRomDestination == other.askRomDestination &&
            showCompletedDownloads == other.showCompletedDownloads &&
            extendedTelemetry == other.extendedTelemetry &&
            checkForUpdatesOnLaunch == other.checkForUpdatesOnLaunch &&

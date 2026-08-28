@@ -240,6 +240,25 @@ bool installs(const DebridTaskSpec& spec, size_t index,
     return true;
 }
 
+// Reintentos ante un corte de red.
+//
+// Cada intento vuelve a mirar el fichero en disco --o los paquetes ya
+// instalados-- antes de pedir nada, asi que reintentar CONTINUA donde iba en
+// vez de empezar de cero. Con dos intentos seguidos y sin espera, un corte de
+// unos segundos mataba la tarea y obligaba a reanudarla a mano.
+//
+// La espera crece para no machacar un servidor que esta caido, y se corta en
+// cuanto el usuario pausa o cierra.
+//
+// Es una tabla y no un contador porque el numero de intentos ES el numero de
+// esperas: quien la cambia --las pruebas la ponen a cero para no dormir casi
+// un minuto comprobando que se reintenta-- cambia las dos cosas a la vez y no
+// pueden quedar descuadradas.
+const std::vector<int>& defaultRetryWaitsMs() {
+    static const std::vector<int> kWaits = {0, 2000, 5000, 15000, 30000};
+    return kWaits;
+}
+
 bool sleepSlices(const std::function<bool()>& shouldStop, int totalMs) {
     int slices = totalMs / 250;
     for (int i = 0; i < slices; ++i) {
@@ -416,6 +435,7 @@ struct RunContext {
     bool magnetCreated = false;
     bool fallbackUsed = false;
     uint32_t resolveWindowMs = 60000;
+    const std::vector<int>* retryWaits = &defaultRetryWaitsMs();
     std::string torrentName;
     std::vector<DebridFile> files;
     std::vector<std::string> selectedLinks;
@@ -822,7 +842,11 @@ Step downloadPlainFile(RunContext& ctx, size_t kthSelected,
         return Step::Failed;
     }
 
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    const size_t attempts = ctx.retryWaits->size();
+    for (size_t attempt = 0; attempt < attempts; ++attempt) {
+        if (attempt > 0 &&
+            !sleepSlices(*ctx.shouldStop, (*ctx.retryWaits)[attempt]))
+            return Step::Stopped;
         uint64_t offset = 0;
         statSize(localPath, offset);
         Step s = fetchAppend(ctx, url, localPath, offset, file.bytes,
@@ -831,21 +855,28 @@ Step downloadPlainFile(RunContext& ctx, size_t kthSelected,
             break;
         if (s == Step::Stopped)
             return Step::Stopped;
-        if (attempt == 0) {
-            std::string fresh;
-            if (ctx.provider.resolveDownloadUrl(ctx.debridId, info,
-                                                kthSelected, file, fresh,
-                                                ctx.error)) {
-                if (!linkAllowed(ctx.provider, fresh)) {
-                    ctx.error =
-                        "Debrid service returned a plaintext download link.";
-                    return Step::Failed;
-                }
-                url = fresh;
+        if (attempt + 1 == attempts)
+            return Step::Failed;
+        // El enlace puede haber caducado mientras tanto, asi que se vuelve a
+        // pedir. Si el proveedor no lo da, se reintenta con el que hay: puede
+        // seguir siendo valido y el fallo haber sido solo de red.
+        log_msg("[debrid] reintento %zu/%zu de '%s': %s\n", attempt + 1,
+                attempts - 1, file.path.c_str(), ctx.error.c_str());
+        std::string fresh;
+        // Con su propio hueco para el error: pedir el enlace es opcional aqui,
+        // y su fallo no puede tapar el motivo real por el que fallo la
+        // transferencia.
+        std::string resolveError;
+        if (ctx.provider.resolveDownloadUrl(ctx.debridId, info, kthSelected,
+                                            file, fresh, resolveError)) {
+            if (!linkAllowed(ctx.provider, fresh)) {
+                ctx.error =
+                    "Debrid service returned a plaintext download link.";
+                return Step::Failed;
             }
-            continue;
+            url = fresh;
         }
-        return Step::Failed;
+        ctx.error.clear();
     }
 
     uint64_t finalSize = 0;
@@ -1030,28 +1061,55 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
 
 Step streamInstallPackage(RunContext& ctx, size_t kthSelected,
                           const DebridFile& file) {
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    const size_t attempts = ctx.retryWaits->size();
+    // El ultimo enlace que sirvio. Pedir uno nuevo es otra llamada de red, y
+    // es justamente lo que falla durante un corte: si no se puede pedir, se
+    // reintenta con este en vez de abandonar. Antes un resolve fallido mataba
+    // la instalacion en el primer intento, que es lo contrario de lo que
+    // pretende reintentar.
+    std::string url;
+    for (size_t attempt = 0; attempt < attempts; ++attempt) {
+        if (attempt > 0 &&
+            !sleepSlices(*ctx.shouldStop, (*ctx.retryWaits)[attempt]))
+            return Step::Stopped;
         DebridInfo info;
         info.links = ctx.selectedLinks;
-        std::string url;
-        if (!ctx.provider.resolveDownloadUrl(ctx.debridId, info,
-                                             kthSelected, file, url,
-                                             ctx.error))
-            return Step::Failed;
-        if (!linkAllowed(ctx.provider, url)) {
-            ctx.error = "Debrid service returned a plaintext download link.";
-            return Step::Failed;
+        std::string fresh;
+        std::string resolveError;
+        if (ctx.provider.resolveDownloadUrl(ctx.debridId, info, kthSelected,
+                                            file, fresh, resolveError)) {
+            if (!linkAllowed(ctx.provider, fresh)) {
+                ctx.error =
+                    "Debrid service returned a plaintext download link.";
+                return Step::Failed;
+            }
+            url = fresh;
+        } else if (url.empty()) {
+            // Sin enlace no hay nada con lo que seguir: se cuenta como intento
+            // y se vuelve a pedir en el siguiente.
+            ctx.error = resolveError;
+            if (attempt + 1 == attempts)
+                return Step::Failed;
+            log_msg("[debrid] reintento %zu/%zu pidiendo enlace de '%s': %s\n",
+                    attempt + 1, attempts - 1, file.path.c_str(),
+                    ctx.error.c_str());
+            continue;
         }
         Step s = attemptStreamInstall(ctx, file, url, file.path);
         if (s == Step::Ok)
             return Step::Ok;
         if (s == Step::Stopped)
             return Step::Stopped;
-        if (attempt == 0) {
-            ctx.error.clear();
-            continue;
-        }
-        return Step::Failed;
+        if (attempt + 1 == attempts)
+            return Step::Failed;
+        // Reintentar una instalacion en streaming es seguro: el backend lleva
+        // journal y reengancha al paquete a medias --y se niega si el journal
+        // apunta a otra memoria o a otro paquete--, asi que no se instala nada
+        // dos veces ni se mezcla con otra cosa.
+        log_msg("[debrid] reintento %zu/%zu instalando '%s': %s\n",
+                attempt + 1, attempts - 1, file.path.c_str(),
+                ctx.error.c_str());
+        ctx.error.clear();
     }
     return Step::Failed;
 }
@@ -1062,12 +1120,18 @@ DebridTransfer::DebridTransfer(DebridProvider& provider, RangeFetcher fetcher)
     : provider_(provider),
       fetcher_(fetcher ? std::move(fetcher) : curlRangeFetcher()) {}
 
+void DebridTransfer::setRetryWaits(std::vector<int> waitsMs) {
+    retryWaits_ = std::move(waitsMs);
+}
+
 DebridRunResult DebridTransfer::run(
     const DebridTaskSpec& spec, const std::function<bool()>& shouldStop,
     const std::function<void(const DebridProgress&)>& progress,
     std::string& debridIdOut, std::string& error,
     uint32_t resolveWindowMsOverride) {
     RunContext ctx{provider_, fetcher_, spec, &shouldStop, &progress};
+    if (!retryWaits_.empty())
+        ctx.retryWaits = &retryWaits_;
     ctx.packagesInstalled = spec.packagesInstalled;
     ctx.resolveWindowMs =
         (resolveWindowMsOverride == UINT32_MAX) ? 60000 : resolveWindowMsOverride;

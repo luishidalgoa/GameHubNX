@@ -207,6 +207,21 @@ public:
             });
         content->addView(showCompleted_);
 
+        askRomDestination_ = new brls::BooleanCell();
+        askRomDestination_->init(
+            tr("gamehubnx/platforms/ask_destination"),
+            settings_->get().askRomDestination,
+            [this](bool enabled) {
+                AppSettingsData values = settings_->get();
+                bool previous = values.askRomDestination;
+                values.askRomDestination = enabled;
+                if (!persist(values, "ask_rom_destination"))
+                    askRomDestination_->setOn(previous, false);
+            });
+        askRomDestination_->setDetailText(
+            tr("gamehubnx/platforms/ask_destination_hint"));
+        content->addView(askRomDestination_);
+
         // Seccion de debrid retirada. Contenia el interruptor de torrent, el
         // selector de proveedor (TorBox / TorrServer / Real-Debrid) y la
         // vinculacion de la cuenta. Nada de eso aplica: aqui se descarga de la
@@ -675,6 +690,7 @@ private:
         maxActiveDownloads_->setSelection(
             static_cast<int>(values.maxActiveDownloads) - 1, true);
         showCompleted_->setOn(values.showCompletedDownloads, false);
+        askRomDestination_->setOn(values.askRomDestination, false);
         checkForUpdates_->setOn(values.checkForUpdatesOnLaunch, false);
         webToggle_->setOn(values.webServerEnabled, false);
         updateWebCells();
@@ -714,6 +730,7 @@ private:
     brls::SelectorCell* installLocation_ = nullptr;
     brls::SelectorCell* maxActiveDownloads_ = nullptr;
     brls::BooleanCell* showCompleted_ = nullptr;
+    brls::BooleanCell* askRomDestination_ = nullptr;
     brls::BooleanCell* webToggle_ = nullptr;
     brls::DetailCell* webAddress_ = nullptr;
     brls::DetailCell* webPin_ = nullptr;
