@@ -138,6 +138,13 @@ uint16_t net_local_port(socket_t fd) {
     return ntohs(addr.sin_port);
 }
 
+uint32_t net_local_ipv4(socket_t fd) {
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (struct sockaddr*)&addr, &len) < 0) return 0;
+    return ntohl(addr.sin_addr.s_addr);
+}
+
 void net_close(socket_t fd) {
     if (fd >= 0) close(fd);
 }

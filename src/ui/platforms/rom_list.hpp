@@ -62,7 +62,7 @@ public:
     brls::RecyclerCell* cellForRow(brls::RecyclerFrame* recycler,
                                    brls::IndexPath index) override;
     float heightForRow(brls::RecyclerFrame*, brls::IndexPath) override {
-        return grid::kRowHeight;
+        return grid::rowHeight();
     }
     // Nada: la tarjeta se activa sola con su propio manejador, como en el
     // catalogo. Dejarlo aqui ademas abriria la ficha dos veces.
@@ -165,7 +165,18 @@ public:
 
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
-        recycler_->estimatedRowHeight = grid::kRowHeight;
+        recycler_->estimatedRowHeight = grid::rowHeight();
+        // El hueco arranca cuadrado --lo que ya habia-- y toma la forma del
+        // arte en cuanto llega la primera portada.
+        grid::resetCoverSlot();
+        slotDecided_ = false;
+        {
+            auto alive = alive_;
+            grid::artworkAspectReporter() = [this, alive](float aspecto) {
+                if (alive->load())
+                    adoptArtworkAspect(aspecto);
+            };
+        }
         recycler_->registerCell("GridRow", [column = focusColumn_] {
             return new GridRowCell(column);
         });
@@ -182,7 +193,39 @@ public:
         load();
     }
 
-    ~RomListActivity() override { alive_->store(false); }
+    ~RomListActivity() override {
+        alive_->store(false);
+        // El hueco es un ajuste de la reja, compartido con el catalogo de
+        // Switch. Se devuelve al salir: si no, las tarjetas de Switch se
+        // quedarian con la forma de la ultima consola que se abrio.
+        grid::artworkAspectReporter() = nullptr;
+        // Solo se devuelve el valor: rehacer la reja de una pantalla que se
+        // esta destruyendo no pinta nada, y la que quede debajo recarga la
+        // suya al volver a mostrarse.
+        grid::resetCoverSlot();
+    }
+
+    // La forma del arte de ESTA consola, aprendida de la primera portada que
+    // llega.
+    //
+    // No se pregunta al servidor a proposito: el numero que publica por
+    // plataforma es la preferencia de maquetacion de la web y esta del reves
+    // en varias --SNES la da apaisada y todas sus portadas son verticales--.
+    // Lo que se mide no se puede equivocar.
+    //
+    // Se queda con la PRIMERA y no vuelve a cambiar. En 3DS y GBA conviven las
+    // dos formas, y perseguir cada portada dejaria la reja rehaciendose sola
+    // mientras se baja por ella; ahi la minoria seguira con banda, que es lo
+    // menos malo mientras el alto de fila tenga que ser uno solo.
+    void adoptArtworkAspect(float aspect) {
+        if (slotDecided_ || aspect <= 0.0f)
+            return;
+        slotDecided_ = true;
+        if (grid::setCoverSlotAspect(aspect) && recycler_) {
+            recycler_->estimatedRowHeight = grid::rowHeight();
+            recycler_->reloadData();
+        }
+    }
 
     brls::View* createContentView() override { return frame_; }
 
@@ -533,6 +576,8 @@ private:
     // Compartida con las tarjetas: recuerda en que columna estaba el foco al
     // cambiar de fila, igual que en el catalogo.
     std::shared_ptr<int> focusColumn_ = std::make_shared<int>(0);
+    // Solo la primera portada decide la forma del hueco.
+    bool slotDecided_ = false;
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };

@@ -170,6 +170,29 @@ void test_acciones() {
     assert(s.binary());
 }
 
+// La respuesta a PASV tiene que llevar una direccion a la que el cliente pueda
+// conectarse de verdad.
+//
+// Este test existe porque no existia: se anunciaba 0.0.0.0 confiando en que el
+// cliente reutilizase la direccion de la conexion de control. curl lo hace, y
+// por eso todo parecia bien; FileZilla se conecta a lo que se le diga y moria
+// con WSAEADDRNOTAVAIL antes de poder listar nada.
+void test_pasv() {
+    std::string out;
+    assert(gamehubnx::formatPasvReply(0xC0A80010u, 28615, out));
+    // 28615 = 111*256 + 199
+    assert(out == "227 Entering Passive Mode (192,168,0,16,111,199)");
+
+    // El puerto alto y el bajo no se pueden confundir.
+    assert(gamehubnx::formatPasvReply(0x0A000001u, 256, out));
+    assert(out == "227 Entering Passive Mode (10,0,0,1,1,0)");
+
+    // Lo que no sirve para conectarse se rechaza en vez de anunciarse: es
+    // justo el caso que rompia FileZilla.
+    assert(!gamehubnx::formatPasvReply(0, 28615, out));
+    assert(!gamehubnx::formatPasvReply(0xC0A80010u, 0, out));
+}
+
 } // namespace
 
 int main() {
@@ -180,6 +203,7 @@ int main() {
     test_no_se_sale_del_arbol();
     test_solo_lectura();
     test_acciones();
+    test_pasv();
     std::printf("ftp session tests passed\n");
     return 0;
 }

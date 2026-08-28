@@ -188,17 +188,32 @@ void FtpServer::serve() {
                         sendLine(control, "425 Sin canal de datos", stopping_);
                         continue;
                     }
-                    // La direccion la toma el cliente de la conexion de
-                    // control; aqui solo hace falta el puerto. Se anuncia
-                    // 0,0,0,0 a proposito: la consola puede tener varias y
-                    // adivinar cual mira el cliente es como se rompe esto en
-                    // redes con VPN.
-                    char text[64];
-                    std::snprintf(text, sizeof(text),
-                                  "227 Entering Passive Mode (0,0,0,0,%u,%u)",
-                                  static_cast<unsigned>(dataPort >> 8),
-                                  static_cast<unsigned>(dataPort & 0xff));
-                    sendLine(control, text, stopping_);
+                    // La direccion que se anuncia es la DEL SOCKET DE
+                    // CONTROL, y es una correccion.
+                    //
+                    // Antes iba 0,0,0,0 dando por hecho que el cliente
+                    // reutilizaria la direccion por la que ya esta hablando.
+                    // curl lo hace; FileZilla NO: intenta conectarse a
+                    // 0.0.0.0 literalmente y muere con WSAEADDRNOTAVAIL sin
+                    // llegar a listar nada. Es el mismo tropiezo que con la
+                    // ruta de PWD --curl era demasiado permisivo y tapaba el
+                    // fallo--, asi que aqui se anuncia una direccion de
+                    // verdad.
+                    //
+                    // getsockname sobre la conexion de control da justo la
+                    // que el cliente esta mirando, asi que sigue siendo
+                    // correcta con varias interfaces o con VPN, que era lo
+                    // que el 0,0,0,0 pretendia resolver.
+                    std::string text;
+                    if (!formatPasvReply(net_local_ipv4(control), dataPort,
+                                         text)) {
+                        // Sin direccion no hay PASV que valga: mejor decirlo
+                        // que anunciar una invalida y dejar al cliente
+                        // esperando.
+                        sendLine(control, "425 Sin direccion local", stopping_);
+                        continue;
+                    }
+                    sendLine(control, text.c_str(), stopping_);
                     continue;
                 }
 
