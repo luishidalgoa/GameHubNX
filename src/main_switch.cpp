@@ -47,6 +47,7 @@ extern "C" {
 #include "ui/common/web_qr.hpp"
 #include "ui/first_run_view.hpp"
 #include "ui/i18n.hpp"
+#include "ui/files/file_browser_view.hpp"
 #include "ui/main_frame.hpp"
 #include "ui/platforms/platforms_view.hpp"
 #include "ui/downloads/downloads_view.hpp"
@@ -180,6 +181,16 @@ public:
                                      catalog, gameUpdates, true,
                                      InstalledView::Mode::Updates);
         });
+        // El explorador, con pestana propia. Estuvo enterrado el octavo en
+        // Ajustes y no se encontraba: dos veces se reporto que no estaba,
+        // estandolo. Aqui cabe porque la barra lateral ya reserva el alto del
+        // pie (kSidebarFooterReserve); sin eso, una septima entrada se metia
+        // debajo de la IP.
+        //
+        // Arranca en la raiz de la tarjeta y no en la carpeta de descargas: lo
+        // que hay que recolocar suele estar justamente fuera de ella.
+        tabs->addNavTab(tr("gamehubnx/browser/title"), NavIconType::Files,
+                        [] { return new FileBrowserView("sdmc:/"); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,
                          installed, updater, mods, webServer] {

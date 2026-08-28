@@ -602,8 +602,6 @@
     "advanced_detail": "Diagnóstico, armazenamento, redefinição",
     "storage": "Armazenamento",
     "storage_detail": "Uso do cartão SD e limpeza",
-    "browser": "Explorador de arquivos",
-    "browser_detail": "Listar, mover, renomear e excluir arquivos do cartão SD",
     "report_bug": "Mostrar logs recentes como códigos QR",
     "report_bug_detail": "Mostrar logs recentes como códigos QR para o desenvolvedor",
     "report_notice": "Nada é enviado a partir do console. O log abaixo é desenhado como códigos QR para você fotografar e enviar você mesmo.",
