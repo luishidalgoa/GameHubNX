@@ -1,8 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <cctype>
+#include <map>
 #include <string>
+#include <vector>
 
+#include <dirent.h>
 #include <sys/stat.h>
 
 #include "app_paths.h"
@@ -27,17 +31,21 @@ inline constexpr const char* kTicoRoot = "sdmc:/tico/roms";
 
 // Carpeta de tico para un slug de GameHub, o cadena vacia si no consta.
 //
+// Los nombres de aqui estan comprobados contra el arbol de una instalacion
+// real de tico, no deducidos.
+//
 // Sin confirmar a proposito, y por eso ausentes:
-//   nds   la guia de referencia manda la DS a MelonDS, en SD:/Roms/DS/, no a
-//         tico. Son ~100 juegos, asi que no es un caso menor.
-//   3ds   tico anadio 3DS via Azahar, pero no he encontrado el nombre de
-//         carpeta.
+//   nds   tico NO crea carpeta para la DS: en el arbol comprobado no existe.
+//         Son 337 juegos, asi que no es un caso menor, pero inventar aqui un
+//         "nds" solo conseguiria que se descargaran a una carpeta que no mira
+//         nadie. Van a otro emulador, y esa ruta la pone el usuario.
 //   psvita-ports  son .zip de homebrew portado, no ROMs: su sitio es
 //         sdmc:/switch/, que es otro camino distinto.
 inline std::string ticoFolderFor(const std::string& slug) {
     struct Pair { const char* slug; const char* folder; };
     static constexpr Pair kKnown[] = {
         {"gba", "gba"},
+        {"3ds", "3ds"},
         {"super-nintendo-entertainment-system", "snes"},
         {"snes", "snes"},
         {"psp", "psp"},
@@ -75,10 +83,48 @@ inline std::string defaultRomPath(const std::string& slug) {
     return std::string(kTicoRoot) + "/" + (folder.empty() ? slug : folder);
 }
 
+// Ruta efectiva: lo que el usuario haya fijado para esa plataforma manda sobre
+// la tabla. Quien no use tico no tiene por que aceptar su arbol, y quien lo use
+// puede haberlo movido.
+inline std::string romPathFor(
+    const std::string& slug,
+    const std::map<std::string, std::string>& overrides) {
+    auto it = overrides.find(slug);
+    if (it != overrides.end() && !it->second.empty())
+        return it->second;
+    return defaultRomPath(slug);
+}
+
 // Cierto cuando la carpeta sale de la tabla comprobada y no de un respaldo.
 // La interfaz lo usa para avisar de que esa ruta hay que confirmarla.
 inline bool defaultPathIsKnown(const std::string& slug) {
     return !ticoFolderFor(slug).empty();
+}
+
+// Carpetas que existen DE VERDAD bajo una raiz de ROMs.
+//
+// Se leen de la tarjeta en vez de adivinarse. La tabla de arriba solo lleva lo
+// comprobado y para nds, 3ds y psvita-ports no hay nombre confirmado; seguir
+// ampliandola a ciegas es apostar, y la respuesta esta en la SD de quien usa
+// la app. Vacio si la raiz no existe --que tambien es una respuesta--.
+inline std::vector<std::string> listRomFolders(const std::string& root) {
+    std::vector<std::string> out;
+    DIR* dir = opendir(root.c_str());
+    if (!dir)
+        return out;
+    while (dirent* entry = readdir(dir)) {
+        const std::string name = entry->d_name;
+        if (name == "." || name == "..")
+            continue;
+        // d_type no lo rellenan todos los sistemas de fichero, asi que la
+        // pregunta se le hace a stat y no al campo.
+        struct stat st {};
+        if (stat((root + "/" + name).c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            out.push_back(name);
+    }
+    closedir(dir);
+    std::sort(out.begin(), out.end());
+    return out;
 }
 
 // Cierto si la carpeta de ROMs de tico existe en la tarjeta.

@@ -3,6 +3,7 @@
 #include "debrid_provider.hpp"
 
 #include <cstdint>
+#include <map>
 #include <string>
 
 namespace gamehubnx {
@@ -51,6 +52,12 @@ struct AppSettingsData {
     // tico quiere que la ROM aparezca ahi y nada mas, y preguntar en cada
     // descarga seria un modal de mas cada vez.
     bool askRomDestination = false;
+    // Carpeta de ROMs por plataforma, slug -> ruta, solo para las que el
+    // usuario haya cambiado. Un mapa y no un campo por plataforma porque las
+    // plataformas las publica el servidor: manana puede haber una que hoy no
+    // existe, y no deberia hacer falta tocar la app para poder colocarla.
+    // Ausente = la ruta por defecto, que es lo que quiere casi todo el mundo.
+    std::map<std::string, std::string> romPaths;
     bool showCompletedDownloads = true;
     bool extendedTelemetry = false;
     bool checkForUpdatesOnLaunch = true;

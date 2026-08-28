@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -195,17 +196,26 @@ public:
                     DownloadManager* manager, AppSettings* settings)
         : platform_(std::move(platform)), catalog_(catalog),
           manager_(manager), settings_(settings) {
-        destination_ = roms::defaultRomPath(platform_.slug);
+        destination_ = resolvedDestination();
 
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setGrow(1);
         content->setPadding(18, 38, 18, 34);
 
-        auto* path = new brls::Label();
-        path->setFontSize(theme::kFontSmall);
-        path->setTextColor(theme::textSecondary());
-        path->setText(tr("gamehubnx/platforms/saved_to") + "  " + destination_);
-        content->addView(path);
+        pathLabel_ = new brls::Label();
+        pathLabel_->setFontSize(theme::kFontSmall);
+        pathLabel_->setTextColor(theme::textSecondary());
+        content->addView(pathLabel_);
+
+        // El aviso de "carpeta sin confirmar" deja de tener sentido en cuanto
+        // el usuario elige una a mano, asi que se pinta junto con la ruta y no
+        // una sola vez al construir.
+        pathWarning_ = new brls::Label();
+        pathWarning_->setFontSize(theme::kFontCaption);
+        pathWarning_->setTextColor(theme::warning());
+        pathWarning_->setMarginTop(4);
+        content->addView(pathWarning_);
+        refreshPathLabels();
 
         // Cuando la carpeta NO sale de la tabla comprobada de tico se avisa: la
         // ROM se descargaria igual, pero el emulador no la encontraria y eso no
@@ -219,14 +229,6 @@ public:
             missing->setMarginTop(4);
             missing->setText(tr("gamehubnx/platforms/tico_missing"));
             content->addView(missing);
-        }
-        if (!roms::defaultPathIsKnown(platform_.slug)) {
-            auto* warn = new brls::Label();
-            warn->setFontSize(theme::kFontCaption);
-            warn->setTextColor(theme::warning());
-            warn->setMarginTop(4);
-            warn->setText(tr("gamehubnx/platforms/path_unverified"));
-            content->addView(warn);
         }
 
         status_ = new brls::Label();
@@ -263,6 +265,100 @@ public:
                            brls::Application::popActivity();
                            return true;
                        });
+        registerAction(tr("gamehubnx/platforms/change_folder"), brls::BUTTON_Y,
+                       [this](brls::View*) {
+                           chooseFolder();
+                           return true;
+                       });
+    }
+
+    // Elegir donde van las ROMs de ESTA plataforma.
+    //
+    // Lo primero de la lista son las carpetas que existen de verdad bajo la
+    // raiz de tico: para nds o 3ds no hay nombre confirmado y la respuesta esta
+    // en la tarjeta, no en una tabla que yo pueda ampliar adivinando. Y detras,
+    // escribir una ruta a mano, porque no todo el mundo usa tico y su arbol no
+    // tiene por que valerle a quien use otro emulador.
+    void chooseFolder() {
+        std::vector<std::string> labels;
+        std::vector<std::string> paths;   // vacio = accion, no ruta
+        for (const std::string& folder : roms::listRomFolders(roms::kTicoRoot)) {
+            const std::string full = std::string(roms::kTicoRoot) + "/" + folder;
+            labels.push_back(full);
+            paths.push_back(full);
+        }
+        labels.push_back(tr("gamehubnx/platforms/type_path"));
+        paths.push_back(std::string());
+        const size_t typeIndex = labels.size() - 1;
+
+        size_t defaultIndex = labels.size();
+        const std::string byDefault = roms::defaultRomPath(platform_.slug);
+        labels.push_back(tr("gamehubnx/platforms/use_default") + "  " +
+                         byDefault);
+        paths.push_back(byDefault);
+
+        // Sin carpetas encontradas la lista se queda en las dos ultimas
+        // opciones, y aun asi se abre: escribir la ruta a mano sigue estando,
+        // que es justo lo que necesita quien no usa tico.
+
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/platforms/choose_folder"), labels,
+            [this, paths, typeIndex, defaultIndex](int index) {
+                if (index < 0 || index >= static_cast<int>(paths.size()))
+                    return;
+                const size_t i = static_cast<size_t>(index);
+                if (i == typeIndex) {
+                    typeFolder();
+                    return;
+                }
+                // "Por defecto" borra la entrada en vez de guardar la ruta de
+                // hoy: si manana se corrige el nombre de carpeta, esta
+                // plataforma se corrige sola.
+                applyFolder(paths[i], /*clear=*/i == defaultIndex);
+            },
+            0);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    void typeFolder() {
+        brls::Application::getImeManager()->openForText(
+            [this](std::string text) {
+                const size_t first = text.find_first_not_of(" \t\r\n");
+                const size_t last = text.find_last_not_of(" \t\r\n");
+                std::string path = first == std::string::npos
+                    ? std::string()
+                    : text.substr(first, last - first + 1);
+                while (path.size() > 1 && path.back() == '/')
+                    path.pop_back();
+                if (path.empty())
+                    return;
+                // Sin prefijo no hay nada que abrir: en la consola las rutas
+                // viven en sdmc:. Se completa en vez de rechazar, que teclear
+                // esto con la cruceta ya cuesta bastante.
+                if (path.rfind("sdmc:", 0) != 0)
+                    path = "sdmc:" + (path[0] == '/' ? path : "/" + path);
+                applyFolder(path, /*clear=*/false);
+            },
+            tr("gamehubnx/platforms/type_path_prompt"), /*subText=*/"",
+            /*maxLength=*/255, /*initialText=*/destination_,
+            brls::KEYBOARD_DISABLE_NONE);
+    }
+
+    void applyFolder(const std::string& path, bool clear) {
+        if (!settings_)
+            return;
+        AppSettingsData values = settings_->get();
+        if (clear)
+            values.romPaths.erase(platform_.slug);
+        else
+            values.romPaths[platform_.slug] = path;
+        std::string error;
+        if (!settings_->update(values, error)) {
+            brls::Application::notify(error);
+            return;
+        }
+        destination_ = resolvedDestination();
+        refreshPathLabels();
     }
 
     void download(size_t index) {
@@ -361,6 +457,28 @@ private:
         });
     }
 
+    std::string resolvedDestination() const {
+        static const std::map<std::string, std::string> kNone;
+        return roms::romPathFor(platform_.slug,
+                                settings_ ? settings_->get().romPaths : kNone);
+    }
+
+    void refreshPathLabels() {
+        pathLabel_->setText(tr("gamehubnx/platforms/saved_to") + "  " +
+                            destination_);
+        // El aviso solo sale cuando la carpeta la eligio la tabla y no consta:
+        // en cuanto el usuario pone una a mano, quien responde por ella es el.
+        const bool chosen = settings_ &&
+            settings_->get().romPaths.count(platform_.slug) > 0;
+        const bool unverified =
+            !chosen && !roms::defaultPathIsKnown(platform_.slug);
+        pathWarning_->setText(unverified
+                                  ? tr("gamehubnx/platforms/path_unverified")
+                                  : std::string());
+        pathWarning_->setVisibility(unverified ? brls::Visibility::VISIBLE
+                                               : brls::Visibility::GONE);
+    }
+
     // "63 juegos", o "63 juegos - 41 no los abre Azahar" cuando hay algo que
     // decir. El nombre del emulador lo publica el servidor; sin el, la frase
     // generica.
@@ -380,6 +498,8 @@ private:
     AppSettings* settings_;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;
+    brls::Label* pathLabel_ = nullptr;
+    brls::Label* pathWarning_ = nullptr;
     brls::Label* status_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
