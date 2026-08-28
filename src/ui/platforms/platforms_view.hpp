@@ -95,7 +95,7 @@ public:
             const std::string& ext = p.extensions[i];
             extLabels_[i]->setVisibility(brls::Visibility::VISIBLE);
             setTextIfChanged(extLabels_[i], ext);
-            switch (roms::compatOfExtension(p.slug, ext)) {
+            switch (roms::displayCompatForExtension(p.slug, ext)) {
                 case roms::RomCompat::Playable:
                     extLabels_[i]->setTextColor(theme::success());
                     break;

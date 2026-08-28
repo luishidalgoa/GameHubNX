@@ -27,6 +27,7 @@
 #include "ui/settings/advanced_settings.hpp"
 #include "ui/settings/network_health.hpp"
 #include "ui/settings/settings_cells.hpp"
+#include "ui/files/file_browser_view.hpp"
 #include "ui/settings/storage_manager.hpp"
 #include "ui/theme.hpp"
 
@@ -273,6 +274,13 @@ public:
             tr("gamehubnx/settings/storage_detail"),
             [this] { openStorage(); }));
 
+        // El explorador vive aqui y no en una pestana propia: la barra lateral
+        // ya va justa de alto --es el problema de #27-- y meterle una septima
+        // la empeoraria. Ademas se usa para arreglar algo puntual, no a diario.
+        content->addView(actionCell(tr("gamehubnx/settings/browser"),
+            tr("gamehubnx/settings/browser_detail"),
+            [this] { openFileBrowser(); }));
+
         content->addView(actionCell(tr("gamehubnx/settings/network_health"),
             tr("gamehubnx/settings/network_health_detail"),
             [this] { openNetworkHealth(); }));
@@ -362,6 +370,12 @@ private:
     void openStorage() {
         brls::Application::pushActivity(
             new StorageManagerActivity(manager_, metadata_));
+    }
+
+    void openFileBrowser() {
+        // Se abre en la raiz de la tarjeta, no en la carpeta de descargas: lo
+        // que hay que recolocar suele estar justamente fuera de ella.
+        brls::Application::pushActivity(new FileBrowserActivity("sdmc:/"));
     }
 
     void openNetworkHealth() {

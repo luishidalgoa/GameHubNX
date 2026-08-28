@@ -127,10 +127,14 @@ public:
                 meta += "   ";
             // Con el nombre del emulador el aviso deja de ser una queja vaga y
             // se puede comprobar; sin el, la frase generica.
-            meta += emulator.empty()
-                        ? tr("gamehubnx/platforms/format_warning")
-                        : tr("gamehubnx/platforms/format_warning_named",
-                             emulator);
+            // Dos motivos distintos, dos frases distintas: no es lo mismo que
+            // el emulador no abra ESE formato que no emule esa consola.
+            if (!roms::ticoSupportsPlatform(entry.platformSlug))
+                meta += tr("gamehubnx/platforms/platform_warning");
+            else
+                meta += emulator.empty()
+                    ? tr("gamehubnx/platforms/format_warning")
+                    : tr("gamehubnx/platforms/format_warning_named", emulator);
         }
         setTextIfChanged(meta_, meta);
         meta_->setTextColor(unplayable ? theme::warning()
@@ -442,9 +446,10 @@ private:
                 // entiende sin leyenda.
                 size_t unplayable = 0;
                 for (const CatalogEntry& rom : fetched)
-                    if (roms::isUnplayableByEmulator(
+                    if (roms::displayCompat(
                             rom.platformSlug,
-                            gamehub::fileNameFromUrl(rom.directUrl)))
+                            gamehub::fileNameFromUrl(rom.directUrl)) ==
+                        roms::RomCompat::Unplayable)
                         ++unplayable;
                 status_->setText(summaryText(fetched.size(), unplayable));
                 status_->setTextColor(unplayable ? theme::warning()
@@ -516,7 +521,7 @@ inline brls::RecyclerCell* RomDataSource::cellForRow(
         const std::string file =
             gamehub::fileNameFromUrl(roms_[i].directUrl);
         cell->setRom(roms_[i], /*onSdCard=*/false,
-                     roms::romCompat(roms_[i].platformSlug, file),
+                     roms::displayCompat(roms_[i].platformSlug, file),
                      roms::extensionOf(file), emulator_);
     }
     return cell;
