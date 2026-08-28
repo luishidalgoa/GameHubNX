@@ -773,6 +773,7 @@
     "platforms": {
         "format_warning": "o emulador não abre este formato",
         "platform_warning": "o tico não emula este console",
+        "platform_badge": "Sem emulador",
         "download": "Baixar",
         "versions": "{} versões",
         "which_version": "Qual versão?",

@@ -773,6 +773,7 @@
     "platforms": {
         "format_warning": "the emulator cannot open this format",
         "platform_warning": "tico does not emulate this console",
+        "platform_badge": "No emulator",
         "download": "Download",
         "versions": "{} versions",
         "which_version": "Which version?",
