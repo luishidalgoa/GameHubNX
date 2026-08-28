@@ -1,8 +1,8 @@
 #include "app/app_paths.h"
 #include "app/app_settings.hpp"
 #include "app/catalog_service.hpp"
-#include "app/companion_settings.hpp"
 #include "app/download_manager.hpp"
+#include "app/ftp_server.hpp"
 #include "app/game_metadata_service.hpp"
 #include "app/game_update_service.hpp"
 #include "app/installed_title_service.hpp"
@@ -44,7 +44,7 @@ extern "C" {
 #include "ui/catalog/catalog_view.hpp"
 #include "ui/common/burn_in_saver.hpp"
 #include "ui/common/ui_helpers.hpp"
-#include "ui/common/web_qr.hpp"
+#include "ui/common/ftp_address.hpp"
 #include "ui/first_run_view.hpp"
 #include "ui/i18n.hpp"
 #include "ui/files/file_browser_view.hpp"
@@ -70,7 +70,7 @@ using gamehubnx::ModIndexService;
 using gamehubnx::SwitchPerformanceController;
 using gamehubnx::UpdateCheckResult;
 using gamehubnx::UpdateService;
-using gamehubnx::WebServer;
+using gamehubnx::FtpServer;
 
 using namespace gamehubnx::ui;
 
@@ -140,11 +140,11 @@ public:
                  GameMetadataService* metadata,
                  InstalledTitleService* installed, AppSettings* settings,
                  UpdateService* updater, ModIndexService* mods,
-                 FavoritesService* favorites, WebServer* webServer,
+                 FavoritesService* favorites, FtpServer* ftpServer,
                  SwitchDeployService* deploy, GameUpdateService* gameUpdates)
         : manager_(manager), catalog_(catalog), metadata_(metadata),
           installed_(installed), settings_(settings), updater_(updater),
-          mods_(mods), favorites_(favorites), webServer_(webServer),
+          mods_(mods), favorites_(favorites), ftpServer_(ftpServer),
           deploy_(deploy), gameUpdates_(gameUpdates) {
         auto* tabs = new gamehubnx::ui::MainFrame();
         using gamehubnx::ui::NavIconType;
@@ -193,16 +193,16 @@ public:
                         [] { return new FileBrowserView("sdmc:/"); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,
-                         installed, updater, mods, webServer] {
+                         installed, updater, mods, ftpServer] {
             return new SettingsView(settings, manager, catalog, metadata,
-                                    installed, updater, mods, webServer);
+                                    installed, updater, mods, ftpServer);
         });
         // Ayuda y Acerca-de no se registran: la primera explica torrents,
         // proveedores de debrid y magnets -- nada de lo que hace esta app -- y
         // la segunda es la ficha del proyecto base. Las vistas siguen
         // compiladas y sin tocar para que los merges con upstream no choquen;
         // lo unico que cambia es que no aparecen en la navegacion.
-        tabs->attachStorageFooter(manager, webServer);
+        tabs->attachStorageFooter(manager, ftpServer);
         frame_ = new brls::AppletFrame(tabs);
         frame_->setTitle(tr("gamehubnx/app/title"));
     }
@@ -234,21 +234,23 @@ public:
                 brls::Application::quit();
                 return true;
             }, /*hidden=*/true);
-        // Visible on every screen: the web companion QR is the whole pairing
-        // story, so it must not stay buried three levels deep in Settings.
-        registerAction(tr("gamehubnx/app/web_qr"), brls::BUTTON_BACK,
+        // La direccion del FTP, desde cualquier pantalla. Sin QR: un codigo
+        // servia para que un movil abriera una pagina; esto se teclea en un
+        // cliente de FTP desde un ordenador, asi que lo util es el texto.
+        registerAction(tr("gamehubnx/ftp/address"), brls::BUTTON_BACK,
             [this](brls::View*) {
                 const gamehubnx::AppSettingsData& values = settings_->get();
-                const std::string url = gamehubnx::ui::webCompanionUrl(
-                    webServer_, values.webServerEnabled);
+                const std::string url =
+                    gamehubnx::ui::ftpAddress(ftpServer_, values.ftpEnabled);
                 if (url.empty()) {
                     brls::Application::notify(
-                        tr(values.webServerEnabled
-                               ? "gamehubnx/settings/web_address_none"
-                               : "gamehubnx/web/off"));
+                        tr(values.ftpEnabled ? "gamehubnx/ftp/no_address"
+                                             : "gamehubnx/ftp/off"));
                     return true;
                 }
-                gamehubnx::ui::showWebQrDialog(url, values.webServerPin);
+                // La clave va aparte: ensenarla junto a la direccion la deja a
+                // la vista de cualquiera que pase por delante de la tele.
+                brls::Application::notify(url);
                 return true;
             });
     }
@@ -262,7 +264,7 @@ private:
     UpdateService* updater_;
     ModIndexService* mods_;
     FavoritesService* favorites_;
-    WebServer* webServer_;
+    FtpServer* ftpServer_;
     SwitchDeployService* deploy_;
     GameUpdateService* gameUpdates_;
     brls::AppletFrame* frame_;
@@ -458,56 +460,15 @@ int main(int argc, char** argv) {
 
         UpdateService updater;
 
-        startupStage("WebServer construction");
-        WebServer webServer(manager, "romfs:/web", GAMEHUBNX_VERSION);
-        webServer.setPin(settings.get().webServerPin);
-        webServer.setStreamSelection(settings.get().streamSelection);
-        webServer.setSettingsHandlers(
-            [&settings](std::string& json, std::string& error) {
-                bool ok = false;
-                if (!runOnUiThread([&] {
-                        json = gamehubnx::companionSettingsJson(settings.get());
-                        ok = true;
-                    })) {
-                    error = "timed out";
-                    return false;
-                }
-                return ok;
-            },
-            [&settings, &manager, &webServer](const std::string& body,
-                                              std::string& error,
-                                              std::string& json) {
-                bool ok = false;
-                if (!runOnUiThread([&] {
-                        gamehubnx::AppSettingsData next = settings.get();
-                        if (!gamehubnx::applyCompanionSettingsPatch(next, body,
-                                                                  error))
-                            return;
-                        if (!settings.update(next, error))
-                            return;
-                        gamehubnx::applyCompanionSettingsRuntime(settings.get(),
-                                                               manager);
-                        webServer.setStreamSelection(
-                            settings.get().streamSelection);
-                        json = gamehubnx::companionSettingsJson(settings.get());
-                        ok = true;
-                    })) {
-                    error = "timed out";
-                    return false;
-                }
-                return ok;
-            });
-        webServer.updateCatalog(catalog.sharedEntries());
-        // Every later adopt() (launch refresh, settings refresh, catalog tab)
-        // lands on the UI thread, so this callback keeps the companion's
-        // catalogue reference current from all of them.
-        catalog.setOnAdopt(
-            [&webServer](
-                std::shared_ptr<const std::vector<gamehubnx::CatalogEntry>> e) {
-                webServer.updateCatalog(std::move(e));
-            });
-        if (settings.get().webServerEnabled)
-            webServer.start();
+        startupStage("FtpServer construction");
+        // Solo lectura y apagado por defecto: publica la tarjeta entera en la
+        // red local, y eso no se enciende sin que alguien lo pida.
+        gamehubnx::FtpServer ftpServer("sdmc:/", settings.get().ftpPin);
+        if (settings.get().ftpEnabled) {
+            std::string ftpError;
+            if (!ftpServer.start(gamehubnx::FtpServer::kDefaultPort, ftpError))
+                log_msg("[ftp] no se pudo arrancar: %s\n", ftpError.c_str());
+        }
 
         // Barrier: from here on the UI reads the metadata service, so the
         // parallel index parse must have landed.
@@ -528,7 +489,7 @@ int main(int argc, char** argv) {
         startupStage("MainActivity construction");
         auto* activity = new MainActivity(&manager, &catalog, &metadata,
                                            &installed, &settings, &updater,
-                                           &mods, &favorites, &webServer,
+                                           &mods, &favorites, &ftpServer,
                                            &deploy, &gameUpdates);
 
         // Diagnostico del recuadro de foco mal dibujado (issue #15/#25). El
@@ -838,7 +799,7 @@ int main(int argc, char** argv) {
         deploy.shutdown();
         // The web server goes first: its threads call into manager, so they
         // must be joined before the manager dies.
-        webServer.shutdown();
+        ftpServer.stop();
         updater.shutdown();
         manager.shutdown();
         performance.setActive(false);

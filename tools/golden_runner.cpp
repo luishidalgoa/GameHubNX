@@ -209,9 +209,9 @@ public:
         if (withExitAction_) {
             registerAction(tr("gamehubnx/app/exit"), brls::BUTTON_START,
                            [](brls::View*) { return true; }, /*hidden=*/true);
-            // Visible on-device on every screen (web companion QR) — must be
-            // part of the measured budget.
-            registerAction(tr("gamehubnx/app/web_qr"), brls::BUTTON_BACK,
+            // Visible en el aparato en todas las pantallas (la direccion del
+            // FTP): tiene que contar dentro del presupuesto medido.
+            registerAction(tr("gamehubnx/ftp/address"), brls::BUTTON_BACK,
                            [](brls::View*) { return true; });
         }
     }

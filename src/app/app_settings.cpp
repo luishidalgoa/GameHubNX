@@ -27,9 +27,9 @@ using Json = nlohmann::json;
 // Fill an empty PIN with a random 6-digit value. Returns true when a new PIN
 // was written into `values` (caller should persist).
 bool ensureWebPin(AppSettingsData& values) {
-    if (!values.webServerPin.empty())
+    if (!values.ftpPin.empty())
         return false;
-    values.webServerPin = generateWebPin();
+    values.ftpPin = generateWebPin();
     return true;
 }
 
@@ -156,9 +156,9 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
                   values.checkForUpdatesOnLaunch, error) ||
         !readBool(root, "catalog_disclaimer_ack",
                   values.catalogDisclaimerAcknowledged, error) ||
-        !readBool(root, "web_server_enabled", values.webServerEnabled,
+        !readBool(root, "ftp_enabled", values.ftpEnabled,
                   error) ||
-        !readString(root, "web_server_pin", values.webServerPin, error) ||
+        !readString(root, "ftp_pin", values.ftpPin, error) ||
         !readBool(root, "torrenting_enabled", values.torrentingEnabled,
                   error) ||
         !readString(root, "torbox_api_key", values.torboxApiKey, error) ||
@@ -178,8 +178,8 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
     // kSettingsVersion, so a count the user raises afterwards sticks.
     if (fileVersion < 2)
         values.maxActiveDownloads = kMinActiveDownloads;
-    if (!isValidWebPin(values.webServerPin))
-        values.webServerPin.clear();
+    if (!isValidWebPin(values.ftpPin))
+        values.ftpPin.clear();
     // v3 keys: absent in an older file, so only read them when present and
     // otherwise leave the struct defaults in place.
     if (root.contains("torrserver_url")) {
@@ -273,8 +273,8 @@ std::string serializeSettings(const AppSettingsData& values) {
     root["extended_telemetry"] = values.extendedTelemetry;
     root["check_for_updates_on_launch"] = values.checkForUpdatesOnLaunch;
     root["catalog_disclaimer_ack"] = values.catalogDisclaimerAcknowledged;
-    root["web_server_enabled"] = values.webServerEnabled;
-    root["web_server_pin"] = values.webServerPin;
+    root["ftp_enabled"] = values.ftpEnabled;
+    root["ftp_pin"] = values.ftpPin;
     root["max_active_downloads"] = values.maxActiveDownloads;
     root["torrenting_enabled"] = values.torrentingEnabled;
     root["torbox_api_key"] = values.torboxApiKey;
@@ -433,8 +433,8 @@ bool AppSettingsData::operator==(const AppSettingsData& other) const {
            checkForUpdatesOnLaunch == other.checkForUpdatesOnLaunch &&
            catalogDisclaimerAcknowledged ==
                other.catalogDisclaimerAcknowledged &&
-           webServerEnabled == other.webServerEnabled &&
-           webServerPin == other.webServerPin &&
+           ftpEnabled == other.ftpEnabled &&
+           ftpPin == other.ftpPin &&
            maxActiveDownloads == other.maxActiveDownloads &&
            torrentingEnabled == other.torrentingEnabled &&
            torboxApiKey == other.torboxApiKey &&
@@ -560,8 +560,8 @@ bool AppSettings::write(const AppSettingsData& values,
 
 bool AppSettings::update(const AppSettingsData& values, std::string& error) {
     AppSettingsData next = values;
-    if (!isValidWebPin(next.webServerPin)) {
-        error = "Web companion PIN must be 4-8 digits.";
+    if (!isValidWebPin(next.ftpPin)) {
+        error = "La clave del FTP tiene que ser de 4 a 8 digitos.";
         return false;
     }
     ensureWebPin(next);

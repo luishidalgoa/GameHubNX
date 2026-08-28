@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "Exit",
-    "web_qr": "Web QR"
-  },
-  "web": {
-    "off": "Web off"
+    "exit": "Exit"
   },
   "nav": {
     "catalog": "Catalog",
@@ -511,17 +507,7 @@
     "section_downloads": "Downloads",
     "section_diagnostics": "Diagnostics",
     "section_general": "General",
-    "section_web": "Web companion",
-    "web_toggle": "Web companion",
-    "web_start_failed": "Could not start the web server.",
-    "web_address": "Address",
-    "web_address_none": "No network connection",
-    "web_disabled": "Off",
-    "web_qr_hint": "Scan from a phone on the same Wi-Fi.",
-    "web_pin": "PIN",
     "web_pin_off": "Off",
-    "web_pin_detail": "4-8 digits, empty to disable",
-    "web_pin_invalid": "PIN must be 4-8 digits (or empty to disable).",
     "language": "Language",
     "language_auto": "Auto",
     "language_en": "English",
@@ -600,6 +586,12 @@
     "advanced_detail": "Diagnostics, storage, reset",
     "storage": "Storage",
     "storage_detail": "SD card breakdown and cleanup",
+    "section_ftp": "FTP",
+    "ftp_toggle": "FTP server",
+    "ftp_toggle_detail": "Read-only. Publishes the SD card on your local network.",
+    "ftp_pin": "FTP password",
+    "ftp_pin_detail": "4 to 8 digits.",
+    "ftp_pin_invalid": "The password must be 4 to 8 digits.",
     "network_health": "Network Health",
     "network_health_detail": "Connectivity and provider status",
     "report_bug": "Show recent logs as QR codes",
@@ -769,6 +761,11 @@
       "marked_hint": "Waiting to be moved: {}",
       "count": "{} items",
       "empty": "Empty folder"
+    },
+    "ftp": {
+      "off": "FTP off",
+      "no_address": "No address yet",
+      "address": "FTP address"
     },
     "platforms": {
         "format_warning": "the emulator cannot open this format",

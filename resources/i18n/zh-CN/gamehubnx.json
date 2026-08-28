@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "退出",
-    "web_qr": "Web 二维码"
-  },
-  "web": {
-    "off": "Web 已关闭"
+    "exit": "退出"
   },
   "nav": {
     "catalog": "目录",
@@ -511,17 +507,7 @@
     "section_downloads": "下载",
     "section_diagnostics": "诊断",
     "section_general": "常规",
-    "section_web": "Web 伴侣",
-    "web_toggle": "Web 伴侣",
-    "web_start_failed": "无法启动 Web 服务器。",
-    "web_address": "地址",
-    "web_address_none": "无网络连接",
-    "web_disabled": "关闭",
-    "web_qr_hint": "用同一 Wi-Fi 下的手机扫描。",
-    "web_pin": "PIN",
     "web_pin_off": "关闭",
-    "web_pin_detail": "4-8 位数字，留空以禁用",
-    "web_pin_invalid": "PIN 必须为 4-8 位数字（或留空以禁用）。",
     "language": "语言",
     "language_auto": "自动",
     "language_en": "English",
@@ -602,6 +588,12 @@
     "advanced_detail": "诊断、存储、重置",
     "storage": "存储",
     "storage_detail": "SD 卡使用情况与清理",
+    "section_ftp": "FTP",
+    "ftp_toggle": "FTP 服务器",
+    "ftp_toggle_detail": "只读。将 SD 卡公开到本地网络。",
+    "ftp_pin": "FTP 密码",
+    "ftp_pin_detail": "4 到 8 位数字。",
+    "ftp_pin_invalid": "密码必须是 4 到 8 位数字。",
     "report_bug": "以二维码显示最近日志",
     "report_bug_detail": "为开发者显示最近日志的二维码",
     "report_notice": "不会从主机发送任何内容。以下日志会绘制成二维码，供你自行拍摄并发送。",
@@ -769,6 +761,11 @@
       "marked_hint": "等待移动：{}",
       "count": "{} 项",
       "empty": "空文件夹"
+    },
+    "ftp": {
+      "off": "FTP 已关闭",
+      "no_address": "暂无地址",
+      "address": "FTP 地址"
     },
     "platforms": {
         "format_warning": "模拟器无法打开此格式",

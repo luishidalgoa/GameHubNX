@@ -1,6 +1,5 @@
 #include "app/app_settings.hpp"
 #include "app/gamehub_catalog.hpp"
-#include "app/companion_settings.hpp"
 #include "app/download_manager.hpp"  // clampMaxActiveDownloads
 
 #include <cassert>
@@ -23,8 +22,6 @@ using gamehubnx::isValidProxyUrl;
 using gamehubnx::isValidCatalogSourceUrl;
 using gamehubnx::effectiveCatalogSourceUrl;
 using gamehubnx::applyProxySetting;
-using gamehubnx::applyCompanionSettingsPatch;
-using gamehubnx::companionSettingsJson;
 
 namespace {
 
@@ -35,36 +32,6 @@ void cleanup() {
     unlink(SettingsPath);
     unlink("/tmp/gamehubnx-settings-test.json.tmp");
     unlink(LegacyPath);
-}
-
-void testCompanionSettingsPatchWhitelist() {
-    AppSettingsData values;
-    values.torboxApiKey = "keep-me";
-    values.maxActiveDownloads = 1;
-    std::string error;
-    assert(!applyCompanionSettingsPatch(values, "not-json", error));
-    error.clear();
-    assert(!applyCompanionSettingsPatch(values, "{\"language\":\"ru\"}", error));
-    assert(error.find("unknown") != std::string::npos);
-    error.clear();
-    assert(applyCompanionSettingsPatch(
-        values,
-        "{\"maxActiveDownloads\":4,\"torboxApiKey\":\"new-key\","
-        "\"catalogFilter\":\"all\",\"refreshCatalogOnLaunch\":true}",
-        error));
-    assert(values.maxActiveDownloads == 4);
-    assert(values.torboxApiKey == "new-key");
-    assert(values.catalogFilter == CatalogFilter::All);
-    assert(values.refreshCatalogOnLaunch);
-    error.clear();
-    assert(applyCompanionSettingsPatch(values, "{\"torboxApiKey\":\"\"}", error));
-    assert(values.torboxApiKey.empty());
-    error.clear();
-    assert(!applyCompanionSettingsPatch(
-        values, "{\"proxyUrl\":\"ftp://nope\"}", error));
-    std::string json = companionSettingsJson(values);
-    assert(json.find("torboxApiKey") == std::string::npos);
-    assert(json.find("\"torboxConfigured\":false") != std::string::npos);
 }
 
 void testMissingFileUsesSafeDefaults() {
@@ -95,10 +62,13 @@ void testMissingFileUsesSafeDefaults() {
     assert(values.torrserverUrl.empty());
     assert(values.debridProvider == DebridProviderKind::TorBox);
     assert(!values.firstRunCompleted);
-    // Fresh install gets a random companion PIN so mutations are never open.
-    assert(values.webServerPin.size() == 6);
-    assert(gamehubnx::isValidWebPin(values.webServerPin));
-    assert(!values.webServerPin.empty());
+    // Una instalacion nueva se lleva una clave de FTP al azar, para que
+    // encender el servidor no lo deje abierto de par en par.
+    assert(values.ftpPin.size() == 6);
+    assert(gamehubnx::isValidWebPin(values.ftpPin));
+    // Y el servidor viene APAGADO: publica la tarjeta entera en la red local,
+    // asi que no se enciende sin que alguien lo pida.
+    assert(!values.ftpEnabled);
     assert(access(SettingsPath, F_OK) == 0);
 }
 
@@ -120,8 +90,8 @@ void testUpdatePersistsEveryPublicSetting() {
     changed.showCompletedDownloads = false;
     changed.extendedTelemetry = true;
     changed.checkForUpdatesOnLaunch = false;
-    changed.webServerEnabled = false;
-    changed.webServerPin = "12345678";
+    changed.ftpEnabled = true;
+    changed.ftpPin = "12345678";
     changed.maxActiveDownloads = 3;
     changed.catalogDisclaimerAcknowledged = true;
     changed.torrentingEnabled = true;
@@ -208,25 +178,26 @@ void testLegacyTelemetryFlagMigratesOnce() {
     std::string error;
     assert(settings.load(error));
     assert(settings.get().extendedTelemetry);
-    assert(!settings.get().webServerPin.empty());
+    assert(!settings.get().ftpPin.empty());
     assert(access(SettingsPath, F_OK) == 0);
     assert(access(LegacyPath, F_OK) != 0);
 }
 
-// A hand-edited PIN that is not 4-8 digits is replaced with a generated PIN
-// rather than leaving the companion open on the LAN.
+// Una clave editada a mano que no sean de 4 a 8 digitos se sustituye por una
+// generada, en vez de dejar el servidor sin clave.
 void testInvalidWebPinIsCleared() {
     cleanup();
     {
         std::ofstream output(SettingsPath);
-        output << R"({"version":1,"web_server_pin":"letters"})";
+        output << R"({"version":1,"ftp_pin":"letters"})";
     }
     AppSettings settings(SettingsPath, LegacyPath);
     std::string error;
     assert(settings.load(error));
-    assert(settings.get().webServerPin.size() == 6);
-    assert(gamehubnx::isValidWebPin(settings.get().webServerPin));
-    assert(settings.get().webServerEnabled);
+    assert(settings.get().ftpPin.size() == 6);
+    assert(gamehubnx::isValidWebPin(settings.get().ftpPin));
+    // Y sigue apagado: rellenar la clave no enciende el servicio.
+    assert(!settings.get().ftpEnabled);
 
     assert(gamehubnx::isValidWebPin(""));
     assert(gamehubnx::isValidWebPin("1234"));
@@ -247,11 +218,11 @@ void testUpdateEmptyPinRegenerates() {
     std::string error;
     assert(settings.load(error));
     AppSettingsData values = settings.get();
-    const std::string previous = values.webServerPin;
-    values.webServerPin.clear();
+    const std::string previous = values.ftpPin;
+    values.ftpPin.clear();
     assert(settings.update(values, error));
-    assert(settings.get().webServerPin.size() == 6);
-    assert(gamehubnx::isValidWebPin(settings.get().webServerPin));
+    assert(settings.get().ftpPin.size() == 6);
+    assert(gamehubnx::isValidWebPin(settings.get().ftpPin));
     (void)previous;
 }
 
@@ -284,7 +255,7 @@ void testVersionOneResetsActiveDownloads() {
     {
         std::ofstream output(SettingsPath);
         output << R"({"version":1,"max_active_downloads":4,)"
-               << R"("language":"ru","web_server_pin":"4242"})";
+               << R"("language":"ru","ftp_pin":"4242"})";
     }
     {
         AppSettings settings(SettingsPath, LegacyPath);
@@ -292,7 +263,7 @@ void testVersionOneResetsActiveDownloads() {
         assert(settings.load(error));
         assert(settings.get().maxActiveDownloads == 1);
         assert(settings.get().language == "ru");
-        assert(settings.get().webServerPin == "4242");
+        assert(settings.get().ftpPin == "4242");
     }
     // update() stamps the new version, so a deliberate 4 now sticks.
     {
@@ -467,7 +438,6 @@ void testProxySettingReachesEnvironment() {
 } // namespace
 
 int main() {
-    testCompanionSettingsPatchWhitelist();
     testMissingFileUsesSafeDefaults();
     testUpdatePersistsEveryPublicSetting();
     testOldSettingsJsonDefaultsRefreshTimes();

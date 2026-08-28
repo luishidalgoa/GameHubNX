@@ -22,10 +22,10 @@
 
 #include "app/download_manager.hpp"
 #include "app/install_space.hpp"
-#include "app/web_server.hpp"
+#include "app/ftp_server.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
-#include "ui/common/web_qr.hpp"
+#include "ui/common/ftp_address.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
@@ -284,12 +284,12 @@ private:
     brls::SidebarItem* owner_;
 };
 
-// One line of web-companion status for the sidebar footer: a state dot
-// (accent = serving, muted = off) and the reachable address. Non-focusable —
-// the QR/action surface is the global Minus hint, this is just the readout.
-class WebStatusRow : public brls::Box {
+// Una linea de estado del FTP en el pie de la barra lateral: un punto (acento
+// = sirviendo, apagado = no) y la direccion a la que conectarse. No enfocable:
+// es un lectura, no un control.
+class FtpStatusRow : public brls::Box {
 public:
-    WebStatusRow() : brls::Box(brls::Axis::ROW) {
+    FtpStatusRow() : brls::Box(brls::Axis::ROW) {
         setFocusable(false);
         setAlignItems(brls::AlignItems::CENTER);
         setMarginBottom(8);
@@ -306,15 +306,16 @@ public:
     void setState(bool running, const std::string& url) {
         dot_->running = running;
         if (!running) {
-            setTextIfChanged(label_, tr("gamehubnx/web/off"));
+            setTextIfChanged(label_, tr("gamehubnx/ftp/off"));
             label_->setTextColor(theme::textTertiary());
         } else if (url.empty()) {
-            setTextIfChanged(label_, tr("gamehubnx/settings/web_address_none"));
+            setTextIfChanged(label_, tr("gamehubnx/ftp/no_address"));
             label_->setTextColor(theme::textTertiary());
         } else {
-            // Drop the scheme: the footer column is 216px, every pixel counts.
-            setTextIfChanged(label_, url.rfind("http://", 0) == 0
-                                         ? url.substr(7)
+            // Sin el esquema: la columna del pie mide 216px y cada pixel
+            // cuenta.
+            setTextIfChanged(label_, url.rfind("ftp://", 0) == 0
+                                         ? url.substr(6)
                                          : url);
             label_->setTextColor(theme::textSecondary());
         }
@@ -406,9 +407,9 @@ public:
     // height is definite, justifyContent flex-end parks the meter on the floor
     // whatever it measures, and clipsToBounds is the backstop.
     void attachStorageFooter(DownloadManager* manager,
-                             gamehubnx::WebServer* webServer = nullptr) {
+                             gamehubnx::FtpServer* ftpServer = nullptr) {
         manager_ = manager;
-        webServer_ = webServer;
+        ftpServer_ = ftpServer;
         // Pinned over the full height of the sidebar column, so it has to be
         // touch-transparent or it eats every tap aimed at the tab items.
         dock_ = new TouchThroughBox(brls::Axis::COLUMN);
@@ -434,7 +435,7 @@ public:
         // fondo, no fiarse del veredicto de golden ni del ojo.
         this->sidebar->setMarginBottom(kSidebarFooterReserve);
 
-        webRow_ = new WebStatusRow();
+        webRow_ = new FtpStatusRow();
         webRow_->setVisibility(collapsed_ ? brls::Visibility::GONE
                                           : brls::Visibility::VISIBLE);
         dock_->addView(webRow_);
@@ -443,7 +444,7 @@ public:
         dock_->addView(footer_);
         addView(dock_);
         refreshStorage();
-        refreshWebStatus();
+        refreshFtpStatus();
         // The periodic refresh runs off a timer + brls::async, NOT from
         // draw(): nsGetStorageSize and nifmGetCurrentIpAddress are
         // synchronous service IPC and used to stall the frame being
@@ -474,12 +475,12 @@ private:
         queryInFlight_ = true;
         auto alive = alive_;
         std::string root = manager_->rootPath();
-        gamehubnx::WebServer* server = webServer_;
+        gamehubnx::FtpServer* server = ftpServer_;
         brls::async([this, alive, root, server] {
             const gamehubnx::StorageSpaceSnapshot storage =
                 gamehubnx::queryStorageSpace(root);
             const bool running = server ? server->running() : true;
-            std::string url = running ? webCompanionUrl(server, true) : "";
+            std::string url = running ? ftpAddress(server, true) : "";
             brls::sync([this, alive, storage, running, url = std::move(url)] {
                 if (!alive->load())
                     return;
@@ -505,14 +506,13 @@ private:
             footer_->setUnavailable();
     }
 
-    void refreshWebStatus() {
+    void refreshFtpStatus() {
         if (!webRow_)
             return;
         // A null server (golden runner) reads as "serving on the fixed fake
         // address" so the baseline row looks like the real thing.
-        const bool running = webServer_ ? webServer_->running() : true;
-        webRow_->setState(running,
-                          running ? webCompanionUrl(webServer_, true) : "");
+        const bool running = ftpServer_ ? ftpServer_->running() : true;
+        webRow_->setState(running, running ? ftpAddress(ftpServer_, true) : "");
     }
 
     // Wide enough for padding + the active-accent bar + the 28px icon.
@@ -524,9 +524,9 @@ private:
     std::vector<brls::View*> labels_;
     brls::Box* dock_ = nullptr;
     StorageMeter* footer_ = nullptr;
-    WebStatusRow* webRow_ = nullptr;
+    FtpStatusRow* webRow_ = nullptr;
     DownloadManager* manager_ = nullptr;
-    gamehubnx::WebServer* webServer_ = nullptr;
+    gamehubnx::FtpServer* ftpServer_ = nullptr;
     brls::RepeatingTimer queryTimer_;
     bool queryInFlight_ = false;
     std::shared_ptr<std::atomic<bool>> alive_ =
