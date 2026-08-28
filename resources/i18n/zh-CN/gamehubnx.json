@@ -755,6 +755,13 @@
         "free": "  (剩余 {})"
     },
     "platforms": {
+        "format_warning": "模拟器无法打开此格式",
+        "where": "ROM 保存到哪里？",
+        "to_emulator": "模拟器文件夹",
+        "to_downloads": "留在下载中",
+        "tico_missing": "卡上找不到 tico 文件夹：放在那里模拟器不会看到它。",
+        "ask_destination": "每次询问 ROM 的保存位置",
+        "ask_destination_hint": "不开启则直接放入 tico 文件夹。",
         "saved_to": "保存到",
         "path_unverified": "此文件夹未针对 tico 确认：请检查模拟器能否读取。",
         "downloading": "正在下载 {}",

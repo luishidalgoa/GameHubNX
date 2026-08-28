@@ -46,6 +46,11 @@ struct AppSettingsData {
     uint64_t lastModsRefreshMs = 0;
     StreamSelection streamSelection = StreamSelection::AllFiles;
     InstallLocation installLocation = InstallLocation::SdCard;
+    // Preguntar la carpeta cada vez que se descarga una ROM, en vez de dejarla
+    // en la de tico sin mediar palabra. Por defecto NO se pregunta: quien tiene
+    // tico quiere que la ROM aparezca ahi y nada mas, y preguntar en cada
+    // descarga seria un modal de mas cada vez.
+    bool askRomDestination = false;
     bool showCompletedDownloads = true;
     bool extendedTelemetry = false;
     bool checkForUpdatesOnLaunch = true;

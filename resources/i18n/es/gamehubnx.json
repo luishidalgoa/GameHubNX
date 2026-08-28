@@ -755,6 +755,13 @@
         "free": "  ({} libres)"
     },
     "platforms": {
+        "format_warning": "el emulador no abre este formato",
+        "where": "¿Dónde dejo la ROM?",
+        "to_emulator": "Carpeta del emulador",
+        "to_downloads": "Dejarla en descargas",
+        "tico_missing": "No encuentro la carpeta de tico en la tarjeta: si la dejas ahí, el emulador no la verá.",
+        "ask_destination": "Preguntar dónde guardar cada ROM",
+        "ask_destination_hint": "Sin esto van directas a la carpeta de tico.",
         "saved_to": "Se guardará en",
         "path_unverified": "Esta carpeta no está confirmada para tico: comprueba que el emulador la lee.",
         "downloading": "Descargando {}",

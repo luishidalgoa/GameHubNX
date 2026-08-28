@@ -8,6 +8,7 @@
 #include <borealis.hpp>
 
 #include "app/catalog_service.hpp"
+#include "app/app_settings.hpp"
 #include "app/download_manager.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
@@ -55,10 +56,20 @@ public:
         addView(badge_);
     }
 
-    void setRom(const CatalogEntry& entry, bool onSdCard) {
+    void setRom(const CatalogEntry& entry, bool onSdCard, bool unplayable) {
         setTextIfChanged(title_, entry.title);
-        setTextIfChanged(meta_, entry.size ? formatBytes(entry.size)
-                                           : std::string());
+        std::string meta = entry.size ? formatBytes(entry.size) : std::string();
+        // El servidor cataloga por lo que escanea; el emulador abre otra cosa.
+        // Descargar un .cia de 3DS funciona y luego no aparece en el emulador,
+        // sin ningun error que lo explique. Se dice aqui, antes de bajarlo.
+        if (unplayable) {
+            if (!meta.empty())
+                meta += "   ";
+            meta += tr("gamehubnx/platforms/format_warning");
+        }
+        setTextIfChanged(meta_, meta);
+        meta_->setTextColor(unplayable ? theme::warning()
+                                       : theme::textTertiary());
         // "En la SD", no "instalado": una ROM no se instala en ningun sitio, y
         // lo que se afirma aqui es exactamente lo que se ha comprobado --que el
         // fichero esta en la carpeta de destino--.
@@ -105,9 +116,9 @@ private:
 class RomListActivity : public brls::Activity {
 public:
     RomListActivity(gamehub::ShopPlatform platform, CatalogService* catalog,
-                    DownloadManager* manager)
+                    DownloadManager* manager, AppSettings* settings)
         : platform_(std::move(platform)), catalog_(catalog),
-          manager_(manager) {
+          manager_(manager), settings_(settings) {
         destination_ = roms::defaultRomPath(platform_.slug);
 
         auto* content = new brls::Box(brls::Axis::COLUMN);
@@ -123,6 +134,16 @@ public:
         // Cuando la carpeta NO sale de la tabla comprobada de tico se avisa: la
         // ROM se descargaria igual, pero el emulador no la encontraria y eso no
         // da ningun error visible. Mejor decirlo antes que dejar que pase.
+        // Si el arbol de tico no esta, dejar ahi la ROM la esconde en una
+        // carpeta que nadie mira. Se dice antes de descargar, no despues.
+        if (!roms::ticoRomsPresent()) {
+            auto* missing = new brls::Label();
+            missing->setFontSize(theme::kFontCaption);
+            missing->setTextColor(theme::warning());
+            missing->setMarginTop(4);
+            missing->setText(tr("gamehubnx/platforms/tico_missing"));
+            content->addView(missing);
+        }
         if (!roms::defaultPathIsKnown(platform_.slug)) {
             auto* warn = new brls::Label();
             warn->setFontSize(theme::kFontCaption);
@@ -171,6 +192,33 @@ public:
         const std::vector<CatalogEntry>& roms = dataSource_->roms();
         if (index >= roms.size())
             return;
+
+        // Preguntar o no lo decide el ajuste. Por defecto no se pregunta:
+        // quien tiene tico quiere que la ROM aparezca ahi y punto, y un modal
+        // en cada descarga seria un estorbo.
+        const bool ask = settings_ && settings_->get().askRomDestination;
+        if (!ask) {
+            enqueue(index, destination_);
+            return;
+        }
+
+        auto* dialog = new brls::Dialog(
+            tr("gamehubnx/platforms/where") + "\n" + destination_);
+        dialog->addButton(tr("gamehubnx/platforms/to_emulator"),
+                          [this, index] { enqueue(index, destination_); });
+        // La otra opcion no es "otra carpeta cualquiera" --no hay teclado de
+        // rutas aqui-- sino dejarlo en descargas, que es donde estaba antes de
+        // que existiera el traslado y sigue siendo util para sacarlo por FTP.
+        dialog->addButton(tr("gamehubnx/platforms/to_downloads"),
+                          [this, index] { enqueue(index, std::string()); });
+        dialog->open();
+    }
+
+private:
+    void enqueue(size_t index, const std::string& destination) {
+        const std::vector<CatalogEntry>& roms = dataSource_->roms();
+        if (index >= roms.size())
+            return;
         const CatalogEntry& rom = roms[index];
 
         DebridImport import;
@@ -186,7 +234,7 @@ public:
         // Y aqui es donde tiene que acabar. Sin esto el rotulo de arriba era
         // una promesa que el codigo no cumplia: el fichero se quedaba en
         // downloads/.
-        import.destinationDir = destination_;
+        import.destinationDir = destination;
 
         std::string taskId;
         std::string error;
@@ -228,6 +276,7 @@ private:
     gamehub::ShopPlatform platform_;
     CatalogService* catalog_;
     DownloadManager* manager_;
+    AppSettings* settings_;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;
     brls::Label* status_ = nullptr;
@@ -243,7 +292,10 @@ inline brls::RecyclerCell* RomDataSource::cellForRow(
     auto* cell = static_cast<RomCell*>(recycler->dequeueReusableCell("Rom"));
     const size_t i = static_cast<size_t>(index.row);
     if (i < roms_.size())
-        cell->setRom(roms_[i], /*onSdCard=*/false);
+        cell->setRom(roms_[i], /*onSdCard=*/false,
+                     roms::isUnplayableByEmulator(
+                         roms_[i].platformSlug,
+                         gamehub::fileNameFromUrl(roms_[i].directUrl)));
     return cell;
 }
 

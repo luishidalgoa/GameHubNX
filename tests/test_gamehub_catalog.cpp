@@ -406,6 +406,30 @@ void test_plataforma_desconocida_cae_al_slug() {
     assert(!roms::defaultPathIsKnown("inventada"));
 }
 
+void test_formatos_que_el_emulador_abre() {
+    // La biblioteca de 3DS es casi toda .cia --un paquete de instalacion-- y el
+    // emulador no lo abre. Se descarga bien y luego no aparece, sin ningun
+    // error que lo explique, asi que hay que avisar antes.
+    assert(roms::isUnplayableByEmulator("3ds", "Juego.cia"));
+    assert(!roms::isUnplayableByEmulator("3ds", "Juego.3ds"));
+    assert(!roms::isUnplayableByEmulator("3ds", "Juego.cci"));
+    assert(!roms::isUnplayableByEmulator("3ds", "JUEGO.CXI"));   // sin distinguir mayusculas
+
+    // Delimitado: ".cci" no puede casar DENTRO de ".zcci", ni ".3ds" dentro de
+    // ".3dsx". Sin eso, un .zcci valido se marcaria como incompatible.
+    assert(!roms::isUnplayableByEmulator("3ds", "Juego.zcci"));
+    assert(!roms::isUnplayableByEmulator("3ds", "Juego.3dsx"));
+
+    // Sin lista para esa plataforma NO se acusa: callarse es mejor que marcar
+    // como incompatible algo que quiza se abre perfectamente.
+    assert(!roms::isUnplayableByEmulator("gba", "Juego.gba"));
+    assert(!roms::isUnplayableByEmulator("gba", "Juego.loquesea"));
+    assert(roms::playableExtensionsFor("gba").empty());
+
+    // Un nombre sin extension tampoco se acusa.
+    assert(!roms::isUnplayableByEmulator("3ds", "sin_extension"));
+}
+
 } // namespace
 
 int main() {
@@ -432,6 +456,7 @@ int main() {
     test_una_entrada_de_switch_no_es_rom();
     test_rutas_de_tico();
     test_plataforma_desconocida_cae_al_slug();
+    test_formatos_que_el_emulador_abre();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

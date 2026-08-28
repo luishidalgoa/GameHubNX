@@ -148,9 +148,9 @@ private:
 class PlatformsView : public brls::Box {
 public:
     PlatformsView(CatalogService* catalog, GameMetadataService* metadata,
-                  DownloadManager* manager)
+                  DownloadManager* manager, AppSettings* settings)
         : brls::Box(brls::Axis::COLUMN), catalog_(catalog),
-          metadata_(metadata), manager_(manager) {
+          metadata_(metadata), manager_(manager), settings_(settings) {
         setGrow(1);
         setPadding(20, 32, 0, 32);
 
@@ -190,7 +190,7 @@ public:
             return;
         }
         brls::Application::pushActivity(
-            new RomListActivity(items[index], catalog_, manager_));
+            new RomListActivity(items[index], catalog_, manager_, settings_));
     }
 
 private:
@@ -230,6 +230,7 @@ private:
     CatalogService* catalog_;
     GameMetadataService* metadata_;
     DownloadManager* manager_;
+    AppSettings* settings_;
     brls::Label* status_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
