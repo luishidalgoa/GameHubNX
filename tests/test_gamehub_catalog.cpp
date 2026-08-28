@@ -451,6 +451,36 @@ void test_carpeta_elegida_por_el_usuario() {
     assert(system(("rm -rf " + root).c_str()) != -1);
 }
 
+void test_nombre_de_rom_desde_el_titulo() {
+    // Lo normal: el titulo se usa tal cual.
+    assert(roms::romFileNameFromTitle("Chrono Trigger") == "Chrono Trigger");
+
+    // Lo que la tarjeta no admite se cae, y el resto se conserva. Sin esto el
+    // renombrado fallaria justo en los juegos con dos puntos en el titulo, que
+    // son legion.
+    assert(roms::romFileNameFromTitle("Zelda: A Link to the Past") ==
+           "Zelda A Link to the Past");
+    assert(roms::romFileNameFromTitle("Where? *What* /Who\\") ==
+           "Where What Who");
+
+    // Espacios repetidos se juntan, y ni espacio ni punto al final: el punto
+    // lo pone la extension.
+    assert(roms::romFileNameFromTitle("  Sonic   the   Hedgehog  ") ==
+           "Sonic the Hedgehog");
+    assert(roms::romFileNameFromTitle("Mario Kart.") == "Mario Kart");
+
+    // Un titulo larguisimo se corta con hueco para la extension, y sin dejar
+    // un espacio colgando en el corte.
+    const std::string largo(300, 'a');
+    assert(roms::romFileNameFromTitle(largo).size() == 120);
+
+    // Y si no queda nada aprovechable se devuelve vacio, que es la senal de
+    // "conserva el nombre original" en vez de dejar un fichero sin nombre.
+    assert(roms::romFileNameFromTitle("///").empty());
+    assert(roms::romFileNameFromTitle("   ").empty());
+    assert(roms::romFileNameFromTitle("").empty());
+}
+
 void test_formatos_que_el_emulador_abre() {
     // La biblioteca de 3DS es casi toda .cia --un paquete de instalacion-- y el
     // emulador no lo abre. Se descarga bien y luego no aparece, sin ningun
@@ -531,6 +561,7 @@ int main() {
     test_plataforma_desconocida_cae_al_slug();
     test_formatos_que_el_emulador_abre();
     test_carpeta_elegida_por_el_usuario();
+    test_nombre_de_rom_desde_el_titulo();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }
