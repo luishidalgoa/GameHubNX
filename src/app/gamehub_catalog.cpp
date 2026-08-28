@@ -250,6 +250,102 @@ bool parsePlatforms(const std::string& json, std::vector<ShopPlatform>& out,
     return true;
 }
 
+bool parseGameDetail(const std::string& json, ShopGameDetail& out,
+                     std::string& error) {
+    nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
+    if (root.is_discarded() || !root.is_object()) {
+        error = "gamehub: game detail is not valid JSON";
+        return false;
+    }
+    auto str = [&root](const char* key) -> std::string {
+        const auto it = root.find(key);
+        return it != root.end() && it->is_string() ? it->get<std::string>()
+                                                   : std::string();
+    };
+
+
+    out = ShopGameDetail{};
+    const auto idIt = root.find("gh_id");
+    if (idIt != root.end() && idIt->is_number_integer())
+        out.id = idIt->get<int>();
+    out.platformSlug = str("gh_platform");
+    out.platformName = str("gh_platform_name");
+    out.title = str("gh_title");
+    out.description = str("gh_description");
+    out.developer = str("gh_developer");
+    out.publisher = str("gh_publisher");
+    out.genre = str("gh_genre");
+    out.region = str("gh_region");
+    out.languages = str("gh_languages");
+
+    const auto yearIt = root.find("gh_year");
+    if (yearIt != root.end() && yearIt->is_number_integer())
+        out.year = std::to_string(yearIt->get<int>());
+    else
+        out.year = str("gh_year");
+
+    // Portada y capturas SOLO del servidor del usuario. Una ficha manipulada no
+    // va a hacer que la consola pida imagenes a cualquier sitio; es el mismo
+    // filtro que ya llevan el catalogo y los iconos de plataforma.
+    const std::string cover = str("gh_cover");
+    if (isTrustedUrl(cover))
+        out.coverUrl = cover;
+
+    const auto shotsIt = root.find("gh_screenshots");
+    if (shotsIt != root.end() && shotsIt->is_array()) {
+        for (const auto& shot : *shotsIt) {
+            if (!shot.is_string())
+                continue;
+            const std::string url = shot.get<std::string>();
+            if (isTrustedUrl(url))
+                out.screenshots.push_back(url);
+        }
+    }
+    // El trailer NO se filtra por host: es un enlace de YouTube y no lo abre la
+    // consola, solo se ensena para verlo en otro sitio.
+    out.trailerUrl = str("gh_trailer");
+
+    const auto filesIt = root.find("files");
+    if (filesIt != root.end() && filesIt->is_array()) {
+        for (const auto& f : *filesIt) {
+            if (!f.is_object())
+                continue;
+            const auto urlIt = f.find("url");
+            if (urlIt == f.end() || !urlIt->is_string())
+                continue;
+            ShopGameFile file;
+            file.url = urlIt->get<std::string>();
+            // Una descarga que no sale de nuestro servidor no se ofrece.
+            if (!isTrustedUrl(file.url))
+                continue;
+            const auto sizeIt = f.find("size");
+            if (sizeIt != f.end() && sizeIt->is_number_unsigned())
+                file.size = sizeIt->get<uint64_t>();
+            const auto kindIt = f.find("gh_kind");
+            if (kindIt != f.end() && kindIt->is_string())
+                file.kind = kindIt->get<std::string>();
+            const auto titleIt = f.find("gh_title");
+            if (titleIt != f.end() && titleIt->is_string())
+                file.title = titleIt->get<std::string>();
+            const auto regionIt = f.find("gh_region");
+            if (regionIt != f.end() && regionIt->is_string())
+                file.region = regionIt->get<std::string>();
+            const auto langIt = f.find("gh_languages");
+            if (langIt != f.end() && langIt->is_string())
+                file.languages = langIt->get<std::string>();
+            out.files.push_back(std::move(file));
+        }
+    }
+
+    // Sin nada que descargar la ficha no sirve para lo que existe. Es distinto
+    // de un campo suelto que falte, que se aguanta perfectamente.
+    if (out.files.empty()) {
+        error = "gamehub: game detail has no downloadable file";
+        return false;
+    }
+    return true;
+}
+
 bool parsePlatformIndex(const std::string& json, const std::string& slug,
                         std::vector<CatalogEntry>& out, std::string& error) {
     if (slug.empty()) {

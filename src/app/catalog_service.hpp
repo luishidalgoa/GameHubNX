@@ -18,7 +18,7 @@ enum class CatalogHealth {
     Dead,
 };
 
-namespace gamehub { struct ShopPlatform; }
+namespace gamehub { struct ShopPlatform; struct ShopGameDetail; }
 
 struct CatalogEntry {
     std::string infoHash;
@@ -181,6 +181,11 @@ public:
     bool fetchPlatformIndex(const std::string& slug,
                             std::vector<CatalogEntry>& out,
                             std::string& error) const;
+
+    // Ficha de un juego. Se pide al abrirla, no con el indice: una descripcion
+    // son cientos de caracteres y el indice de gba trae mil filas.
+    bool fetchGameDetail(int gameId, gamehub::ShopGameDetail& out,
+                         std::string& error) const;
     // UI-thread only: adopt a freshly fetched batch as the live catalogue.
     // entries() is read unsynchronised by the render thread every frame, so
     // entries_ may only be reassigned here — never from a fetch worker.

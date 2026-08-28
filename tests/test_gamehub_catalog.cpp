@@ -415,6 +415,90 @@ void test_plataforma_desconocida_cae_al_slug() {
     assert(!roms::defaultPathIsKnown("inventada"));
 }
 
+void test_ficha_de_un_juego() {
+    const std::string json = R"({
+      "gh_id": 271,
+      "gh_platform": "3ds",
+      "gh_platform_name": "Nintendo 3DS",
+      "gh_title": "Resident Evil: Revelations",
+      "gh_cover": "https://gamehub.hdglabs.com/api/covers/proxy/covers/3ds/271.webp?fmt=jpg",
+      "gh_description": "Un survival horror a bordo de un crucero.",
+      "gh_screenshots": [
+        "https://gamehub.hdglabs.com/api/covers/proxy/shots/1.webp?fmt=jpg",
+        "https://malo.example/robada.jpg"
+      ],
+      "gh_trailer": "https://www.youtube.com/watch?v=abc",
+      "gh_developer": "Capcom",
+      "gh_publisher": "Capcom",
+      "gh_genre": "Survival horror",
+      "gh_year": 2012,
+      "gh_region": "E",
+      "gh_languages": "es,en",
+      "files": [
+        {"url": "https://gamehub.hdglabs.com/api/shop/download/271/re.cia",
+         "size": 3380741120, "gh_kind": "base", "gh_title": "Resident Evil"},
+        {"url": "https://gamehub.hdglabs.com/api/shop/download/dlc/9/re-usa.cia",
+         "size": 3380741121, "gh_kind": "region", "gh_region": "USA"},
+        {"url": "https://otro.example/colado.cia", "size": 10,
+         "gh_kind": "base"}
+      ]
+    })";
+    gamehub::ShopGameDetail detail;
+    std::string error;
+    assert(gamehub::parseGameDetail(json, detail, error));
+    assert(detail.id == 271);
+    assert(detail.platformSlug == "3ds");
+    assert(detail.title == "Resident Evil: Revelations");
+    assert(detail.description.find("survival") != std::string::npos);
+    assert(detail.developer == "Capcom");
+    assert(detail.genre == "Survival horror");
+    // El ano llega como numero y se guarda como texto, que es lo que pinta la
+    // ficha.
+    assert(detail.year == "2012");
+    assert(detail.region == "E");
+    assert(detail.languages == "es,en");
+
+    // Imagenes SOLO de nuestro servidor: una ficha manipulada no va a hacer que
+    // la consola pida imagenes a cualquier sitio.
+    assert(detail.screenshots.size() == 1);
+    assert(detail.screenshots[0].find("gamehub.hdglabs.com") !=
+           std::string::npos);
+    assert(!detail.coverUrl.empty());
+
+    // El trailer SI puede ser de fuera: es un enlace de YouTube que se ensena
+    // para verlo en otro sitio, la consola no lo abre ni lo descarga.
+    assert(detail.trailerUrl == "https://www.youtube.com/watch?v=abc");
+
+    // Y las descargas tambien se filtran por host: la tercera se cae.
+    assert(detail.files.size() == 2);
+    assert(detail.files[0].kind == "base");
+    assert(detail.files[0].size == 3380741120ull);
+    assert(detail.files[1].kind == "region");
+    assert(detail.files[1].region == "USA");
+
+    // Una ficha sin nada que descargar no sirve para lo que existe.
+    gamehub::ShopGameDetail vacia;
+    assert(!gamehub::parseGameDetail(
+        R"({"gh_id":1,"gh_title":"x","files":[]})", vacia, error));
+    assert(!error.empty());
+
+    // Pero que falten campos sueltos se aguanta: una ficha a medias sigue
+    // sirviendo para decidir, y una pantalla en blanco no.
+    gamehub::ShopGameDetail minima;
+    assert(gamehub::parseGameDetail(
+        R"({"gh_id":5,"gh_title":"Solo lo justo","files":[
+             {"url":"https://gamehub.hdglabs.com/api/shop/download/5/a.gba",
+              "size":4194304}]})", minima, error));
+    assert(minima.title == "Solo lo justo");
+    assert(minima.description.empty());
+    assert(minima.screenshots.empty());
+    assert(minima.files.size() == 1);
+
+    // Y una respuesta que no es JSON no revienta.
+    gamehub::ShopGameDetail rota;
+    assert(!gamehub::parseGameDetail("<html>404</html>", rota, error));
+}
+
 void test_carpeta_elegida_por_el_usuario() {
     std::map<std::string, std::string> chosen;
     // Sin nada elegido manda la tabla.
@@ -577,6 +661,7 @@ int main() {
     test_plataforma_desconocida_cae_al_slug();
     test_formatos_que_el_emulador_abre();
     test_carpeta_elegida_por_el_usuario();
+    test_ficha_de_un_juego();
     test_nombre_de_rom_desde_el_titulo();
     std::printf("gamehub catalog tests passed\n");
     return 0;

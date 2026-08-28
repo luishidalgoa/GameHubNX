@@ -678,6 +678,25 @@ bool CatalogService::fetchPlatforms(std::vector<gamehub::ShopPlatform>& out,
     return gamehub::parsePlatforms(body, out, error);
 }
 
+bool CatalogService::fetchGameDetail(int gameId,
+                                    gamehub::ShopGameDetail& out,
+                                    std::string& error) const {
+    if (gameId <= 0) {
+        error = "gamehub: game detail needs an id";
+        return false;
+    }
+    if (!gCatalogNetworkEnabled.load(std::memory_order_relaxed)) {
+        error.clear();
+        return true;
+    }
+    const std::string url = std::string(gamehub::kCatalogUrl) + "/game/" +
+                            std::to_string(gameId);
+    std::string body;
+    if (!httpGet(url, body, error, gamehub::kCatalogUrl))
+        return false;
+    return gamehub::parseGameDetail(body, out, error);
+}
+
 bool CatalogService::fetchPlatformIndex(const std::string& slug,
                                         std::vector<CatalogEntry>& out,
                                         std::string& error) const {

@@ -232,7 +232,8 @@ public:
             return;
         }
         brls::Application::pushActivity(
-            new RomListActivity(items[index], catalog_, manager_, settings_));
+            new RomListActivity(items[index], catalog_, manager_, settings_,
+                                metadata_));
     }
 
 private:
