@@ -475,8 +475,6 @@ add_custom_target(sync_i18n ALL
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n" "${ROMFS_DIR}/i18n"
     VERBATIM
 )
-    VERBATIM
-)
 file(COPY
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png
     DESTINATION ${ROMFS_DIR}
