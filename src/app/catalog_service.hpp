@@ -178,9 +178,14 @@ public:
     // plataformas.
     bool fetchPlatforms(std::vector<gamehub::ShopPlatform>& out,
                         std::string& error) const;
+    // `aspect` recibe la proporcion de portada de ESA plataforma, o 0 si su
+    // indice no la trae. Cada consola tiene la suya --una caja de 3DS no tiene
+    // la forma de una de Switch-- y sin esto todas se pintaban con la de
+    // Switch, que es lo que les dejaba bandas negras.
     bool fetchPlatformIndex(const std::string& slug,
                             std::vector<CatalogEntry>& out,
-                            std::string& error) const;
+                            std::string& error,
+                            float* aspect = nullptr) const;
 
     // Ficha de un juego. Se pide al abrirla, no con el indice: una descripcion
     // son cientos de caracteres y el indice de gba trae mil filas.

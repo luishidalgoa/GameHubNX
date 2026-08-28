@@ -153,6 +153,7 @@
     "players_up_to": "up to {}",
     "players_single": "1 player",
     "fact_size": "Size",
+    "fact_platform": "Platform",
     "fact_title_id": "Title ID",
     "fact_dlc": "DLC",
     "dlc_installed": "{} installed",
@@ -748,6 +749,7 @@
     },
     "browser": {
       "title": "File browser",
+      "tab": "Files",
       "up": "Up",
       "actions": "Actions",
       "mark": "Move somewhere else",
@@ -771,6 +773,7 @@
         "format_warning": "the emulator cannot open this format",
         "platform_warning": "tico does not emulate this console",
         "platform_badge": "No emulator",
+        "no_favorites": "Nothing starred here yet",
         "download": "Download",
         "versions": "{} versions",
         "which_version": "Which version?",

@@ -123,6 +123,14 @@ void test_acciones() {
     // RETR sin nombre no manda a ninguna parte.
     assert(s.handle("RETR").text.rfind("550", 0) == 0);
 
+    // SIZE deja que el transporte ponga el numero: la sesion no toca el disco.
+    // Antes devolvia la palabra "SIZE" como si fuera un tamano y el cliente se
+    // quedaba sin saber cuanto iba a bajar.
+    const FtpSession::Reply tam = s.handle("SIZE gamehubnx.log");
+    assert(tam.action == FtpSession::Action::ReportSize);
+    assert(tam.text.empty());
+    assert(s.path() == "sdmc:/switch/gamehubnx/gamehubnx.log");
+
     // El modo texto se acepta pero se transfiere en binario igual: traducir
     // saltos de linea corromperia un NRO.
     s.handle("TYPE A");

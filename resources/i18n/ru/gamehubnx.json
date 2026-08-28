@@ -153,6 +153,7 @@
     "players_up_to": "до {}",
     "players_single": "1 игрок",
     "fact_size": "Размер",
+    "fact_platform": "Платформа",
     "fact_title_id": "Title ID",
     "fact_dlc": "DLC",
     "dlc_installed": "установлено: {}",
@@ -748,6 +749,7 @@
     },
     "browser": {
       "title": "Проводник",
+      "tab": "Файлы",
       "up": "Наверх",
       "actions": "Действия",
       "mark": "Переместить в другое место",
@@ -771,6 +773,7 @@
         "format_warning": "эмулятор не открывает этот формат",
         "platform_warning": "tico не эмулирует эту консоль",
         "platform_badge": "Нет эмулятора",
+        "no_favorites": "Здесь пока ничего не отмечено",
         "download": "Скачать",
         "versions": "версий: {}",
         "which_version": "Какая версия?",

@@ -343,7 +343,10 @@ private:
         refreshLabels();
         recycler_->reloadData();
         if (count > 0)
-            brls::Application::giveFocus(recycler_);
+            // Solo si el foco YA estaba aqui: si no, se lo robariamos a la
+            // barra lateral por el mero hecho de pasar por esta pestana.
+            if (focusIsInside(this) || focusIsInside(recyclerHost_))
+                brls::Application::giveFocus(recycler_);
     }
 
     std::string path_;

@@ -10,11 +10,13 @@
 #include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/favorites_service.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/ui_helpers.hpp"
+#include "ui/detail/detail_page.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
@@ -36,59 +38,71 @@ public:
                       CatalogService* catalog, GameMetadataService* metadata,
                       std::string destination,
                       std::function<void(const CatalogEntry&,
-                                         const std::string&)> onDownload)
+                                         const std::string&)> onDownload,
+                      FavoritesService* favorites)
         : entry_(std::move(entry)), platform_(std::move(platform)),
           catalog_(catalog), metadata_(metadata),
           destination_(std::move(destination)),
-          onDownload_(std::move(onDownload)) {
-        auto* columns = new brls::Box(brls::Axis::ROW);
-        columns->setGrow(1);
-        columns->setPadding(18, 38, 18, 34);
+          onDownload_(std::move(onDownload)), favorites_(favorites) {
+        // La maqueta sale de detail_page, la misma que usa la ficha de Switch.
+        // Copiarla a mano fue lo que dejo las dos pantallas descuadradas.
+        auto* columns = detail_page::makeColumns();
+        auto* left = detail_page::makeLeftColumn();
+        cover_ = detail_page::makeCover(left);
 
-        // ── Columna izquierda: portada y datos ──────────────────────────────
-        //
-        // Mismas medidas y mismo trato que la ficha de Switch: 320 de columna,
-        // 200 de alto de portada, y el ancho salido de la PROPORCION que
-        // publica la tienda. Antes era una caja de 320x320 con la imagen
-        // ajustada dentro, y como las portadas de consola son verticales,
-        // quedaban dos bandas negras enormes arriba y abajo -- que es lo que se
-        // veia en pantalla y parecia una captura rota.
-        auto* left = new brls::Box(brls::Axis::COLUMN);
-        left->setWidth(kLeftColumnWidth);
-        left->setMarginRight(28);
+        // Los BOTONES, como en la ficha de Switch. Antes descargar era solo la
+        // accion A del marco y no habia nada que mirar ni que pulsar: la
+        // pantalla parecia una lectura, no una ficha desde la que se hace algo.
+        primary_ = new brls::Button();
+        primary_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
+        primary_->setText(tr("gamehubnx/platforms/download"));
+        primary_->setMarginTop(20);
+        primary_->registerClickAction([this](brls::View*) {
+            startDownload();
+            return true;
+        });
+        left->addView(primary_);
 
-        const float coverWidth =
-            std::min(kLeftColumnWidth, kCoverHeight * coverAspect());
-        cover_ = new AsyncRgbaImage();
-        cover_->setWidth(coverWidth);
-        cover_->setHeight(kCoverHeight);
-        cover_->setMarginLeft((kLeftColumnWidth - coverWidth) / 2.0f);
-        cover_->setCornerRadius(theme::kRadiusLarge);
-        cover_->setScalingType(brls::ImageScalingType::FIT);
-        // FIT deja bandas; con el recorte puesto, borealis rellena la vista
-        // entera con ellas. Es el mismo ajuste que la ficha de Switch.
-        cover_->setClipsToBounds(false);
-        left->addView(cover_);
+        // Solo aparece cuando hay mas de una edicion. Un boton "Versiones (1)"
+        // no ofrece nada y estorba.
+        versions_ = new brls::Button();
+        versions_->setStyle(&brls::BUTTONSTYLE_BORDERLESS);
+        versions_->setMarginTop(8);
+        versions_->setVisibility(brls::Visibility::GONE);
+        versions_->registerClickAction([this](brls::View*) {
+            chooseVersion();
+            return true;
+        });
+        left->addView(versions_);
 
-        facts_ = new brls::Label();
-        facts_->setFontSize(theme::kFontCaption);
-        facts_->setTextColor(theme::textSecondary());
-        facts_->setMarginTop(16);
-        left->addView(facts_);
+        // El ★, como en la ficha de Switch y con su mismo atajo. Cuadrado y al
+        // lado, no una fila entera: no es una accion que se busque, es una que
+        // se marca de paso.
+        favoriteButton_ = new brls::Button();
+        favoriteButton_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        favoriteButton_->setMarginTop(8);
+        favoriteButton_->setWidth(64);
+        favoriteButton_->setText("★");
+        favoriteButton_->registerClickAction([this](brls::View*) {
+            toggleFavorite();
+            return true;
+        });
+        if (!favorites_)
+            favoriteButton_->setVisibility(brls::Visibility::GONE);
+        left->addView(favoriteButton_);
 
-        // El aviso de compatibilidad va aqui y no escondido en la lista: es lo
-        // que decide si merece la pena descargar esto.
+        // El aviso de compatibilidad va aqui, pegado al boton: es lo que decide
+        // si merece la pena pulsarlo.
         warning_ = new brls::Label();
         warning_->setFontSize(theme::kFontCaption);
         warning_->setTextColor(theme::warning());
-        warning_->setMarginTop(10);
+        warning_->setMarginTop(12);
         left->addView(warning_);
 
         columns->addView(left);
 
-        // ── Columna derecha: capturas y descripcion, con scroll ─────────────
-        auto* right = new brls::Box(brls::Axis::COLUMN);
-        right->setGrow(1);
+        brls::Box* right = detail_page::makeRightColumn(columns);
+        right_ = right;
 
         title_ = new brls::Label();
         title_->setFontSize(theme::kFontHeading);
@@ -103,15 +117,13 @@ public:
         status_->setText(tr("gamehubnx/common/loading"));
         right->addView(status_);
 
-        // El carril de capturas, con el alto reservado como en la ficha de
-        // Switch: la fila mide mas que las imagenes para que el recuadro de
-        // foco quepa sin comerse el texto de al lado, que es justo lo que
-        // pasaba.
-        shotsRow_ = new brls::Box(brls::Axis::ROW);
-        shotsRow_->setHeight(180);
-        shotsRow_->setMarginTop(14);
-        shotsRow_->setVisibility(brls::Visibility::GONE);
-        right->addView(shotsRow_);
+        // Tabla de datos, en la columna derecha y con el mismo formato que la
+        // ficha de Switch: etiqueta a la izquierda, valor a la derecha. Antes
+        // eran ocho lineas sueltas debajo de la portada, sin decir que era cada
+        // una, y se salian por abajo de la columna.
+        facts_ = new brls::Box(brls::Axis::COLUMN);
+        facts_->setMarginTop(8);
+        right->addView(facts_);
 
         description_ = new brls::Label();
         description_->setFontSize(theme::kFontSmall);
@@ -126,11 +138,6 @@ public:
         trailer_->setVisibility(brls::Visibility::GONE);
         right->addView(trailer_);
 
-        auto* scroll = new brls::ScrollingFrame();
-        scroll->setGrow(1);
-        scroll->setContentView(right);
-        columns->addView(scroll);
-
         frame_ = new brls::AppletFrame(columns);
         frame_->setTitle(platform_.name);
 
@@ -138,6 +145,7 @@ public:
         // la enriquece: si el servidor es viejo y no publica /game/<id>, esto
         // se queda como esta en vez de dejar una pantalla en blanco.
         applyKnown();
+        refreshFavorite();
         load();
     }
 
@@ -146,45 +154,58 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
+        if (favorites_) {
+            registerAction(tr("gamehubnx/catalog/action_favorite"),
+                           brls::BUTTON_RT, [this](brls::View*) {
+                toggleFavorite();
+                return true;
+            });
+        }
         registerAction(tr("gamehubnx/common/close"), brls::BUTTON_B,
                        [](brls::View*) {
                            brls::Application::popActivity();
                            return true;
                        });
-        registerAction(tr("gamehubnx/platforms/download"), brls::BUTTON_A,
-                       [this](brls::View*) {
-                           startDownload();
-                           return true;
-                       });
+
     }
 
 private:
+    void toggleFavorite() {
+        if (!favorites_)
+            return;
+        std::string error;
+        favorites_->toggle(entry_.infoHash, entry_.title, error);
+        if (!error.empty()) {
+            brls::Application::notify(error);
+            return;
+        }
+        refreshFavorite();
+    }
+
+    void refreshFavorite() {
+        if (!favoriteButton_ || !favorites_)
+            return;
+        // El estado se dice con el estilo del boton, no cambiando el simbolo:
+        // una estrella hueca y una llena se distinguen mal a distancia de sofa.
+        favoriteButton_->setStyle(favorites_->contains(entry_.infoHash)
+                                      ? &brls::BUTTONSTYLE_PRIMARY
+                                      : &brls::BUTTONSTYLE_DEFAULT);
+    }
+
     void applyKnown() {
-        std::string facts;
-        auto line = [&facts](const std::string& text) {
-            if (text.empty())
-                return;
-            if (!facts.empty())
-                facts += "\n";
-            facts += text;
-        };
-        line(platform_.name);
+        facts_->clearViews();
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_platform"), platform_.name);
         if (entry_.size)
-            line(formatBytes(entry_.size));
-        if (!detail_.year.empty())
-            line(detail_.year);
-        if (!detail_.genre.empty())
-            line(detail_.genre);
-        if (!detail_.developer.empty())
-            line(detail_.developer);
-        if (!detail_.publisher.empty() &&
-            detail_.publisher != detail_.developer)
-            line(detail_.publisher);
-        if (!detail_.region.empty())
-            line(detail_.region);
-        if (!detail_.languages.empty())
-            line(detail_.languages);
-        facts_->setText(facts);
+            detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_size"),
+                       formatBytes(entry_.size));
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_release"), detail_.year);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_genre"), detail_.genre);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_developer"), detail_.developer);
+        if (detail_.publisher != detail_.developer)
+            detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_publisher"),
+                       detail_.publisher);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_region"), detail_.region);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_languages"), detail_.languages);
 
         const std::string file =
             gamehub::fileNameFromUrl(entry_.directUrl);
@@ -224,59 +245,37 @@ private:
                                     ? brls::Visibility::GONE
                                     : brls::Visibility::VISIBLE);
 
-        // Las miniaturas se crean una sola vez, al llegar la ficha: esta
-        // pantalla no se recicla como una lista.
-        if (!detail_.screenshots.empty() && metadata_) {
-            const std::vector<std::string> shots = detail_.screenshots;
-            const std::string viewerTitle =
-                detail_.title.empty() ? entry_.title : detail_.title;
-            for (size_t i = 0; i < shots.size(); ++i) {
-                auto* thumb = new AsyncRgbaImage();
-                thumb->setWidth(300);
-                thumb->setHeight(170);
-                thumb->setMarginRight(12);
-                thumb->setCornerRadius(theme::kRadiusSmall);
-                thumb->setScalingType(brls::ImageScalingType::FIT);
-                // Sin recorte, para que FIT no pinte las bandas dentro de la
-                // vista. Mismo ajuste que la portada y que la ficha de Switch.
-                thumb->setClipsToBounds(false);
-                thumb->setFocusable(true);
-                // La ficha de Switch enruta ARRIBA a su boton principal porque
-                // el carril seria un callejon sin salida. Aqui NO se hace: no
-                // hay ningun otro enfocable en la pantalla --descargar es una
-                // accion del marco, con A-- asi que no habria a donde ir.
-                // Apuntar a una etiqueta seria aparentar un arreglo sin serlo.
-                thumb->registerClickAction(
-                    [this, shots, i, viewerTitle](brls::View*) {
-                        brls::Application::pushActivity(
-                            new ScreenshotViewerActivity(metadata_, shots, i,
-                                                         viewerTitle));
-                        return true;
-                    });
-                shotsRow_->addView(thumb);
-                loadImageInto(thumb, metadata_, shots[i],
-                              GameMetadataService::kImageDimCard);
-            }
-            shotsRow_->setVisibility(brls::Visibility::VISIBLE);
-        }
+        // El carril compartido: mismas medidas, mismo trato de las bandas y
+        // misma ruta de foco que la ficha de Switch. Se construye una sola vez,
+        // al llegar la ficha; esta pantalla no se recicla como una lista.
+        detail_page::addScreenshotRail(
+            right_, metadata_, detail_.screenshots,
+            detail_.title.empty() ? entry_.title : detail_.title, primary_);
 
-        // El recuento de versiones solo se dice cuando hay mas de una: "1
-        // versión" no es informacion, es ruido.
-        status_->setText(detail_.files.size() > 1
-                             ? tr("gamehubnx/platforms/versions",
-                                  detail_.files.size())
-                             : std::string());
+        // El boton de versiones solo aparece cuando hay mas de una. "1 version"
+        // no ofrece nada y estorba.
+        if (detail_.files.size() > 1) {
+            versions_->setText(
+                tr("gamehubnx/platforms/versions", detail_.files.size()));
+            versions_->setVisibility(brls::Visibility::VISIBLE);
+        }
+        status_->setText(std::string());
     }
 
     // Con una sola descarga se encola y ya. Con varias se pregunta: son las
     // ediciones regionales del mismo juego, y bajar la primera a ciegas es lo
     // que hacia la lista antes de existir esta pantalla.
+    // Descargar la edicion principal. Elegir otra es el otro boton: mezclar
+    // las dos cosas en uno obligaba a pasar por un menu incluso cuando solo hay
+    // una version.
     void startDownload() {
-        if (detail_.files.size() <= 1) {
-            onDownload_(entry_, destination_);
-            brls::Application::popActivity();
+        onDownload_(entry_, destination_);
+        brls::Application::popActivity();
+    }
+
+    void chooseVersion() {
+        if (detail_.files.size() <= 1)
             return;
-        }
         std::vector<std::string> labels;
         for (const gamehub::ShopGameFile& file : detail_.files) {
             std::string label = file.region.empty()
@@ -344,6 +343,8 @@ private:
     std::string destination_;
     std::function<void(const CatalogEntry&, const std::string&)> onDownload_;
     gamehub::ShopGameDetail detail_;
+    FavoritesService* favorites_ = nullptr;
+    brls::Button* favoriteButton_ = nullptr;
 
     // Mismas medidas que la ficha de Switch, para que las dos se vean iguales.
     static constexpr float kLeftColumnWidth = 320.0f;
@@ -352,10 +353,12 @@ private:
     brls::AppletFrame* frame_ = nullptr;
     AsyncRgbaImage* cover_ = nullptr;
     brls::Label* title_ = nullptr;
-    brls::Label* facts_ = nullptr;
+    brls::Box* facts_ = nullptr;
+    brls::Box* right_ = nullptr;
+    brls::Button* primary_ = nullptr;
+    brls::Button* versions_ = nullptr;
     brls::Label* warning_ = nullptr;
     brls::Label* status_ = nullptr;
-    brls::Box* shotsRow_ = nullptr;
     brls::Label* description_ = nullptr;
     brls::Label* trailer_ = nullptr;
     std::shared_ptr<std::atomic<bool>> alive_ =

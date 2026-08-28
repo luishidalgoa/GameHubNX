@@ -28,6 +28,7 @@ public:
         OpenPassive,   // abrir el canal de datos y anunciarlo
         SendListing,   // volcar el listado de `path()` por el canal de datos
         SendFile,      // volcar el fichero de `path()` por el canal de datos
+        ReportSize,    // responder "213 <bytes>" de `path()`
         Close,         // cerrar la conexion tras responder
     };
 
@@ -119,8 +120,12 @@ public:
             if (arg.empty() || !resolve(arg, target))
                 return {"550 Ruta no permitida"};
             path_ = target;
+            // El tamano lo mide el transporte, que es quien toca el disco. La
+            // sesion no puede inventarselo: antes devolvia la palabra "SIZE"
+            // como si fuera un numero y el cliente se quedaba sin saber cuanto
+            // iba a bajar.
             if (verb == "SIZE")
-                return {"213 SIZE"};    // el transporte pone el numero
+                return {"", Action::ReportSize};
             return {"150 Enviando", Action::SendFile};
         }
         // Todo lo que escribe se rechaza explicitamente, en vez de con un

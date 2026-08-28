@@ -159,9 +159,9 @@ public:
         });
         tabs->addNavTab(tr("gamehubnx/platforms/title"),
                         NavIconType::Platforms,
-                        [catalog, metadata, manager, settings] {
+                        [catalog, metadata, manager, settings, favorites] {
             return new gamehubnx::ui::PlatformsView(catalog, metadata, manager,
-                                                    settings);
+                                                    settings, favorites);
         });
         tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [manager, metadata, settings, deploy] {
@@ -188,7 +188,7 @@ public:
         //
         // Arranca en la raiz de la tarjeta y no en la carpeta de descargas: lo
         // que hay que recolocar suele estar justamente fuera de ella.
-        tabs->addNavTab(tr("gamehubnx/browser/title"), NavIconType::Files,
+        tabs->addNavTab(tr("gamehubnx/browser/tab"), NavIconType::Files,
                         [] { return new FileBrowserView("sdmc:/"); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,

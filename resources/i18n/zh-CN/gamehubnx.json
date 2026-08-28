@@ -153,6 +153,7 @@
     "players_up_to": "最多 {}",
     "players_single": "1 名玩家",
     "fact_size": "大小",
+    "fact_platform": "平台",
     "fact_title_id": "标题 ID",
     "fact_dlc": "DLC",
     "dlc_installed": "已安装 {}",
@@ -748,6 +749,7 @@
     },
     "browser": {
       "title": "文件浏览器",
+      "tab": "文件",
       "up": "上一层",
       "actions": "操作",
       "mark": "移动到别处",
@@ -771,6 +773,7 @@
         "format_warning": "模拟器无法打开此格式",
         "platform_warning": "tico 不模拟这台主机",
         "platform_badge": "无模拟器",
+        "no_favorites": "这里还没有收藏",
         "download": "下载",
         "versions": "{} 个版本",
         "which_version": "哪个版本？",

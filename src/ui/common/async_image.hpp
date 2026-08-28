@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -72,11 +73,24 @@ public:
     // UI_PLAN F6: synchronous upload for memory-cache hits. UI thread only
     // (needs the live NVG context) — the cover paints in the same frame,
     // so catalog re-entry shows no placeholder flash.
+    // Aviso con el tamano REAL de la imagen decodificada.
+    //
+    // Hace falta porque la proporcion no se puede saber de antemano: dentro de
+    // una misma plataforma conviven portadas de procedencias distintas --en
+    // 3DS hay caja apaisada de 1200x1029 junto a arte vertical de 1200x1800--
+    // asi que ni una constante ni el dato por plataforma que publica la tienda
+    // aciertan con todas. Quien pinta la caja se ajusta cuando llega la imagen.
+    void setOnDecoded(std::function<void(int, int)> callback) {
+        onDecoded_ = std::move(callback);
+    }
+
     void setRgbaNow(const uint8_t* pixels, int width, int height) {
         if (!pixels || width <= 0 || height <= 0)
             return;
         NVGcontext* vg = brls::Application::getNVGContext();
         innerSetImage(nvgCreateImageRGBA(vg, width, height, 0, pixels));
+        if (onDecoded_)
+            onDecoded_(width, height);
     }
 
     void setRgbaAsync(std::function<void(std::function<void(
@@ -97,12 +111,17 @@ public:
                 NVGcontext* vg = brls::Application::getNVGContext();
                 lifetime->image->innerSetImage(nvgCreateImageRGBA(
                     vg, width, height, 0, pixels->data()));
+                // Ya estamos en el hilo de la interfaz --brls::sync-- asi que
+                // quien escuche puede recolocar la vista sin mas.
+                if (lifetime->image->onDecoded_)
+                    lifetime->image->onDecoded_(width, height);
             });
         });
     }
 
 private:
     std::shared_ptr<AsyncImageLifetime> lifetime_;
+    std::function<void(int, int)> onDecoded_;
 };
 
 inline void loadImageInto(AsyncRgbaImage* image, GameMetadataService* service,

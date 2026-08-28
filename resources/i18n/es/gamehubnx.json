@@ -153,6 +153,7 @@
     "players_up_to": "hasta {}",
     "players_single": "1 jugador",
     "fact_size": "Tamaño",
+    "fact_platform": "Plataforma",
     "fact_title_id": "Title ID",
     "fact_dlc": "DLC",
     "dlc_installed": "{} instalados",
@@ -748,6 +749,7 @@
     },
     "browser": {
       "title": "Explorador de ficheros",
+      "tab": "Ficheros",
       "up": "Subir",
       "actions": "Acciones",
       "mark": "Mover a otro sitio",
@@ -771,6 +773,7 @@
         "format_warning": "el emulador no abre este formato",
         "platform_warning": "tico no emula esta consola",
         "platform_badge": "Sin emulador",
+        "no_favorites": "Aquí no has marcado nada todavía",
         "download": "Descargar",
         "versions": "{} versiones",
         "which_version": "¿Qué versión?",

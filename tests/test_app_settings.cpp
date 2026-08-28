@@ -183,8 +183,10 @@ void testLegacyTelemetryFlagMigratesOnce() {
     assert(access(LegacyPath, F_OK) != 0);
 }
 
-// Una clave editada a mano que no sean de 4 a 8 digitos se sustituye por una
-// generada, en vez de dejar el servidor sin clave.
+// Una clave editada a mano que no sean de 4 a 8 digitos se LIMPIA: dejarla
+// puesta seria una clave que no funciona. No se sustituye por otra, porque
+// quedarse sin clave es un estado legitimo -- el FTP puede querer dejarse
+// abierto en la red local.
 void testInvalidWebPinIsCleared() {
     cleanup();
     {
@@ -194,9 +196,8 @@ void testInvalidWebPinIsCleared() {
     AppSettings settings(SettingsPath, LegacyPath);
     std::string error;
     assert(settings.load(error));
-    assert(settings.get().ftpPin.size() == 6);
-    assert(gamehubnx::isValidWebPin(settings.get().ftpPin));
-    // Y sigue apagado: rellenar la clave no enciende el servicio.
+    assert(settings.get().ftpPin.empty());
+    // Y sigue apagado.
     assert(!settings.get().ftpEnabled);
 
     assert(gamehubnx::isValidWebPin(""));
@@ -211,19 +212,25 @@ void testInvalidWebPinIsCleared() {
     assert(gamehubnx::isValidWebPin(generated));
 }
 
-// Clearing the PIN via update() regenerates one instead of storing empty.
-void testUpdateEmptyPinRegenerates() {
+// Borrar la clave se GUARDA vacia. Antes se regeneraba una, y eso hacia
+// imposible dejar el FTP sin clave: quien lo enciende decide si quiere que sea
+// abierto en su red o no, y la aplicacion no puede deshacer esa eleccion.
+void testUpdateEmptyPinIsKept() {
     cleanup();
     AppSettings settings(SettingsPath, LegacyPath);
     std::string error;
     assert(settings.load(error));
     AppSettingsData values = settings.get();
-    const std::string previous = values.ftpPin;
+    // Instalacion nueva: sale con clave puesta, para que encenderlo no lo deje
+    // abierto sin querer.
+    assert(values.ftpPin.size() == 6);
     values.ftpPin.clear();
     assert(settings.update(values, error));
-    assert(settings.get().ftpPin.size() == 6);
-    assert(gamehubnx::isValidWebPin(settings.get().ftpPin));
-    (void)previous;
+    assert(settings.get().ftpPin.empty());
+    // Y sobrevive a releerlo del disco.
+    AppSettings recargado(SettingsPath, LegacyPath);
+    assert(recargado.load(error));
+    assert(recargado.get().ftpPin.empty());
 }
 
 // A hand-edited count outside [1,4] degrades to the nearest supported value
@@ -445,7 +452,7 @@ int main() {
     testUnknownLanguageIsRejected();
     testLegacyTelemetryFlagMigratesOnce();
     testInvalidWebPinIsCleared();
-    testUpdateEmptyPinRegenerates();
+    testUpdateEmptyPinIsKept();
     testMaxActiveDownloadsClamped();
     testVersionOneResetsActiveDownloads();
     testFutureVersionIsRejected();
