@@ -14,7 +14,7 @@
 
 namespace gamehubnx::ui {
 
-class FileBrowserActivity;
+class FileBrowserView;
 
 // Fila del explorador. La carpeta se distingue por la barra final y por el
 // color, no por un icono: un glifo mas en una lista de cientos de nombres solo
@@ -64,7 +64,7 @@ private:
 
 class BrowserDataSource : public brls::RecyclerDataSource {
 public:
-    explicit BrowserDataSource(FileBrowserActivity* owner) : owner_(owner) {}
+    explicit BrowserDataSource(FileBrowserView* owner) : owner_(owner) {}
 
     void setEntries(std::vector<files::Entry> entries) {
         entries_ = std::move(entries);
@@ -84,7 +84,7 @@ public:
     void didSelectRowAt(brls::RecyclerFrame*, brls::IndexPath index) override;
 
 private:
-    FileBrowserActivity* owner_;
+    FileBrowserView* owner_;
     std::vector<files::Entry> entries_;
     std::string marked_;
 };
@@ -94,11 +94,11 @@ private:
 // Existe porque la aplicacion ESCRIBE en la tarjeta --descarga ROMs, las lleva
 // a la carpeta del emulador, deja carpetas de trabajo-- y hasta ahora no daba
 // ninguna forma de mirar lo que hay ni de recolocarlo sin un ordenador y FTP.
-class FileBrowserActivity : public brls::Activity {
+class FileBrowserView : public brls::Box {
 public:
-    explicit FileBrowserActivity(std::string startPath)
-        : path_(std::move(startPath)) {
-        auto* content = new brls::Box(brls::Axis::COLUMN);
+    explicit FileBrowserView(std::string startPath)
+        : Box(brls::Axis::COLUMN), path_(std::move(startPath)) {
+        brls::Box* content = this;
         content->setGrow(1);
         content->setPadding(18, 38, 18, 34);
 
@@ -131,25 +131,16 @@ public:
         recyclerHost_ = recyclerHost(recycler_);
         content->addView(recyclerHost_);
 
-        frame_ = new brls::AppletFrame(content);
-        frame_->setTitle(tr("gamehubnx/browser/title"));
-        reload();
-    }
-
-    brls::View* createContentView() override { return frame_; }
-
-    const std::string& currentPath() const { return path_; }
-
-    void onContentAvailable() override {
+        // B sube una carpeta, y desde la raiz NO se consume.
+        //
+        // Devolver false ahi es lo que deja que B siga su camino y devuelva el
+        // foco a la barra lateral. Consumiendolo siempre, la pestana se
+        // quedaria sin salida: estando dentro de una carpeta no podrias salir
+        // del explorador, y estando en la raiz tampoco.
         registerAction(tr("gamehubnx/browser/up"), brls::BUTTON_B,
                        [this](brls::View*) {
-                           // B sube una carpeta y solo cierra desde la raiz.
-                           // Salir de golpe estando tres niveles adentro es la
-                           // forma mas rapida de perder donde estabas.
-                           if (files::isRootPath(path_)) {
-                               brls::Application::popActivity();
-                               return true;
-                           }
+                           if (files::isRootPath(path_))
+                               return false;
                            path_ = files::parentPath(path_);
                            reload();
                            return true;
@@ -159,7 +150,10 @@ public:
                            openActions(SIZE_MAX);
                            return true;
                        });
+        reload();
     }
+
+    const std::string& currentPath() const { return path_; }
 
     void activate(size_t index) {
         const std::vector<files::Entry>& entries = dataSource_->entries();
@@ -354,7 +348,6 @@ private:
 
     std::string path_;
     bool markedIsDirectory_ = false;
-    brls::AppletFrame* frame_ = nullptr;
     brls::Label* pathLabel_ = nullptr;
     brls::Label* markedLabel_ = nullptr;
     brls::Label* status_ = nullptr;

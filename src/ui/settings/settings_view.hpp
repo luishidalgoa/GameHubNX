@@ -27,7 +27,6 @@
 #include "ui/settings/advanced_settings.hpp"
 #include "ui/settings/network_health.hpp"
 #include "ui/settings/settings_cells.hpp"
-#include "ui/files/file_browser_view.hpp"
 #include "ui/settings/storage_manager.hpp"
 #include "ui/theme.hpp"
 
@@ -89,19 +88,6 @@ public:
             markUpdateChecked();
         content->addView(updateAction_);
 
-        // El explorador va ARRIBA, no enterrado entre los ajustes.
-        //
-        // Estaba el octavo de la lista y el usuario no lo encontro --dos veces
-        // dijo que no estaba, estandolo--. Que exista y que se encuentre no es
-        // lo mismo, y una funcion que nadie halla vale igual que no tenerla.
-        //
-        // Su sitio de verdad es una pestana propia, como en cualquier gestor de
-        // ficheros. No esta ahi porque la barra lateral ya va justa de alto
-        // --es el #27-- y una septima pestana lo empeoraria; el arreglo de esa
-        // barra existe y esta aparcado. Mientras tanto, arriba del todo.
-        content->addView(actionCell(tr("gamehubnx/settings/browser"),
-            tr("gamehubnx/settings/browser_detail"),
-            [this] { openFileBrowser(); }));
 
         addSection(content, tr("gamehubnx/settings/section_catalog"));
         catalogFilter_ = new brls::SelectorCell();
@@ -377,12 +363,6 @@ private:
     void openStorage() {
         brls::Application::pushActivity(
             new StorageManagerActivity(manager_, metadata_));
-    }
-
-    void openFileBrowser() {
-        // Se abre en la raiz de la tarjeta, no en la carpeta de descargas: lo
-        // que hay que recolocar suele estar justamente fuera de ella.
-        brls::Application::pushActivity(new FileBrowserActivity("sdmc:/"));
     }
 
     void openNetworkHealth() {

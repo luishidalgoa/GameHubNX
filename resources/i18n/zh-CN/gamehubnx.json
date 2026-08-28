@@ -602,8 +602,6 @@
     "advanced_detail": "诊断、存储、重置",
     "storage": "存储",
     "storage_detail": "SD 卡使用情况与清理",
-    "browser": "文件浏览器",
-    "browser_detail": "浏览、移动、重命名和删除 SD 卡上的文件",
     "report_bug": "以二维码显示最近日志",
     "report_bug_detail": "为开发者显示最近日志的二维码",
     "report_notice": "不会从主机发送任何内容。以下日志会绘制成二维码，供你自行拍摄并发送。",

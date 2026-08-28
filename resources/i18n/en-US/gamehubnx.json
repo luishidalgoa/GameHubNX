@@ -600,8 +600,6 @@
     "advanced_detail": "Diagnostics, storage, reset",
     "storage": "Storage",
     "storage_detail": "SD card breakdown and cleanup",
-    "browser": "File browser",
-    "browser_detail": "List, move, rename and delete files on the SD card",
     "network_health": "Network Health",
     "network_health_detail": "Connectivity and provider status",
     "report_bug": "Show recent logs as QR codes",

@@ -602,8 +602,6 @@
     "advanced_detail": "Diagnostics, stockage, réinitialisation",
     "storage": "Stockage",
     "storage_detail": "Utilisation de la carte SD et nettoyage",
-    "browser": "Explorateur de fichiers",
-    "browser_detail": "Lister, déplacer, renommer et supprimer des fichiers de la carte SD",
     "report_bug": "Afficher les journaux récents en QR",
     "report_bug_detail": "Afficher les journaux récents en codes QR pour le développeur",
     "report_notice": "Rien n'est envoyé depuis la console. Le journal ci-dessous est affiché en codes QR à photographier et envoyer vous-même.",
