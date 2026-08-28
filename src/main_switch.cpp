@@ -529,9 +529,22 @@ int main(int argc, char** argv) {
             [](brls::View* view) {
                 if (!view)
                     return;
-                log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f\n",
+                // Desglosado, no solo el total. Dos filas hermanas de la misma
+                // lista salieron con x=34 y x=68, y con el total a secas no se
+                // puede saber cual de los sumandos sobra: View::getX() suma la
+                // x del padre, el left que calcula Yoga, la traslacion y ---si
+                // la vista esta desacoplada--- el origen desacoplado. Y detach()
+                // solo marca un flag: no le dice a Yoga que el nodo sea
+                // absoluto, asi que Yoga le sigue asignando un left propio y
+                // los dos pueden sumarse.
+                brls::View* parent = view->getParent();
+                log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f "
+                        "| padre=%.0f yoga=%.0f desacoplada=%d\n",
                         view->describe().c_str(), view->getX(), view->getY(),
-                        view->getWidth(), view->getHeight());
+                        view->getWidth(), view->getHeight(),
+                        parent ? parent->getX() : 0.0f,
+                        YGNodeLayoutGetLeft(view->getYGNode()),
+                        view->isDetached() ? 1 : 0);
             });
 
         startupStage("push MainActivity");
