@@ -14,6 +14,7 @@
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
+#include "ui/platforms/rom_detail.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
@@ -197,9 +198,10 @@ private:
 class RomListActivity : public brls::Activity {
 public:
     RomListActivity(gamehub::ShopPlatform platform, CatalogService* catalog,
-                    DownloadManager* manager, AppSettings* settings)
+                    DownloadManager* manager, AppSettings* settings,
+                    GameMetadataService* metadata)
         : platform_(std::move(platform)), catalog_(catalog),
-          manager_(manager), settings_(settings) {
+          manager_(manager), settings_(settings), metadata_(metadata) {
         destination_ = resolvedDestination();
 
         auto* content = new brls::Box(brls::Axis::COLUMN);
@@ -365,6 +367,17 @@ public:
         refreshPathLabels();
     }
 
+    void openDetail(size_t index) {
+        const std::vector<CatalogEntry>& roms = dataSource_->roms();
+        if (index >= roms.size())
+            return;
+        brls::Application::pushActivity(new RomDetailActivity(
+            roms[index], platform_, catalog_, metadata_, destination_,
+            [this](const CatalogEntry& rom, const std::string& destination) {
+                enqueueEntry(rom, destination);
+            }));
+    }
+
     void download(size_t index) {
         const std::vector<CatalogEntry>& roms = dataSource_->roms();
         if (index >= roms.size())
@@ -396,8 +409,13 @@ private:
         const std::vector<CatalogEntry>& roms = dataSource_->roms();
         if (index >= roms.size())
             return;
-        const CatalogEntry& rom = roms[index];
+        enqueueEntry(roms[index], destination);
+    }
 
+    // Por entrada y no por indice: la version que elige la ficha --una edicion
+    // regional-- no esta en la lista, se construye clonando la entrada con otra
+    // URL.
+    void enqueueEntry(const CatalogEntry& rom, const std::string& destination) {
         DebridImport import;
         import.infoHash = catalogLower(rom.infoHash);
         import.name = rom.title;
@@ -501,6 +519,8 @@ private:
     CatalogService* catalog_;
     DownloadManager* manager_;
     AppSettings* settings_;
+    // Solo para la ficha: es quien descarga y cachea portadas y capturas.
+    GameMetadataService* metadata_;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;
     brls::Label* pathLabel_ = nullptr;
@@ -529,7 +549,9 @@ inline brls::RecyclerCell* RomDataSource::cellForRow(
 
 inline void RomDataSource::didSelectRowAt(brls::RecyclerFrame*,
                                            brls::IndexPath index) {
-    owner_->download(static_cast<size_t>(index.row));
+    // Abrir la ficha, no descargar. Antes un solo botón encolaba tres gigas sin
+    // haber podido ver de que juego se trataba ni elegir edicion.
+    owner_->openDetail(static_cast<size_t>(index.row));
 }
 
 } // namespace gamehubnx::ui

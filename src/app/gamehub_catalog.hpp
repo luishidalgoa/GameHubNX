@@ -113,6 +113,50 @@ bool parsePlatforms(const std::string& json, std::vector<ShopPlatform>& out,
 bool parsePlatformIndex(const std::string& json, const std::string& slug,
                         std::vector<CatalogEntry>& out, std::string& error);
 
+// Un fichero descargable de la ficha de un juego: el juego en si o uno de sus
+// complementos.
+struct ShopGameFile {
+    std::string url;
+    uint64_t size = 0;
+    // "base", "region", "dlc", "update", "mod". Lo dice el servidor, que lo sabe
+    // desde el escaneo; deducirlo del nombre es como se llegaba a ensenar un
+    // parche disfrazado de juego.
+    std::string kind;
+    std::string title;
+    std::string region;
+    std::string languages;
+};
+
+// Ficha de un juego, tal y como la sirve /api/shop/game/<id>.
+//
+// Existe porque la metadata rica solo salia dentro del mapa titledb de
+// /api/shop, indexado por Title ID de Switch: una ROM no tiene, asi que se
+// quedaba sin descripcion, sin capturas y sin trailer aunque el servidor los
+// tuviera guardados.
+struct ShopGameDetail {
+    int id = 0;
+    std::string platformSlug;
+    std::string platformName;
+    std::string title;
+    std::string coverUrl;
+    std::string description;
+    std::vector<std::string> screenshots;
+    std::string trailerUrl;
+    std::string developer;
+    std::string publisher;
+    std::string genre;
+    std::string year;
+    std::string region;
+    std::string languages;
+    std::vector<ShopGameFile> files;
+};
+
+// Parsea /api/shop/game/<id>. Misma tolerancia que el resto: un campo mal
+// formado se ignora, no tumba la ficha, porque una ficha a medias sigue
+// sirviendo para decidir y una pantalla en blanco no.
+bool parseGameDetail(const std::string& json, ShopGameDetail& out,
+                     std::string& error);
+
 // Proporcion de portada publicada por la tienda en la raiz del indice
 // (gh_cover_width / gh_cover_height). Es la preferencia por plataforma que el
 // usuario configura en la web de GameHub; sin ella la app pintaba las cajas con
