@@ -756,6 +756,9 @@
     },
     "platforms": {
         "format_warning": "the emulator cannot open this format",
+        "format_warning_named": "{} can't open this format",
+        "games_unplayable": "{} games · {} that {} can't open",
+        "games_unplayable_plain": "{} games · {} the emulator can't open",
         "where": "Where should the ROM go?",
         "to_emulator": "Emulator folder",
         "to_downloads": "Leave it in downloads",

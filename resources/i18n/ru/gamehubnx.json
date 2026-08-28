@@ -756,6 +756,9 @@
     },
     "platforms": {
         "format_warning": "эмулятор не открывает этот формат",
+        "format_warning_named": "{} не открывает этот формат",
+        "games_unplayable": "игр: {} · {} не откроет {}",
+        "games_unplayable_plain": "игр: {} · {} не откроет эмулятор",
         "where": "Куда сохранить ROM?",
         "to_emulator": "Папка эмулятора",
         "to_downloads": "Оставить в загрузках",

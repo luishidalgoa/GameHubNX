@@ -46,14 +46,34 @@ public:
         name_->setSingleLine(true);
         name_->setAutoAnimate(false);
         name_->setFontSize(theme::kFontBody);
+
+        // El recuento y, al lado, los formatos que sirve el servidor pintados
+        // con su veredicto: verde lo abre el emulador, ambar no lo abre, gris
+        // no consta. Es el mismo codigo de color que las franjas de la lista de
+        // ROMs, y aqui se ve ANTES de entrar en la plataforma.
+        auto* metaRow = new brls::Box(brls::Axis::ROW);
+        metaRow->setAlignItems(brls::AlignItems::CENTER);
+        metaRow->setMarginTop(3);
         meta_ = new brls::Label();
         meta_->setSingleLine(true);
         meta_->setAutoAnimate(false);
         meta_->setFontSize(theme::kFontCaption);
         meta_->setTextColor(theme::textTertiary());
-        meta_->setMarginTop(3);
+        metaRow->addView(meta_);
+        // Reserva fija: las celdas se reciclan y crear vistas en setPlatform
+        // haria crecer el arbol en cada scroll. Cuatro sobran --la plataforma
+        // con mas formatos hoy tiene tres-- y las que sobran quedan GONE.
+        for (brls::Label*& slot : extLabels_) {
+            slot = new brls::Label();
+            slot->setSingleLine(true);
+            slot->setAutoAnimate(false);
+            slot->setFontSize(theme::kFontCaption);
+            slot->setMarginLeft(12);
+            slot->setVisibility(brls::Visibility::GONE);
+            metaRow->addView(slot);
+        }
         text->addView(name_);
-        text->addView(meta_);
+        text->addView(metaRow);
         addView(text);
 
         badge_ = new brls::Label();
@@ -66,10 +86,29 @@ public:
                      GameMetadataService* metadata) {
         setTextIfChanged(name_, p.name);
 
-        std::string meta = tr("gamehubnx/platforms/games", p.games);
-        for (const std::string& ext : p.extensions)
-            meta += "   " + ext;
-        setTextIfChanged(meta_, meta);
+        setTextIfChanged(meta_, tr("gamehubnx/platforms/games", p.games));
+        for (size_t i = 0; i < kMaxExtLabels; ++i) {
+            if (i >= p.extensions.size()) {
+                extLabels_[i]->setVisibility(brls::Visibility::GONE);
+                continue;
+            }
+            const std::string& ext = p.extensions[i];
+            extLabels_[i]->setVisibility(brls::Visibility::VISIBLE);
+            setTextIfChanged(extLabels_[i], ext);
+            switch (roms::compatOfExtension(p.slug, ext)) {
+                case roms::RomCompat::Playable:
+                    extLabels_[i]->setTextColor(theme::success());
+                    break;
+                case roms::RomCompat::Unplayable:
+                    extLabels_[i]->setTextColor(theme::warning());
+                    break;
+                // Gris no es "va mal": es que de esa plataforma no consta que
+                // abre el nucleo, y entonces la app no afirma nada.
+                case roms::RomCompat::Unknown:
+                    extLabels_[i]->setTextColor(theme::textTertiary());
+                    break;
+            }
+        }
 
         // "Nativa" lo dice el servidor; no se deduce del slug.
         if (p.native) {
@@ -95,9 +134,12 @@ public:
     }
 
 private:
+    static constexpr size_t kMaxExtLabels = 4;
+
     AsyncRgbaImage* icon_;
     brls::Label* name_;
     brls::Label* meta_;
+    brls::Label* extLabels_[kMaxExtLabels] = {};
     brls::Label* badge_;
     std::string iconUrl_;
     std::shared_ptr<ImageRequestState> iconState_ =

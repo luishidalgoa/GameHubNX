@@ -420,14 +420,42 @@ void test_formatos_que_el_emulador_abre() {
     assert(!roms::isUnplayableByEmulator("3ds", "Juego.zcci"));
     assert(!roms::isUnplayableByEmulator("3ds", "Juego.3dsx"));
 
-    // Sin lista para esa plataforma NO se acusa: callarse es mejor que marcar
-    // como incompatible algo que quiza se abre perfectamente.
+    // El resto de la biblioteca SI encaja con lo que abre su nucleo, y eso
+    // tambien hay que comprobarlo: un falso aviso en las mil filas de GBA
+    // seria peor que no avisar.
     assert(!roms::isUnplayableByEmulator("gba", "Juego.gba"));
-    assert(!roms::isUnplayableByEmulator("gba", "Juego.loquesea"));
-    assert(roms::playableExtensionsFor("gba").empty());
+    assert(!roms::isUnplayableByEmulator("nds", "Juego.nds"));
+    assert(!roms::isUnplayableByEmulator("psp", "Juego.chd"));
+    assert(!roms::isUnplayableByEmulator("wii", "Juego.rvz"));
+    assert(!roms::isUnplayableByEmulator(
+        "super-nintendo-entertainment-system", "Juego.sfc"));
+
+    // Sin lista para esa plataforma NO se acusa: callarse es mejor que marcar
+    // como incompatible algo que quiza se abre perfectamente. Vita3k no es un
+    // nucleo libretro y no hay .info que consultar.
+    assert(!roms::isUnplayableByEmulator("psvita", "Juego.vpk"));
+    assert(roms::playableExtensionsFor("psvita").empty());
+    assert(roms::romCompat("psvita", "Juego.vpk") == roms::RomCompat::Unknown);
+
+    // Un comprimido tampoco se juzga: los frontends libretro suelen extraerlo
+    // al vuelo y asi se distribuye media biblioteca de 8 y 16 bits.
+    assert(roms::romCompat("gba", "Juego.zip") == roms::RomCompat::Unknown);
+    assert(roms::romCompat("nes", "Juego.7z") == roms::RomCompat::Unknown);
 
     // Un nombre sin extension tampoco se acusa.
     assert(!roms::isUnplayableByEmulator("3ds", "sin_extension"));
+    assert(roms::romCompat("3ds", "sin_extension") ==
+           roms::RomCompat::Unknown);
+
+    // Los tres veredictos, que son los tres colores de la franja.
+    assert(roms::romCompat("3ds", "Juego.3ds") == roms::RomCompat::Playable);
+    assert(roms::romCompat("3ds", "Juego.cia") == roms::RomCompat::Unplayable);
+
+    // La extension sale en minusculas y con el punto: es lo que se pinta en la
+    // insignia y lo que se busca en la lista.
+    assert(roms::extensionOf("JUEGO.CIA") == ".cia");
+    assert(roms::extensionOf("un.nombre.raro.3ds") == ".3ds");
+    assert(roms::extensionOf("sin_extension").empty());
 }
 
 } // namespace

@@ -756,6 +756,9 @@
     },
     "platforms": {
         "format_warning": "o emulador não abre este formato",
+        "format_warning_named": "{} não abre este formato",
+        "games_unplayable": "{} jogos · {} que o {} não abre",
+        "games_unplayable_plain": "{} jogos · {} que o emulador não abre",
         "where": "Onde salvar a ROM?",
         "to_emulator": "Pasta do emulador",
         "to_downloads": "Deixar em downloads",
