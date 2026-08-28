@@ -7,8 +7,12 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
+#include <map>
 #include <string>
 #include <vector>
+
+#include <sys/stat.h>
 
 using namespace gamehubnx;
 
@@ -392,18 +396,59 @@ void test_rutas_de_tico() {
     assert(roms::defaultRomPath("super-nintendo-entertainment-system") ==
            "sdmc:/tico/roms/snes");
     assert(roms::defaultPathIsKnown("gba"));
+    // Comprobado contra el arbol de una instalacion real: la carpeta de 3DS se
+    // llama igual que el slug, y eso quita el aviso de 63 juegos.
+    assert(roms::defaultRomPath("3ds") == "sdmc:/tico/roms/3ds");
+    assert(roms::defaultPathIsKnown("3ds"));
 }
 
 void test_plataforma_desconocida_cae_al_slug() {
     // Sin correspondencia comprobada NO se adivina: se usa el slug, que al
     // menos es estable y unico, y la interfaz avisa de que hay que revisarla.
+    // tico no crea carpeta para la DS --en el arbol comprobado no existe-- asi
+    // que aqui no hay nada que confirmar y el aviso tiene que salir.
     assert(roms::defaultRomPath("nds") == "sdmc:/tico/roms/nds");
     assert(!roms::defaultPathIsKnown("nds"));
-    assert(!roms::defaultPathIsKnown("3ds"));
     assert(!roms::defaultPathIsKnown("psvita-ports"));
     // Y una plataforma que el servidor anada manana tampoco rompe nada.
     assert(roms::defaultRomPath("inventada") == "sdmc:/tico/roms/inventada");
     assert(!roms::defaultPathIsKnown("inventada"));
+}
+
+void test_carpeta_elegida_por_el_usuario() {
+    std::map<std::string, std::string> chosen;
+    // Sin nada elegido manda la tabla.
+    assert(roms::romPathFor("gba", chosen) == "sdmc:/tico/roms/gba");
+
+    // Y en cuanto se elige, manda lo elegido: quien no usa tico no tiene por
+    // que aceptar su arbol.
+    chosen["gba"] = "sdmc:/retroarch/roms/gba";
+    assert(roms::romPathFor("gba", chosen) == "sdmc:/retroarch/roms/gba");
+    // Sin tocar a las demas.
+    assert(roms::romPathFor("psp", chosen) == "sdmc:/tico/roms/psp");
+
+    // Una entrada vacia no cuenta como eleccion: dejaria las ROMs en la raiz.
+    chosen["psp"] = "";
+    assert(roms::romPathFor("psp", chosen) == "sdmc:/tico/roms/psp");
+
+    // Leer una raiz que no existe da lista vacia, no un fallo: es la respuesta
+    // util cuando tico no esta instalado.
+    assert(roms::listRomFolders("/no/existe/esta/ruta").empty());
+
+    // Y sobre una raiz de verdad devuelve solo carpetas, ordenadas.
+    const std::string root = "/tmp/gamehubnx-romfolders-test";
+    assert(system(("rm -rf " + root).c_str()) != -1);
+    assert(mkdir(root.c_str(), 0755) == 0);
+    assert(mkdir((root + "/snes").c_str(), 0755) == 0);
+    assert(mkdir((root + "/gba").c_str(), 0755) == 0);
+    FILE* stray = fopen((root + "/leeme.txt").c_str(), "w");
+    assert(stray);
+    fclose(stray);
+    const std::vector<std::string> found = roms::listRomFolders(root);
+    assert(found.size() == 2);
+    assert(found[0] == "gba");
+    assert(found[1] == "snes");
+    assert(system(("rm -rf " + root).c_str()) != -1);
 }
 
 void test_formatos_que_el_emulador_abre() {
@@ -485,6 +530,7 @@ int main() {
     test_rutas_de_tico();
     test_plataforma_desconocida_cae_al_slug();
     test_formatos_que_el_emulador_abre();
+    test_carpeta_elegida_por_el_usuario();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

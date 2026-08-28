@@ -69,6 +69,29 @@ bool readBool(const Json& root, const char* key, bool& value,
     return true;
 }
 
+// Mapa de cadena a cadena. Una entrada con basura se ignora en vez de tumbar
+// el fichero entero: perder la ruta de una plataforma es un fastidio, perder
+// todos los ajustes es otra cosa.
+bool readStringMap(const Json& root, const char* key,
+                   std::map<std::string, std::string>& value,
+                   std::string& error) {
+    if (!root.contains(key))
+        return true;
+    if (!root[key].is_object()) {
+        error = std::string("Setting '") + key + "' must be an object.";
+        return false;
+    }
+    value.clear();
+    for (auto it = root[key].begin(); it != root[key].end(); ++it) {
+        if (!it.value().is_string())
+            continue;
+        std::string path = it.value().get<std::string>();
+        if (!it.key().empty() && !path.empty())
+            value[it.key()] = std::move(path);
+    }
+    return true;
+}
+
 bool readUnsigned(const Json& root, const char* key, uint64_t& value,
                   std::string& error) {
     if (!root.contains(key))
@@ -124,6 +147,7 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
         !readString(root, "install_location", install, error) ||
         !readBool(root, "ask_rom_destination", values.askRomDestination,
                   error) ||
+        !readStringMap(root, "rom_paths", values.romPaths, error) ||
         !readBool(root, "show_completed_downloads",
                   values.showCompletedDownloads, error) ||
         !readBool(root, "extended_telemetry", values.extendedTelemetry,
@@ -239,6 +263,12 @@ std::string serializeSettings(const AppSettingsData& values) {
     root["stream_selection"] = streamSelectionName(values.streamSelection);
     root["install_location"] = installLocationName(values.installLocation);
     root["ask_rom_destination"] = values.askRomDestination;
+    // Solo lo que se ha cambiado. Volcar aqui la ruta por defecto de cada
+    // plataforma congelaria la tabla en el fichero: al corregir un nombre de
+    // carpeta en una version nueva, el fichero viejo seguiria mandando.
+    root["rom_paths"] = Json::object();
+    for (const auto& entry : values.romPaths)
+        root["rom_paths"][entry.first] = entry.second;
     root["show_completed_downloads"] = values.showCompletedDownloads;
     root["extended_telemetry"] = values.extendedTelemetry;
     root["check_for_updates_on_launch"] = values.checkForUpdatesOnLaunch;
