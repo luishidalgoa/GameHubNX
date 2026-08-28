@@ -774,6 +774,7 @@
     },
     "platforms": {
         "format_warning": "l'émulateur n'ouvre pas ce format",
+        "platform_warning": "tico n'émule pas cette console",
         "format_warning_named": "{} n'ouvre pas ce format",
         "games_unplayable": "{} jeux · {} que {} n'ouvre pas",
         "games_unplayable_plain": "{} jeux · {} que l'émulateur n'ouvre pas",

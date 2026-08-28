@@ -774,6 +774,7 @@
     },
     "platforms": {
         "format_warning": "模拟器无法打开此格式",
+        "platform_warning": "tico 不模拟这台主机",
         "format_warning_named": "{} 无法打开此格式",
         "games_unplayable": "{} 个游戏 · {} 个 {} 无法打开",
         "games_unplayable_plain": "{} 个游戏 · {} 个模拟器无法打开",

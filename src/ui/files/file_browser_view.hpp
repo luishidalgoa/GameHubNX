@@ -19,9 +19,9 @@ class FileBrowserActivity;
 // Fila del explorador. La carpeta se distingue por la barra final y por el
 // color, no por un icono: un glifo mas en una lista de cientos de nombres solo
 // le quita sitio al que importa, que es el nombre.
-class FileCell : public brls::RecyclerCell {
+class BrowserCell : public brls::RecyclerCell {
 public:
-    FileCell() {
+    BrowserCell() {
         setFocusable(true);
         setAxis(brls::Axis::ROW);
         setAlignItems(brls::AlignItems::CENTER);
@@ -62,9 +62,9 @@ private:
     brls::Label* size_;
 };
 
-class FileDataSource : public brls::RecyclerDataSource {
+class BrowserDataSource : public brls::RecyclerDataSource {
 public:
-    explicit FileDataSource(FileBrowserActivity* owner) : owner_(owner) {}
+    explicit BrowserDataSource(FileBrowserActivity* owner) : owner_(owner) {}
 
     void setEntries(std::vector<files::Entry> entries) {
         entries_ = std::move(entries);
@@ -125,8 +125,8 @@ public:
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
         recycler_->estimatedRowHeight = 58;
-        recycler_->registerCell("File", [] { return new FileCell(); });
-        dataSource_ = new FileDataSource(this);
+        recycler_->registerCell("Browser", [] { return new BrowserCell(); });
+        dataSource_ = new BrowserDataSource(this);
         recycler_->setDataSource(dataSource_);
         recyclerHost_ = recyclerHost(recycler_);
         content->addView(recyclerHost_);
@@ -360,12 +360,13 @@ private:
     brls::Label* status_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
-    FileDataSource* dataSource_ = nullptr;
+    BrowserDataSource* dataSource_ = nullptr;
 };
 
-inline brls::RecyclerCell* FileDataSource::cellForRow(
+inline brls::RecyclerCell* BrowserDataSource::cellForRow(
     brls::RecyclerFrame* recycler, brls::IndexPath index) {
-    auto* cell = static_cast<FileCell*>(recycler->dequeueReusableCell("File"));
+    auto* cell = static_cast<BrowserCell*>(
+        recycler->dequeueReusableCell("Browser"));
     const size_t i = static_cast<size_t>(index.row);
     if (i < entries_.size()) {
         // Se compara la ruta entera, no el nombre: dos carpetas pueden tener un
@@ -378,7 +379,7 @@ inline brls::RecyclerCell* FileDataSource::cellForRow(
     return cell;
 }
 
-inline void FileDataSource::didSelectRowAt(brls::RecyclerFrame*,
+inline void BrowserDataSource::didSelectRowAt(brls::RecyclerFrame*,
                                            brls::IndexPath index) {
     owner_->activate(static_cast<size_t>(index.row));
 }

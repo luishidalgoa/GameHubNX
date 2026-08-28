@@ -73,6 +73,16 @@ inline std::string ticoFolderFor(const std::string& slug) {
     return {};
 }
 
+// Cierto cuando tico emula esa consola.
+//
+// Se responde con la tabla de carpetas comprobadas, que no es un atajo: si tico
+// no crea carpeta para un sistema es porque no lo ejecuta. La DS es el caso
+// vivo --no hay carpeta nds en el arbol de una instalacion real-- y por eso sus
+// juegos no se abren aunque el formato .nds sea el correcto.
+inline bool ticoSupportsPlatform(const std::string& slug) {
+    return !ticoFolderFor(slug).empty();
+}
+
 // Ruta por defecto donde dejar las ROMs de una plataforma.
 //
 // Con carpeta conocida va a la de tico; sin ella se usa el slug tal cual, que
@@ -304,6 +314,26 @@ inline RomCompat compatOfExtension(const std::string& slug,
 inline RomCompat romCompat(const std::string& slug,
                            const std::string& fileName) {
     return compatOfExtension(slug, extensionOf(fileName));
+}
+
+// Veredicto que se pinta de verdad, que junta las dos preguntas: si tico emula
+// esa consola y si el nucleo abre ese fichero.
+//
+// La primera manda. De nada sirve que el formato sea el correcto si el
+// emulador no ejecuta ese sistema: la ROM se descarga, se deja en su sitio y no
+// aparece igual. Es exactamente lo que pasa con los 337 juegos de DS.
+inline RomCompat displayCompat(const std::string& slug,
+                               const std::string& fileName) {
+    if (!ticoSupportsPlatform(slug))
+        return RomCompat::Unplayable;
+    return romCompat(slug, fileName);
+}
+
+inline RomCompat displayCompatForExtension(const std::string& slug,
+                                           const std::string& ext) {
+    if (!ticoSupportsPlatform(slug))
+        return RomCompat::Unplayable;
+    return compatOfExtension(slug, ext);
 }
 
 // Cierto solo cuando consta que el emulador NO lo abre. Sin dato no se acusa.

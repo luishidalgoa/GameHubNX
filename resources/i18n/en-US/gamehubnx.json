@@ -774,6 +774,7 @@
     },
     "platforms": {
         "format_warning": "the emulator cannot open this format",
+        "platform_warning": "tico does not emulate this console",
         "format_warning_named": "{} can't open this format",
         "games_unplayable": "{} games · {} that {} can't open",
         "games_unplayable_plain": "{} games · {} the emulator can't open",

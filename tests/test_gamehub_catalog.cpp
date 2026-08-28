@@ -522,6 +522,22 @@ void test_formatos_que_el_emulador_abre() {
     assert(roms::romCompat("3ds", "sin_extension") ==
            roms::RomCompat::Unknown);
 
+    // Lo que se pinta junta DOS preguntas, y la primera manda: de nada sirve
+    // que el formato sea el correcto si tico no emula esa consola. La ROM se
+    // descargaria, se dejaria en su sitio y no apareceria igual.
+    assert(!roms::ticoSupportsPlatform("nds"));
+    assert(roms::romCompat("nds", "Juego.nds") == roms::RomCompat::Playable);
+    assert(roms::displayCompat("nds", "Juego.nds") ==
+           roms::RomCompat::Unplayable);
+    assert(roms::displayCompatForExtension("nds", ".nds") ==
+           roms::RomCompat::Unplayable);
+    // Y donde tico si llega, el veredicto sigue siendo el del formato.
+    assert(roms::ticoSupportsPlatform("gba"));
+    assert(roms::displayCompat("gba", "Juego.gba") ==
+           roms::RomCompat::Playable);
+    assert(roms::displayCompat("3ds", "Juego.cia") ==
+           roms::RomCompat::Unplayable);
+
     // Los tres veredictos, que son los tres colores de la franja.
     assert(roms::romCompat("3ds", "Juego.3ds") == roms::RomCompat::Playable);
     assert(roms::romCompat("3ds", "Juego.cia") == roms::RomCompat::Unplayable);

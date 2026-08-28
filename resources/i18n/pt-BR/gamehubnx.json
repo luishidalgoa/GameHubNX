@@ -774,6 +774,7 @@
     },
     "platforms": {
         "format_warning": "o emulador não abre este formato",
+        "platform_warning": "o tico não emula este console",
         "format_warning_named": "{} não abre este formato",
         "games_unplayable": "{} jogos · {} que o {} não abre",
         "games_unplayable_plain": "{} jogos · {} que o emulador não abre",
