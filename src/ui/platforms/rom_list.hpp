@@ -182,14 +182,7 @@ public:
         load();
     }
 
-    ~RomListActivity() override {
-        alive_->store(false);
-        // La proporcion es un ajuste GLOBAL que comparten esta pantalla y el
-        // catalogo de Switch. Se devuelve al salir: si no, las cajas de Switch
-        // se quedarian con la forma de la ultima consola que se abrio.
-        if (previousAspect_ > 0.0f)
-            setCoverAspect(previousAspect_);
-    }
+    ~RomListActivity() override { alive_->store(false); }
 
     brls::View* createContentView() override { return frame_; }
 
@@ -392,13 +385,20 @@ private:
                         fetched = std::move(fetched)]() mutable {
                 if (!alive->load())
                     return;
-                // La forma de la caja de ESTA consola, antes de crear ninguna
-                // tarjeta. Sin esto se pintaban todas con la de Switch y las
-                // portadas salian con bandas negras arriba y abajo.
-                if (aspect > 0.0f) {
-                    previousAspect_ = coverAspect();
-                    setCoverAspect(aspect);
-                }
+                // La proporcion que publica el servidor por plataforma NO se
+                // adopta, y es una correccion de lo que hice antes.
+                //
+                // Es la preferencia de maquetacion que el usuario configura en
+                // la web, no la forma del arte: medido contra el servidor, SNES
+                // la publica en 200x140 (apaisada) y TODAS sus portadas son
+                // 1200x1800 (verticales). Adoptarla ponia la caja del reves y
+                // dejaba bandas en cada tarjeta.
+                //
+                // Lo unico fiable es la proporcion de cada imagen, y la tarjeta
+                // ya se ajusta a ella al decodificar. Hasta entonces vale el
+                // valor por defecto (0,62), que se parece mucho al 0,667 real
+                // de casi todo el arte de consola.
+                (void)aspect;
                 if (!ok) {
                     status_->setText(error);
                     return;
@@ -533,8 +533,6 @@ private:
     // Compartida con las tarjetas: recuerda en que columna estaba el foco al
     // cambiar de fila, igual que en el catalogo.
     std::shared_ptr<int> focusColumn_ = std::make_shared<int>(0);
-    // La proporcion que habia antes de entrar, para devolverla al salir.
-    float previousAspect_ = 0.0f;
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };

@@ -249,11 +249,22 @@ private:
 
 class ShopAddOnsActivity : public brls::Activity {
 public:
+    // `onChosen`, cuando se pasa, sustituye a la instalacion por lotes: recibe
+    // lo marcado y decide que hacer con ello.
+    //
+    // Existe para que las ROMs puedan usar ESTA pantalla --la de marcar varias
+    // cosas y llevarselas de una vez-- sin heredar su accion: una ROM no se
+    // instala en la consola, se descarga a la carpeta de un emulador, y con
+    // ella el lote haria lo que no toca. Antes las ROMs tenian su propio
+    // desplegable, que ademas solo dejaba elegir una.
     ShopAddOnsActivity(std::string gameTitle, std::vector<ShopItem> items,
                        DownloadManager* manager, AppSettings* settings,
-                       std::function<void()> viewDownloads = nullptr)
+                       std::function<void()> viewDownloads = nullptr,
+                       std::function<void(std::vector<CatalogEntry>)>
+                           onChosen = nullptr)
         : manager_(manager), settings_(settings),
-          viewDownloads_(std::move(viewDownloads)) {
+          viewDownloads_(std::move(viewDownloads)),
+          onChosen_(std::move(onChosen)) {
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setGrow(1);
         content->setPadding(18, 38, 18, 34);
@@ -397,6 +408,15 @@ private:
         std::vector<CatalogEntry> entries = selectedEntries();
         if (entries.empty())
             return;
+        if (onChosen_) {
+            // Se cierra ANTES de entregar: quien recibe puede querer cerrar su
+            // propia pantalla, y hacerlo con esta todavia encima deja el foco
+            // en una actividad ya destruida. Es exactamente lo que colgaba la
+            // app en el desplegable que esto sustituye.
+            brls::Application::popActivity();
+            onChosen_(std::move(entries));
+            return;
+        }
         // Ni una linea de instalacion propia: BatchInstallActivity ya sabe
         // hacerlo, y desde que la tienda entro por la ruta de transferencia usa
         // GameHubProvider cuando toda la seleccion es suya.
@@ -411,6 +431,7 @@ private:
     DownloadManager* manager_;
     AppSettings* settings_;
     std::function<void()> viewDownloads_;
+    std::function<void(std::vector<CatalogEntry>)> onChosen_;
     brls::AppletFrame* frame_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     ShopAddOnsDataSource* dataSource_ = nullptr;

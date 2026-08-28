@@ -248,10 +248,18 @@ public:
         cover_->setBorderColor(highlight ? theme::accent()
                                          : brls::TRANSPARENT);
         iconPreserveAspect_ = info.iconPreserveAspect;
-        // La tarjeta se recicla: la proporcion de la imagen anterior no vale
-        // para esta, y dejarla puesta pintaria la caja con la forma del juego
-        // que ocupaba antes esta celda.
-        ownAspect_ = 0.0f;
+        // La proporcion va atada a SU url, no a la celda.
+        //
+        // Reiniciarla a secas estaba mal: setArtworkUrl no recarga cuando la
+        // url no ha cambiado y ya hay textura --al volver a pasar por la misma
+        // tarjeta-- asi que no habria decodificacion, no llegaria el aviso, y
+        // la caja se quedaria con la forma provisional para siempre. Atada a la
+        // url, se conserva mientras sea la misma imagen y se olvida en cuanto
+        // la celda pasa a otro juego.
+        if (aspectUrl_ != info.iconUrl) {
+            aspectUrl_ = info.iconUrl;
+            ownAspect_ = 0.0f;
+        }
         image_->setOnDecoded([this](int width, int height) {
             if (width <= 0 || height <= 0)
                 return;
@@ -378,6 +386,7 @@ private:
     bool iconPreserveAspect_ = false;
     // Proporcion de la portada de ESTA tarjeta, 0 hasta que la imagen llega.
     float ownAspect_ = 0.0f;
+    std::string aspectUrl_;
     // Se recuerda para poder recolocar la caja al decodificar sin perder el
     // aumento del foco.
     bool focused_ = false;

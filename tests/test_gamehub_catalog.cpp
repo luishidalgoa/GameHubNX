@@ -415,6 +415,26 @@ void test_plataforma_desconocida_cae_al_slug() {
     assert(!roms::defaultPathIsKnown("inventada"));
 }
 
+void test_clasificar_title_id() {
+    // El discriminante de trece bits: cero es el juego, 0x800 exactamente la
+    // actualizacion, y de 0x1000 en adelante los DLC.
+    assert(gamehub::isBaseTitleId("0100B2301F4A8000"));
+    assert(!gamehub::isUpdateTitleId("0100B2301F4A8000"));
+
+    assert(gamehub::isUpdateTitleId("0100B2301F4A8800"));
+    assert(!gamehub::isBaseTitleId("0100B2301F4A8800"));
+    assert(!gamehub::isDlcTitleId("0100B2301F4A8800"));
+
+    assert(gamehub::isDlcTitleId("0100B2301F4A9000"));
+    assert(!gamehub::isUpdateTitleId("0100B2301F4A9000"));
+
+    // Sin distinguir mayusculas, y nada que no sea un id de 16 digitos.
+    assert(gamehub::isUpdateTitleId("0100b2301f4a8800"));
+    assert(!gamehub::isUpdateTitleId("0100B2301F4A88"));
+    assert(!gamehub::isUpdateTitleId(""));
+    assert(!gamehub::isUpdateTitleId("no-es-un-id-xxxx"));
+}
+
 void test_ficha_de_un_juego() {
     const std::string json = R"({
       "gh_id": 271,
@@ -662,6 +682,7 @@ int main() {
     test_formatos_que_el_emulador_abre();
     test_carpeta_elegida_por_el_usuario();
     test_ficha_de_un_juego();
+    test_clasificar_title_id();
     test_nombre_de_rom_desde_el_titulo();
     std::printf("gamehub catalog tests passed\n");
     return 0;

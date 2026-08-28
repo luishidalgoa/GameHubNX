@@ -37,6 +37,11 @@ inline size_t utf8TruncateBoundary(const std::string& text, size_t maxBytes) {
 // or DLC reusing the same [vN] is excluded. Empty when no package matches;
 // selectUpdateFiles then falls back to its own heuristics. The caller feeds
 // the recommendation into the update-file chooser, which always opens.
+// Primera etiqueta numerica "[vN]" de un nombre de fichero
+// ("Minecraft [0100D71004694800][v10092544].nsp" -> 10092544). Falso cuando el
+// nombre no lleva ninguna.
+bool fileVersionTag(const std::string& path, uint64_t& value);
+
 std::vector<size_t> updateVersionMatches(const TorrentPreview& preview,
                                          const std::string& latestVersion,
                                          const std::string& titleId = {});
