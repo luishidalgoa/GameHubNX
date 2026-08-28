@@ -662,6 +662,114 @@ int main() {
         assert(manager.snapshot().empty());
     }
 
+    // Borrar una ROM ya movida a la carpeta del emulador tiene que borrar el
+    // FICHERO, no solo la fila de la lista.
+    //
+    // Es lo que fallaba: al mover la ROM, la carpeta de trabajo se queda vacia,
+    // y "eliminar" borraba esa carpeta vacia. La tarea desaparecia y el fichero
+    // seguia en la tarjeta, sin ninguna forma de quitarlo desde la app.
+    {
+        const std::string root = "/tmp/gamehubnx-borrar-rom-movida";
+        assert(system(("rm -rf " + root).c_str()) != -1);
+        {
+            DownloadManager createDirs(root, false);
+        }
+        // Fuera de la carpeta de descargas, como la de tico.
+        const std::string emulatorDir = root + "/tico-roms";
+        assert(mkdir(emulatorDir.c_str(), 0755) == 0);
+        const std::string delivered = emulatorDir + "/Animal Crossing.nds";
+        {
+            std::ofstream rom(delivered, std::ios::binary | std::ios::trunc);
+            rom << "rom";
+        }
+        const std::string dataPath = root + "/downloads/animal-crossing";
+        assert(mkdir(dataPath.c_str(), 0755) == 0);
+
+        std::string queue = "d5:tasksl";
+        queue += "d";
+        queue += "9:completedi3e";
+        queue += "4:data" + bstr(dataPath);
+        queue += "9:delivered" + bstr(delivered);
+        queue += "11:destination" + bstr(emulatorDir);
+        queue += "5:error" + bstr("");
+        queue += "2:id" + bstr("aa11bb22cc33dd44ee55ff6677889900aabbccdd");
+        queue += "8:metainfo" + bstr("");
+        queue += "4:mode" + bstr("download");
+        queue += "4:name" + bstr("Animal Crossing");
+        queue += "6:status" + bstr("completed");
+        queue += "5:totali3e";
+        queue += "e";
+        queue += "e7:versioni3ee";
+        {
+            std::ofstream output(root + "/queue.bencode",
+                                 std::ios::binary | std::ios::trunc);
+            output << queue;
+        }
+
+        DownloadManager manager(root, false);
+        auto tasks = manager.snapshot();
+        assert(tasks.size() == 1);
+        // La ruta sobrevive a guardar y volver a leer: sin eso, cerrar la app
+        // dejaria la ROM otra vez sin dueno.
+        assert(tasks[0].deliveredPath == delivered);
+
+        struct stat st {};
+        assert(stat(delivered.c_str(), &st) == 0);
+        assert(manager.remove(tasks[0].id, true, error));
+        assert(manager.snapshot().empty());
+        assert(stat(delivered.c_str(), &st) != 0);
+        // Y la carpeta del emulador sigue ahi: se borra el fichero, no el sitio
+        // donde viven las demas ROMs.
+        assert(stat(emulatorDir.c_str(), &st) == 0);
+        assert(system(("rm -rf " + root).c_str()) != -1);
+    }
+
+    // Y con "conservar los datos" el fichero NO se toca.
+    {
+        const std::string root = "/tmp/gamehubnx-conservar-rom-movida";
+        assert(system(("rm -rf " + root).c_str()) != -1);
+        {
+            DownloadManager createDirs(root, false);
+        }
+        const std::string emulatorDir = root + "/tico-roms";
+        assert(mkdir(emulatorDir.c_str(), 0755) == 0);
+        const std::string delivered = emulatorDir + "/Pikmin.iso";
+        {
+            std::ofstream rom(delivered, std::ios::binary | std::ios::trunc);
+            rom << "rom";
+        }
+        const std::string dataPath = root + "/downloads/pikmin";
+        assert(mkdir(dataPath.c_str(), 0755) == 0);
+
+        std::string queue = "d5:tasksl";
+        queue += "d";
+        queue += "9:completedi3e";
+        queue += "4:data" + bstr(dataPath);
+        queue += "9:delivered" + bstr(delivered);
+        queue += "5:error" + bstr("");
+        queue += "2:id" + bstr("bb11cc22dd33ee44ff55006677889900aabbccdd");
+        queue += "8:metainfo" + bstr("");
+        queue += "4:mode" + bstr("download");
+        queue += "4:name" + bstr("Pikmin");
+        queue += "6:status" + bstr("completed");
+        queue += "5:totali3e";
+        queue += "e";
+        queue += "e7:versioni3ee";
+        {
+            std::ofstream output(root + "/queue.bencode",
+                                 std::ios::binary | std::ios::trunc);
+            output << queue;
+        }
+
+        DownloadManager manager(root, false);
+        auto tasks = manager.snapshot();
+        assert(tasks.size() == 1);
+        assert(manager.remove(tasks[0].id, /*deleteData=*/false, error));
+        struct stat st {};
+        assert(stat(delivered.c_str(), &st) == 0);
+        assert(system(("rm -rf " + root).c_str()) != -1);
+    }
+
     // Fast resume: a version-5 queue with a resume-bf blob loads, and a user
     // recheck (verify) drops the trusted bitfield persistently.
     {

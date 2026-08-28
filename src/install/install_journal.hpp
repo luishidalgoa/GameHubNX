@@ -28,6 +28,15 @@ struct InstallJournal {
     bool load(const char* data, size_t size);
 };
 
+// IMPROVEMENT_PLAN F-B: un journal por tarea, junto al estado de la cola.
+// Vive aqui y no en el coordinador de paquetes porque lo necesitan las DOS
+// rutas de instalacion --la de torrent y la de enlace directo-- y no deberian
+// poder discrepar sobre donde esta el fichero.
+inline std::string installJournalPath(const std::string& root,
+                                      const std::string& taskId) {
+    return root + "/install-journal-" + taskId + ".bencode";
+}
+
 // Atomic file helpers (write <path>.tmp, then rename over <path>).
 bool saveInstallJournal(const std::string& path, const InstallJournal& journal);
 bool loadInstallJournal(const std::string& path, InstallJournal& journal);

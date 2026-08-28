@@ -70,6 +70,14 @@ struct DownloadTask {
     std::string name;
     std::string metainfoPath;
     std::string dataPath;
+    // Donde acabo el fichero de verdad cuando se movio fuera de la carpeta de
+    // descargas --la de tico, o la que eligiera el usuario--.
+    //
+    // Sin esto, borrar la descarga borraba su carpeta de trabajo, que despues
+    // del traslado esta vacia: la tarea desaparecia de la lista y la ROM se
+    // quedaba en la tarjeta. La app tiene que acordarse de donde puso el
+    // fichero para poder deshacerlo.
+    std::string deliveredPath;
     std::string error;
     DownloadStatus status = DownloadStatus::Queued;
     TransferMode mode = TransferMode::DownloadOnly;

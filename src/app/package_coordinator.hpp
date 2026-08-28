@@ -30,11 +30,10 @@ extern "C" {
 
 namespace gamehubnx {
 
-// IMPROVEMENT_PLAN F-B: one journal file per task next to the queue state.
-inline std::string installJournalPath(const std::string& root,
-                                      const std::string& taskId) {
-    return root + "/install-journal-" + taskId + ".bencode";
-}
+// Definido en install_journal.hpp, donde tambien lo ve la ruta de enlace
+// directo. Se reexporta aqui para no tocar a quien ya lo llamaba sin espacio
+// de nombres.
+using install::installJournalPath;
 
 class PackageCoordinator {
 public:

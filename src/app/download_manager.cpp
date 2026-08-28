@@ -1,5 +1,6 @@
 #include "gamehub_provider.hpp"
 #include "download_manager.hpp"
+#include "rom_paths.hpp"
 #include "task_files.hpp"
 #include "request_gate.hpp"
 #include "stream_budget_arbiter.hpp"
@@ -127,32 +128,72 @@ bool directoryEmpty(const std::string& path) {
 // bytes: una ROM de PSP son gigabytes y copiarlos para borrarlos despues
 // llenaria la SD y tardaria una eternidad. Solo si rename falla --tipicamente
 // porque origen y destino estan en volumenes distintos-- se copia.
+// Extension del fichero, con el punto, o vacio.
+std::string fileExtension(const std::string& name) {
+    const size_t dot = name.find_last_of('.');
+    if (dot == std::string::npos || dot + 1 >= name.size())
+        return {};
+    // Un punto al principio es un fichero oculto, no una extension.
+    if (dot == 0)
+        return {};
+    return name.substr(dot);
+}
+
 bool moveDirectoryContents(const std::string& source,
                            const std::string& destination,
+                           const std::string& preferredBaseName,
+                           std::vector<std::string>& movedPaths,
                            std::string& error) {
     if (!makeDirectories(destination)) {
         error = "No se pudo crear " + destination;
         return false;
     }
-    DIR* dir = opendir(source.c_str());
-    if (!dir) {
-        error = "No se pudo abrir " + source;
-        return false;
+    // Primero se mira que hay, para saber si se puede renombrar.
+    //
+    // El titulo solo se le puede poner a UN fichero: si la descarga trajera
+    // varios, ponerles el mismo nombre los machacaria entre si. Con varios se
+    // conservan sus nombres, que es lo unico que los distingue.
+    std::vector<std::string> files;
+    {
+        DIR* scan = opendir(source.c_str());
+        if (!scan) {
+            error = "No se pudo abrir " + source;
+            return false;
+        }
+        while (struct dirent* entry = readdir(scan)) {
+            const std::string name = entry->d_name;
+            if (name == "." || name == "..")
+                continue;
+            struct stat st {};
+            // Solo ficheros: una descarga de la tienda es un fichero suelto, y
+            // recorrer arboles aqui seria trabajo sin caso de uso.
+            if (stat((source + "/" + name).c_str(), &st) != 0 ||
+                !S_ISREG(st.st_mode))
+                continue;
+            files.push_back(name);
+        }
+        closedir(scan);
     }
+
+    // El nombre del juego, no el churro del fichero. Es lo que mira el
+    // emulador para reconocerlo y bajarle su caratula y sus datos; con el
+    // nombre de origen no encuentra nada.
+    std::string renameTo;
+    if (files.size() == 1 && !preferredBaseName.empty()) {
+        const std::string base = roms::romFileNameFromTitle(preferredBaseName);
+        if (!base.empty())
+            renameTo = base + fileExtension(files[0]);
+    }
+
     bool ok = true;
-    while (struct dirent* entry = readdir(dir)) {
-        const std::string name = entry->d_name;
-        if (name == "." || name == "..")
-            continue;
+    for (const std::string& name : files) {
         const std::string from = source + "/" + name;
-        const std::string to = destination + "/" + name;
-        struct stat st {};
-        // Solo ficheros: una descarga de la tienda es un fichero suelto, y
-        // recorrer arboles aqui seria trabajo sin caso de uso.
-        if (stat(from.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+        const std::string to =
+            destination + "/" + (renameTo.empty() ? name : renameTo);
+        if (rename(from.c_str(), to.c_str()) == 0) {
+            movedPaths.push_back(to);
             continue;
-        if (rename(from.c_str(), to.c_str()) == 0)
-            continue;
+        }
         std::ifstream in(from, std::ios::binary);
         std::ofstream out(to, std::ios::binary | std::ios::trunc);
         if (!in || !out) {
@@ -171,8 +212,8 @@ bool moveDirectoryContents(const std::string& source,
         in.close();
         out.close();
         unlink(from.c_str());
+        movedPaths.push_back(to);
     }
-    closedir(dir);
     // La carpeta de trabajo se va con su contenido: dejarla vacia es lo que
     // llena downloads/ de carpetas huerfanas.
     if (ok && directoryEmpty(source))
@@ -1303,6 +1344,7 @@ bool DownloadManager::saveLocked(std::string& error) const {
         state << "9:completed" << bint(task.completedBytes);
         state << "4:data" << bstr(task.dataPath);
         state << "9:debrid-id" << bstr(task.debridId);
+        state << "9:delivered" << bstr(task.deliveredPath);
         state << "11:destination" << bstr(task.destinationDir);
         state << "5:error" << bstr(task.error);
         state << "2:id" << bstr(task.id);
@@ -1429,6 +1471,7 @@ void DownloadManager::load() {
                     static_cast<uint32_t>(packagesDone);
         }
         dictionaryString(item, "destination", task.destinationDir);
+        dictionaryString(item, "delivered", task.deliveredPath);
         uint64_t persistedTarget = 0;
         if (dictionaryInteger(item, "install-target", persistedTarget)) {
             task.installTarget = persistedTarget == 1
@@ -1563,7 +1606,18 @@ bool DownloadManager::removeLocked(std::unique_lock<std::mutex>& lock,
         // looked crashed.
         if (deleteData) {
             const std::string dataPath = it->dataPath;
+            // El fichero movido fuera de la carpeta de descargas se borra
+            // aparte, y de la unica forma que se puede permitir: un unlink del
+            // fichero CONCRETO que escribio la app y cuya ruta guardo. Ni un
+            // recorrido de arbol ni una ruta que venga de fuera --el guardia de
+            // arriba sigue prohibiendo eso--; solo deshacer lo que hizo ella.
+            const std::string delivered = it->deliveredPath;
             lock.unlock();
+            if (!delivered.empty()) {
+                struct stat st {};
+                if (stat(delivered.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+                    unlink(delivered.c_str());
+            }
             const bool ok = removeTree(dataPath);
             lock.lock();
             it = tasks_.end();
@@ -1958,6 +2012,7 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     if (result == DebridRunResult::Finished) {
         std::string dataPath;
         std::string destination;
+        std::string title;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             DownloadTask* task = findLocked(activeId);
@@ -1965,13 +2020,27 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
                 !task->destinationDir.empty()) {
                 dataPath = task->dataPath;
                 destination = task->destinationDir;
+                title = task->name;
             }
         }
         if (!destination.empty()) {
             std::string moveError;
-            if (moveDirectoryContents(dataPath, destination, moveError)) {
+            std::vector<std::string> moved;
+            if (moveDirectoryContents(dataPath, destination, title, moved,
+                                      moveError)) {
                 log_msg("[roms] %s -> %s\n", dataPath.c_str(),
                         destination.c_str());
+                // Se apunta donde quedo para poder borrarlo despues. Solo con
+                // UN fichero: con varios no hay "el fichero" que senalar, y
+                // adivinar cual seria peor que no apuntar ninguno.
+                if (moved.size() == 1) {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    if (DownloadTask* task = findLocked(activeId)) {
+                        task->deliveredPath = moved.front();
+                        std::string ignored;
+                        saveLocked(ignored);
+                    }
+                }
             } else {
                 // El fichero esta bajado y entero; lo unico que fallo fue
                 // moverlo. Se marca error para que se vea y se diga donde

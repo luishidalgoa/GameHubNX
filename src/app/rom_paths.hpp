@@ -138,6 +138,49 @@ inline bool ticoRomsPresent() {
     return stat(kTicoRoot, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
+// Nombre de fichero valido en la tarjeta a partir del titulo del juego.
+//
+// Para que sirve: el emulador reconoce el juego por el NOMBRE del fichero y de
+// ahi saca su caratula y sus datos. Con el nombre de origen --que suele traer
+// region, grupo, version y medio alfabeto entre corchetes-- no encuentra nada.
+//
+// La tarjeta es FAT32/exFAT: hay caracteres que no se pueden usar y un nombre
+// demasiado largo no entra. Devuelve vacio si no queda nada aprovechable, y
+// entonces quien llama conserva el nombre original: feo, pero existe, y es
+// mejor que un fichero sin nombre.
+inline std::string romFileNameFromTitle(const std::string& title) {
+    std::string out;
+    out.reserve(title.size());
+    bool lastWasSpace = false;
+    for (unsigned char c : title) {
+        if (c < 0x20 || c == '\\' || c == '/' || c == ':' || c == '*' ||
+            c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
+            continue;
+        }
+        const bool isSpace = c == ' ' || c == '\t';
+        if (isSpace) {
+            // Los espacios de mas se juntan y los del principio se caen.
+            if (out.empty() || lastWasSpace)
+                continue;
+            out.push_back(' ');
+            lastWasSpace = true;
+            continue;
+        }
+        out.push_back(static_cast<char>(c));
+        lastWasSpace = false;
+    }
+    // Ni espacio ni punto al final: el punto lo pone la extension, y algunos
+    // sistemas se comen el ultimo caracter si es cualquiera de los dos.
+    while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
+        out.pop_back();
+    // Con hueco de sobra para la extension dentro del limite de 255.
+    if (out.size() > 120)
+        out.resize(120);
+    while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
+        out.pop_back();
+    return out;
+}
+
 // Que abre de verdad el emulador, que no es lo mismo que el servidor escanea.
 //
 // GameHub cataloga por su columna `extensions` --lo que mete en la

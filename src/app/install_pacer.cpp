@@ -229,8 +229,6 @@ bool InstallPacer::waitForWrite(
         return true;
     bool charged = false;
     while (true) {
-        if (cancelled && cancelled())
-            return false;
         uint64_t sleepMs = kWaitSliceMs;
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -278,6 +276,20 @@ bool InstallPacer::waitForWrite(
                 }
             }
         }
+        // La cancelacion se mira aqui y no al entrar: solo cuenta cuando de
+        // verdad habria que ESPERAR.
+        //
+        // Mirarla antes hacia que una pausa reventase toda escritura, incluida
+        // la de los bytes que ya estaban descargados y en memoria. Y una
+        // escritura fallida envenena el flujo del paquete, que a partir de ahi
+        // se niega a dar un punto de retorno: pausar destruia justo lo que
+        // hace falta para reanudar. Con la fuente ya terminada el pacer no
+        // tiene nada que ritmar y devuelve true arriba sin llegar aqui, asi
+        // que lo que queda en el buffer se instala y la pausa cae en un sitio
+        // del que se puede volver. Lo pendiente esta acotado por el tamano del
+        // buffer, o sea que no puede alargarse indefinidamente.
+        if (cancelled && cancelled())
+            return false;
         clock_.sleepMs(sleepMs);
     }
 }

@@ -6,6 +6,7 @@
 #include "nx_file_types.hpp"
 #include "stream_ram_budget.hpp"
 #include "../install/install_backend.hpp"
+#include "../install/install_journal.hpp"
 #include "../install/package_stream.hpp"
 
 #include <curl/curl.h>
@@ -105,7 +106,13 @@ public:
 
     bool pop(std::vector<uint8_t>& chunk) {
         std::unique_lock<std::mutex> lock(mutex_);
-        while (queue_.empty() && !finished_ && !stopped_ && !cancelled_())
+        // Al pausar NO se sale de aqui: se espera a que el productor se pare
+        // --lo hace enseguida, mira la misma senal-- y luego se vacia lo que
+        // dejo. Saliendo en cuanto se pausa se abandonaban hasta 64 MiB ya
+        // descargados, y ademas el consumidor podia irse sin haber instalado
+        // nada, con lo que no habia punto de retorno que guardar. `stopped_`
+        // sigue siendo la salida de emergencia.
+        while (queue_.empty() && !finished_ && !stopped_)
             ready_.wait_for(lock, std::chrono::milliseconds(50));
         if (queue_.empty())
             return false;
@@ -913,7 +920,19 @@ install::PackageCallbacks makeCallbacks(RunContext& ctx,
                            lastEmit = std::make_shared<Clock::time_point>(
                                Clock::time_point::min())](
                               const uint8_t* data, size_t size) {
-        if (!pacer.waitForWrite(size, [&ctx] { return ctx.stop(); }))
+        // Una pausa no puede tumbar una escritura en curso.
+        //
+        // Si la tumba, el flujo del paquete queda envenenado y ya no da punto
+        // de retorno: pausar destruia justo lo que hace falta para reanudar.
+        // Asi que al pararse se le da un margen --lo que tarda el productor en
+        // cerrar la cola, milisegundos-- y en cuanto la cola se cierra el
+        // pacer no tiene nada que ritmar y deja pasar la escritura sola. El
+        // margen existe para que cerrar la app no se pueda quedar colgado si
+        // el productor no cierra.
+        const auto graceUntil = Clock::now() + std::chrono::seconds(2);
+        if (!pacer.waitForWrite(size, [&ctx, graceUntil] {
+                return ctx.stop() && Clock::now() > graceUntil;
+            }))
             return false;
         bool ok = backend->writeFile(data, size);
         if (ok) {
@@ -946,23 +965,113 @@ install::PackageCallbacks makeCallbacks(RunContext& ctx,
 Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
                           const std::string& url,
                           const std::string& displayName) {
-    ctx.packageDownloadedBytes = 0;
     if (!ctx.backend)
         ctx.backend = install::createInstallBackend(ctx.spec.workingRoot,
                                                     ctx.spec.installTarget);
     install::InstallBackend* backend = ctx.backend.get();
-    if (!backend->beginPackage(ctx.spec.taskId, displayName)) {
-        ctx.error = backend->error();
-        return Step::Failed;
-    }
+    const bool compressed = isCompressedName(file.path);
+    const std::string journalPath =
+        install::installJournalPath(ctx.spec.workingRoot, ctx.spec.taskId);
+
     StreamRamBudget budget = detectStreamRamBudget(1 * 1024 * 1024);
     const size_t maximumBuffered = budget.valid
         ? budget.maxBufferedBytes : 64 * 1024 * 1024;
     InstallPacer pacer(maximumBuffered);
-    pacer.beginPackage(isCompressedName(file.path));
-    install::PackageStream stream(
-        isCompressedName(file.path),
-        makeCallbacks(ctx, backend, displayName, pacer), ctx.spec.taskId);
+    pacer.beginPackage(compressed);
+
+    // Reenganchar a una instalacion interrumpida de ESTE paquete.
+    //
+    // Toda esta maquinaria ya existia y estaba probada en la ruta de torrent;
+    // esta ruta --la de enlace directo, que es la que usa el catalogo-- nunca
+    // llego a escribir ni a leer el journal, asi que pausar tiraba lo instalado
+    // y volvia a empezar. Aqui es incluso mas simple que alli: la fuente es una
+    // peticion HTTP con rango, o sea que reanudar es un desplazamiento y ya.
+    //
+    // Ante cualquier duda --otro paquete, otro tamano, otra compresion, un
+    // punto fuera de rango o un backend que no reengancha-- se tira el journal
+    // y se empieza de cero. Reanudar mal es peor que no reanudar: dejaria un
+    // paquete a medias dado por bueno.
+    std::unique_ptr<install::PackageStream> stream;
+    uint64_t startOffset = 0;
+    install::InstallJournal journal;
+    if (install::loadInstallJournal(journalPath, journal)) {
+        const bool sane =
+            journal.packageId == file.path &&
+            journal.packageSize == file.bytes &&
+            journal.compressed == compressed &&
+            journal.state.consumed > 0 &&
+            journal.state.consumed < file.bytes &&
+            !journal.backendState.empty();
+        if (sane && backend->resumePackage(ctx.spec.taskId, displayName,
+                                           journal.backendState)) {
+            auto candidate = std::make_unique<install::PackageStream>(
+                compressed, makeCallbacks(ctx, backend, displayName, pacer),
+                ctx.spec.taskId);
+            if (candidate->restore(journal.state)) {
+                stream = std::move(candidate);
+                startOffset = journal.state.consumed;
+                log_msg("[debrid] reanudando '%s' en %llu de %llu bytes\n",
+                        displayName.c_str(),
+                        static_cast<unsigned long long>(startOffset),
+                        static_cast<unsigned long long>(file.bytes));
+            } else {
+                // El backend ya habia reenganchado, asi que hay que soltarlo.
+                backend->rollbackPackage();
+                install::removeInstallJournal(journalPath);
+            }
+        } else {
+            if (!sane)
+                log_msg("[debrid] journal descartado para '%s'\n",
+                        displayName.c_str());
+            install::removeInstallJournal(journalPath);
+        }
+    }
+    if (!stream) {
+        if (!backend->beginPackage(ctx.spec.taskId, displayName)) {
+            ctx.error = backend->error();
+            return Step::Failed;
+        }
+        stream = std::make_unique<install::PackageStream>(
+            compressed, makeCallbacks(ctx, backend, displayName, pacer),
+            ctx.spec.taskId);
+    }
+
+    // Lo ya bajado cuenta: si no, la barra retrocederia al reanudar.
+    ctx.packageDownloadedBytes = startOffset;
+
+    // Un punto de retorno cada 8 MiB.
+    //
+    // El intervalo importa mas de lo que parece, y es por una carrera que no
+    // se puede evitar del todo: cuando se pausa, el consumidor puede estar YA
+    // dentro de un write, y ese write falla --el pacer corta la espera-- y
+    // envenena el flujo, que a partir de ahi se niega a dar un punto de
+    // retorno. Cuando eso pasa, lo unico que queda es el ultimo punto
+    // periodico. De ahi 8 MiB y no 32: es lo que como mucho se repite.
+    //
+    // Repetir es seguro: al reenganchar, el backend trunca el fichero hasta el
+    // punto guardado y el flujo restaurado vuelve a entregar esos bytes.
+    constexpr uint64_t kJournalIntervalBytes = 8ull * 1024 * 1024;
+    uint64_t journaled = startOffset;
+    auto checkpoint = [&](bool force) {
+        const uint64_t consumed = stream->consumed();
+        if (!force && consumed < journaled + kJournalIntervalBytes)
+            return;
+        if (consumed <= journaled)
+            return;
+        install::InstallJournal point;
+        if (!stream->checkpoint(point.state) || point.state.consumed == 0)
+            return;
+        point.backendState = backend->checkpointPackage();
+        if (point.backendState.empty())
+            return;
+        point.packageId = file.path;
+        point.packageSize = file.bytes;
+        point.compressed = compressed;
+        if (!install::saveInstallJournal(journalPath, point))
+            return;
+        journaled = consumed;
+    };
+
     DebridStreamQueue queue(maximumBuffered, pacer, *ctx.shouldStop);
     std::string fetchError;
     bool fetchOk = false;
@@ -971,7 +1080,7 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
             ctx.packageDownloadedBytes.fetch_add(n);
             return queue.push(data, n);
         };
-        fetchOk = fetchOrdered(ctx.fetcher, url, 0, file.bytes,
+        fetchOk = fetchOrdered(ctx.fetcher, url, startOffset, file.bytes,
                                maximumBuffered / 2, sink, *ctx.shouldStop,
                                fetchError);
         queue.finish();
@@ -984,26 +1093,28 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     auto flushBatch = [&]() -> bool {
         if (batch.empty())
             return true;
-        if (!stream.write(batch.data(), batch.size())) {
+        if (!stream->write(batch.data(), batch.size())) {
             streamOk = false;
             queue.stop();
             batch.clear();
             return false;
         }
-        pacer.observeConsumed(stream.consumed(), backend->installedBytes(),
+        pacer.observeConsumed(stream->consumed(), backend->installedBytes(),
                               now_ms());
         batch.clear();
+        checkpoint(/*force=*/false);
         return true;
     };
     while (queue.pop(chunk)) {
         if (batch.empty() && chunk.size() >= kInstallBatchBytes) {
-            if (!stream.write(chunk.data(), chunk.size())) {
+            if (!stream->write(chunk.data(), chunk.size())) {
                 streamOk = false;
                 queue.stop();
                 break;
             }
-            pacer.observeConsumed(stream.consumed(), backend->installedBytes(),
+            pacer.observeConsumed(stream->consumed(), backend->installedBytes(),
                                   now_ms());
+            checkpoint(/*force=*/false);
         } else {
             batch.insert(batch.end(), chunk.begin(), chunk.end());
             if (batch.size() >= kInstallBatchBytes && !flushBatch())
@@ -1015,11 +1126,30 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     queue.stop();
     producer.join();
     if (!fetchOk || !streamOk) {
-        backend->rollbackPackage();
+        // Lo que decide no es "salimos del bucle" --de ahi se sale tambien al
+        // pausar-- sino si el flujo en si esta sano.
+        const bool streamHealthy = stream->error().empty();
+        // Aqui esta la diferencia entre poder seguir y volver a empezar.
+        //
+        // Con el flujo sano se anota donde iba; envenenado, no se puede pedir
+        // punto nuevo y vale el ultimo periodico, que describe un estado
+        // anterior y consistente.
+        if (streamHealthy)
+            checkpoint(/*force=*/true);
+        // Y con punto guardado se SUSPENDE --deja lo escrito en su sitio para
+        // reengancharlo-- en vez de tirarlo. Sin ningun punto no hay a donde
+        // volver, asi que lo escrito solo estorbaria.
+        struct stat js {};
+        if (stat(journalPath.c_str(), &js) == 0 && js.st_size > 0) {
+            backend->suspendPackage();
+        } else {
+            backend->rollbackPackage();
+            install::removeInstallJournal(journalPath);
+        }
         if (ctx.stop())
             return Step::Stopped;
         if (ctx.error.empty())
-            ctx.error = !stream.error().empty() ? stream.error()
+            ctx.error = !stream->error().empty() ? stream->error()
                         : (fetchError.empty() ? "Package download failed."
                                               : fetchError);
         return Step::Failed;
@@ -1036,18 +1166,23 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     committing.installTotalBytes = backend->expectedBytes();
     ctx.emit(committing);
 
-    if (!stream.finish()) {
-        ctx.error = stream.error().empty() ? "Package finalize failed."
-                                           : stream.error();
+    if (!stream->finish()) {
+        ctx.error = stream->error().empty() ? "Package finalize failed."
+                                            : stream->error();
         backend->rollbackPackage();
+        install::removeInstallJournal(journalPath);
         return Step::Failed;
     }
     bool alreadyInstalled = false;
     if (!backend->commitPackage(alreadyInstalled)) {
         ctx.error = backend->error();
         backend->rollbackPackage();
+        install::removeInstallJournal(journalPath);
         return Step::Failed;
     }
+    // El paquete ya esta puesto: su punto de retorno sobra, y dejarlo seria
+    // ofrecerselo al SIGUIENTE paquete, que no es el mismo.
+    install::removeInstallJournal(journalPath);
     ctx.packagesInstalled += 1;
     DebridProgress done;
     done.status = DownloadStatus::Installing;

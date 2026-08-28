@@ -1,13 +1,16 @@
 #include "app/debrid_transfer.hpp"
 #include "app/torbox_provider.hpp"
+#include "install/install_journal.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 #include <sys/stat.h>
@@ -319,6 +322,155 @@ void testStreamInstallCommitsPackage() {
                             "-Example_game.nsp";
     struct stat st {};
     assert(stat(committed.c_str(), &st) == 0);
+}
+
+// Pausar una instalacion y reanudarla tiene que CONTINUAR, no volver a
+// empezar. Es lo que fallaba: esta ruta --la de enlace directo, la que usa el
+// catalogo-- nunca escribia el journal y al pausar tiraba lo instalado.
+void testStreamInstallResumesAfterPause() {
+    const std::string root = "/tmp/gamehubnx-torbox-resume-test";
+    assert(system(("rm -rf " + root).c_str()) != -1);
+    assert(mkdir(root.c_str(), 0755) == 0);
+    const std::string data = root + "/data";
+    assert(mkdir(data.c_str(), 0755) == 0);
+
+    // Dos NCA, y el paquete por debajo de 8 MiB a proposito: asi la descarga
+    // va por el camino de un solo flujo. Por encima, fetchOrdered reparte el
+    // fichero en segmentos de 4 MiB entre varios hilos y solo entrega los que
+    // estan completos y en orden, asi que donde cae la pausa dependeria de
+    // como se crucen esos hilos y el test valdria segun el dia.
+    std::vector<uint8_t> first(3 * 1024 * 1024);
+    for (size_t i = 0; i < first.size(); ++i)
+        first[i] = static_cast<uint8_t>((i * 11) ^ (i >> 5));
+    std::vector<uint8_t> second(2 * 1024 * 1024);
+    for (size_t i = 0; i < second.size(); ++i)
+        second[i] = static_cast<uint8_t>((i * 3) ^ (i >> 2));
+    std::vector<uint8_t> nsp = makePfs0({
+        {"00112233445566778899aabbccddeeff.nca", first},
+        {"ffeeddccbbaa99887766554433221100.nca", second},
+    });
+    const std::string content(nsp.begin(), nsp.end());
+
+    // Registra con que desplazamiento se pide el fichero en cada pasada: es
+    // exactamente la pregunta del test.
+    std::vector<uint64_t> requestedOffsets;
+    std::atomic<bool> paused {false};
+    // Pasado el 70 %% del paquete se pausa. Lo dispara la propia entrega, no el
+    // progreso: asi cae SIEMPRE dentro del paquete.
+    const uint64_t pauseAfter = content.size() * 7 / 10;
+    std::atomic<uint64_t> delivered {0};
+    auto fetcher = [&content, &requestedOffsets, &paused, &delivered,
+                    pauseAfter](
+        const std::string&, uint64_t offset, uint64_t endExclusive,
+        const std::function<bool(const uint8_t*, size_t)>& sink,
+        const std::function<bool()>&, std::string& error) {
+        requestedOffsets.push_back(offset);
+        if (offset > content.size()) {
+            error = "range past end";
+            return false;
+        }
+        // Respetar el final del rango: fetchOrdered pide ventanas acotadas y
+        // entregar de mas aborta la transferencia.
+        const uint64_t end = endExclusive == 0
+            ? content.size()
+            : std::min<uint64_t>(endExclusive, content.size());
+        if (offset > end) {
+            error = "range past end";
+            return false;
+        }
+        const std::string slice = content.substr(
+            static_cast<size_t>(offset), static_cast<size_t>(end - offset));
+        const size_t step = 64 * 1024;
+        for (size_t at = 0; at < slice.size(); at += step) {
+            const size_t n = std::min(step, slice.size() - at);
+            if (!sink(reinterpret_cast<const uint8_t*>(slice.data()) + at, n))
+                return false;
+            if (delivered.fetch_add(n) + n >= pauseAfter && !paused.load()) {
+                // Se pausa y se devuelve el control en el acto: el productor
+                // cierra la cola, el pacer deja de ritmar --ya no viene nada--
+                // y el consumidor instala lo que quedaba en el buffer. Esperar
+                // aqui a que instale seria peor: con el productor parado a
+                // medias, el pacer frena al consumidor y la pausa cae en mitad
+                // de una escritura.
+                paused.store(true);
+                error = "paused";
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const std::string journal =
+        gamehubnx::install::installJournalPath(root, "aabbccddaabbccddaabbccddaabbccddaabbccdd");
+
+    // --- Primera pasada: se pausa a mitad ---
+    {
+        std::vector<std::pair<std::string, std::string>> script = {
+            {"mylist", infoReadyJson("Example/game.nsp", content.size())},
+            {"requestdl", "{\"success\":true,\"data\":\"https://x/dl\"}"},
+        };
+        TorboxProvider provider("k", scriptedTransport(&script));
+        DebridTransfer transfer(provider, fetcher);
+        DebridTaskSpec spec;
+        spec.taskId = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
+        spec.debridId = "42";
+        spec.dataPath = data;
+        spec.workingRoot = root;
+        spec.mode = TransferMode::StreamInstall;
+
+        std::string debridId;
+        std::string error;
+        DebridRunResult result = transfer.run(
+            spec, [&paused] { return paused.load(); },
+            [](const DebridProgress&) {}, debridId, error);
+        assert(result == DebridRunResult::Stopped);
+        assert(paused.load());
+    }
+
+    // Al pausar queda un punto de retorno escrito. Sin esto, lo de abajo no
+    // podria continuar por ningun sitio.
+    struct stat st {};
+    assert(stat(journal.c_str(), &st) == 0);
+    assert(st.st_size > 0);
+
+    // --- Segunda pasada: reanuda ---
+    paused.store(false);
+    delivered.store(0);
+    requestedOffsets.clear();
+    {
+        std::vector<std::pair<std::string, std::string>> script = {
+            {"mylist", infoReadyJson("Example/game.nsp", content.size())},
+            {"requestdl", "{\"success\":true,\"data\":\"https://x/dl\"}"},
+        };
+        TorboxProvider provider("k", scriptedTransport(&script));
+        DebridTransfer transfer(provider, fetcher);
+        DebridTaskSpec spec;
+        spec.taskId = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
+        spec.debridId = "42";
+        spec.dataPath = data;
+        spec.workingRoot = root;
+        spec.mode = TransferMode::StreamInstall;
+
+        std::string debridId;
+        std::string error;
+        DebridProgress last;
+        DebridRunResult result = transfer.run(
+            spec, [] { return false; },
+            [&last](const DebridProgress& p) { last = p; }, debridId, error);
+        assert(result == DebridRunResult::Finished);
+        assert(last.packagesInstalled == 1);
+    }
+
+    // Lo que prueba que CONTINUO y no empezo de cero: no volvio a pedir el
+    // fichero desde el byte 0.
+    assert(!requestedOffsets.empty());
+    assert(requestedOffsets[0] > 0);
+
+    // Y al terminar el paquete su punto de retorno se borra: dejarlo seria
+    // ofrecerselo al siguiente paquete, que no es el mismo.
+    assert(stat(journal.c_str(), &st) != 0);
+
+    assert(system(("rm -rf " + root).c_str()) != -1);
 }
 
 void testPartialStreamFailureRetriesWithoutPacerDeadlock() {
@@ -678,6 +830,7 @@ int main() {
     testResumeUsesOnDiskOffset();
     testStopRequestedReturnsStopped();
     testStreamInstallCommitsPackage();
+    testStreamInstallResumesAfterPause();
     testPartialStreamFailureRetriesWithoutPacerDeadlock();
     testSelectionPathsPicksOneFile();
     testSelectionPathsNoMatchReturnsFailed();
