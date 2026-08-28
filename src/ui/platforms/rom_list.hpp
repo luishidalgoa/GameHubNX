@@ -13,6 +13,7 @@
 #include "app/download_manager.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
+#include "ui/catalog/catalog_grid.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/platforms/rom_detail.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -23,150 +24,29 @@ namespace gamehubnx::ui {
 
 class RomListActivity;
 
-// Fila de una ROM.
+// Rejilla de ROMs, la misma que el catalogo de Switch.
 //
-// Lleva a la izquierda una franja con el veredicto de compatibilidad --verde
-// lo abre el emulador, ambar no lo abre, gris no consta-- y, SOLO cuando no
-// lo abre, una insignia con la extension pegada al titulo.
+// Antes era una lista de texto y desentonaba: la misma aplicacion ensenaba los
+// juegos de Switch con su portada y los de las demas consolas como renglones.
+// Se reutilizan GridRowCell y GameCard tal cual, que es lo que garantiza que se
+// vean IGUAL y no solo parecido.
 //
-// La insignia no se pone tambien en verde a proposito: repetir ".GBA" en las
-// mil filas de GBA no informa de nada, solo hace ruido. El color de la franja
-// es lo que se lee de un vistazo y la insignia queda para el caso que hay que
-// mirar dos veces. Y van color Y texto: en una tele lavada, o para quien no
-// distingue el rojo del verde, el color solo no dice nada.
-class RomCell : public brls::RecyclerCell {
-public:
-    RomCell() {
-        setFocusable(true);
-        setAxis(brls::Axis::ROW);
-        setAlignItems(brls::AlignItems::CENTER);
-        setPadding(6, 20, 6, 8);
-        setHeight(62);
-
-        stripe_ = new brls::Box();
-        stripe_->setFocusable(false);
-        stripe_->setWidth(4);
-        stripe_->setHeight(34);
-        stripe_->setCornerRadius(2);
-        stripe_->setMarginRight(12);
-        addView(stripe_);
-
-        auto* text = new brls::Box(brls::Axis::COLUMN);
-        text->setGrow(1);
-
-        auto* titleRow = new brls::Box(brls::Axis::ROW);
-        titleRow->setAlignItems(brls::AlignItems::CENTER);
-        title_ = new brls::Label();
-        title_->setSingleLine(true);
-        title_->setAutoAnimate(false);
-        title_->setFontSize(theme::kFontBody);
-        // El titulo cede sitio y la insignia no: un nombre largo recorta el
-        // nombre, que se puede adivinar, antes que el aviso, que no.
-        title_->setShrink(1);
-        titleRow->addView(title_);
-
-        chip_ = new brls::Box();
-        chip_->setFocusable(false);
-        chip_->setShrink(0);
-        chip_->setMarginLeft(10);
-        chip_->setPadding(1, 8, 1, 8);
-        chip_->setCornerRadius(theme::kRadiusSmall);
-        chip_->setBorderColor(theme::warning());
-        chip_->setBorderThickness(1.0f);
-        chip_->setAlignItems(brls::AlignItems::CENTER);
-        chip_->setJustifyContent(brls::JustifyContent::CENTER);
-        chipLabel_ = new brls::Label();
-        chipLabel_->setFontSize(theme::kFontCaption);
-        chipLabel_->setTextColor(theme::warning());
-        chip_->addView(chipLabel_);
-        titleRow->addView(chip_);
-        text->addView(titleRow);
-
-        meta_ = new brls::Label();
-        meta_->setSingleLine(true);
-        meta_->setAutoAnimate(false);
-        meta_->setFontSize(theme::kFontCaption);
-        meta_->setTextColor(theme::textTertiary());
-        meta_->setMarginTop(3);
-        text->addView(meta_);
-        addView(text);
-
-        badge_ = new brls::Label();
-        badge_->setFontSize(theme::kFontCaption);
-        badge_->setMarginLeft(16);
-        badge_->setTextColor(theme::success());
-        addView(badge_);
-    }
-
-    void setRom(const CatalogEntry& entry, bool onSdCard,
-                roms::RomCompat compat, const std::string& ext,
-                const std::string& emulator) {
-        setTextIfChanged(title_, entry.title);
-
-        // Verde / ambar / gris. El gris NO es un "va mal": es que de esa
-        // plataforma no consta que abre el nucleo, y entonces la app no
-        // afirma nada.
-        NVGcolor mark = theme::textDisabled();
-        if (compat == roms::RomCompat::Playable)
-            mark = theme::success();
-        else if (compat == roms::RomCompat::Unplayable)
-            mark = theme::warning();
-        stripe_->setBackgroundColor(mark);
-
-        const bool unplayable = compat == roms::RomCompat::Unplayable;
-        chip_->setVisibility(unplayable ? brls::Visibility::VISIBLE
-                                        : brls::Visibility::GONE);
-        if (unplayable)
-            setTextIfChanged(chipLabel_, upperAscii(ext));
-
-        std::string meta = entry.size ? formatBytes(entry.size) : std::string();
-        // El servidor cataloga por lo que escanea; el emulador abre otra cosa.
-        // Descargar un .cia de 3DS funciona y luego no aparece en el emulador,
-        // sin ningun error que lo explique. Se dice aqui, antes de bajarlo.
-        if (unplayable) {
-            if (!meta.empty())
-                meta += "   ";
-            // Con el nombre del emulador el aviso deja de ser una queja vaga y
-            // se puede comprobar; sin el, la frase generica.
-            // Dos motivos distintos, dos frases distintas: no es lo mismo que
-            // el emulador no abra ESE formato que no emule esa consola.
-            if (!roms::ticoSupportsPlatform(entry.platformSlug))
-                meta += tr("gamehubnx/platforms/platform_warning");
-            else
-                meta += emulator.empty()
-                    ? tr("gamehubnx/platforms/format_warning")
-                    : tr("gamehubnx/platforms/format_warning_named", emulator);
-        }
-        setTextIfChanged(meta_, meta);
-        meta_->setTextColor(unplayable ? theme::warning()
-                                       : theme::textTertiary());
-        // "En la SD", no "instalado": una ROM no se instala en ningun sitio, y
-        // lo que se afirma aqui es exactamente lo que se ha comprobado --que el
-        // fichero esta en la carpeta de destino--.
-        setTextIfChanged(badge_, onSdCard ? tr("gamehubnx/platforms/on_sd")
-                                          : std::string());
-    }
-
-private:
-    static std::string upperAscii(std::string s) {
-        for (char& c : s)
-            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-        return s;
-    }
-
-    brls::Box* stripe_;
-    brls::Label* title_;
-    brls::Box* chip_;
-    brls::Label* chipLabel_;
-    brls::Label* meta_;
-    brls::Label* badge_;
-};
-
-class RomListActivity;
+// El aviso de compatibilidad viaja en la linea de debajo del titulo --el `sub`
+// de la tarjeta-- como insignia, que es el hueco que esa tarjeta ya tiene para
+// decir algo del juego.
+// ".cia" -> ".CIA". Es lo que se pinta en la insignia de la tarjeta.
+inline std::string upperExtension(std::string ext) {
+    for (char& c : ext)
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    return ext;
+}
 
 class RomDataSource : public brls::RecyclerDataSource {
 public:
-    explicit RomDataSource(RomListActivity* owner) : owner_(owner) {}
+    RomDataSource(RomListActivity* owner, GameMetadataService* metadata,
+                  std::shared_ptr<int> focusColumn)
+        : owner_(owner), metadata_(metadata),
+          focusColumn_(std::move(focusColumn)) {}
 
     void setRoms(std::vector<CatalogEntry> roms) { roms_ = std::move(roms); }
     // Lo publica el servidor por plataforma; puede venir vacio.
@@ -174,17 +54,24 @@ public:
     const std::vector<CatalogEntry>& roms() const { return roms_; }
 
     int numberOfRows(brls::RecyclerFrame*, int) override {
-        return static_cast<int>(roms_.size());
+        return (static_cast<int>(roms_.size()) + grid::kColumns - 1) /
+               grid::kColumns;
     }
     brls::RecyclerCell* cellForRow(brls::RecyclerFrame* recycler,
                                    brls::IndexPath index) override;
     float heightForRow(brls::RecyclerFrame*, brls::IndexPath) override {
-        return 62.0f;
+        return grid::kRowHeight;
     }
-    void didSelectRowAt(brls::RecyclerFrame*, brls::IndexPath index) override;
+    // Nada: la tarjeta se activa sola con su propio manejador, como en el
+    // catalogo. Dejarlo aqui ademas abriria la ficha dos veces.
+    void didSelectRowAt(brls::RecyclerFrame*, brls::IndexPath) override {}
 
 private:
+    GridCardInfo makeInfo(size_t index) const;
+
     RomListActivity* owner_;
+    GameMetadataService* metadata_;
+    std::shared_ptr<int> focusColumn_;
     std::vector<CatalogEntry> roms_;
     std::string emulator_;
 };
@@ -247,9 +134,11 @@ public:
 
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
-        recycler_->estimatedRowHeight = 62;
-        recycler_->registerCell("Rom", [] { return new RomCell(); });
-        dataSource_ = new RomDataSource(this);
+        recycler_->estimatedRowHeight = grid::kRowHeight;
+        recycler_->registerCell("GridRow", [column = focusColumn_] {
+            return new GridRowCell(column);
+        });
+        dataSource_ = new RomDataSource(this, metadata_, focusColumn_);
         dataSource_->setEmulator(platform_.emulator);
         recycler_->setDataSource(dataSource_);
         recyclerHost_ = recyclerHost(recycler_);
@@ -529,29 +418,57 @@ private:
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
     RomDataSource* dataSource_ = nullptr;
+    // Compartida con las tarjetas: recuerda en que columna estaba el foco al
+    // cambiar de fila, igual que en el catalogo.
+    std::shared_ptr<int> focusColumn_ = std::make_shared<int>(0);
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };
 
-inline brls::RecyclerCell* RomDataSource::cellForRow(
-    brls::RecyclerFrame* recycler, brls::IndexPath index) {
-    auto* cell = static_cast<RomCell*>(recycler->dequeueReusableCell("Rom"));
-    const size_t i = static_cast<size_t>(index.row);
-    if (i < roms_.size()) {
-        const std::string file =
-            gamehub::fileNameFromUrl(roms_[i].directUrl);
-        cell->setRom(roms_[i], /*onSdCard=*/false,
-                     roms::displayCompat(roms_[i].platformSlug, file),
-                     roms::extensionOf(file), emulator_);
+inline GridCardInfo RomDataSource::makeInfo(size_t index) const {
+    GridCardInfo info;
+    info.entryIndex = static_cast<int>(index);
+    const CatalogEntry& rom = roms_[index];
+    info.infoHash = rom.infoHash;
+    info.title = rom.title;
+    info.iconUrl = rom.posterUrl;
+    // Las portadas de consola son cajas verticales, no iconos cuadrados: sin
+    // esto salen estiradas.
+    info.iconPreserveAspect = true;
+
+    // La linea de debajo dice lo que hay que saber ANTES de abrir: el tamano, o
+    // el aviso cuando el emulador no va a poder con ello. El aviso gana, porque
+    // el tamano no cambia la decision y esto si.
+    const std::string file = gamehub::fileNameFromUrl(rom.directUrl);
+    if (roms::displayCompat(rom.platformSlug, file) ==
+        roms::RomCompat::Unplayable) {
+        info.sub = roms::ticoSupportsPlatform(rom.platformSlug)
+            ? upperExtension(roms::extensionOf(file))
+            : tr("gamehubnx/platforms/platform_badge");
+        info.subIsBadge = true;
+    } else if (rom.size) {
+        info.sub = formatBytes(rom.size);
     }
-    return cell;
+    return info;
 }
 
-inline void RomDataSource::didSelectRowAt(brls::RecyclerFrame*,
-                                           brls::IndexPath index) {
-    // Abrir la ficha, no descargar. Antes un solo botón encolaba tres gigas sin
-    // haber podido ver de que juego se trataba ni elegir edicion.
-    owner_->openDetail(static_cast<size_t>(index.row));
+inline brls::RecyclerCell* RomDataSource::cellForRow(
+    brls::RecyclerFrame* recycler, brls::IndexPath index) {
+    auto* cell =
+        static_cast<GridRowCell*>(recycler->dequeueReusableCell("GridRow"));
+    const size_t start = static_cast<size_t>(index.row) * grid::kColumns;
+    std::vector<GridCardInfo> infos;
+    for (size_t i = start;
+         i < std::min(start + grid::kColumns, roms_.size()); ++i)
+        infos.push_back(makeInfo(i));
+    RomListActivity* owner = owner_;
+    cell->setRow(infos, metadata_, [owner](int entryIndex) {
+        // Abrir la ficha, no descargar. Antes un solo boton encolaba tres gigas
+        // sin haber podido ver de que juego se trataba ni elegir edicion.
+        if (entryIndex >= 0)
+            owner->openDetail(static_cast<size_t>(entryIndex));
+    });
+    return cell;
 }
 
 } // namespace gamehubnx::ui

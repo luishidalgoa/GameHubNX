@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "Sair",
-    "web_qr": "QR da Web"
-  },
-  "web": {
-    "off": "Web desligada"
+    "exit": "Sair"
   },
   "nav": {
     "catalog": "Catálogo",
@@ -511,17 +507,7 @@
     "section_downloads": "Downloads",
     "section_diagnostics": "Diagnóstico",
     "section_general": "Geral",
-    "section_web": "Companheiro web",
-    "web_toggle": "Companheiro web",
-    "web_start_failed": "Não foi possível iniciar o servidor web.",
-    "web_address": "Endereço",
-    "web_address_none": "Sem conexão de rede",
-    "web_disabled": "Desligado",
-    "web_qr_hint": "Escaneie a partir de um celular na mesma rede Wi-Fi.",
-    "web_pin": "PIN",
     "web_pin_off": "Desligado",
-    "web_pin_detail": "4-8 dígitos, vazio para desativar",
-    "web_pin_invalid": "O PIN deve ter 4-8 dígitos (ou vazio para desativar).",
     "language": "Idioma",
     "language_auto": "Automático",
     "language_en": "English",
@@ -602,6 +588,12 @@
     "advanced_detail": "Diagnóstico, armazenamento, redefinição",
     "storage": "Armazenamento",
     "storage_detail": "Uso do cartão SD e limpeza",
+    "section_ftp": "FTP",
+    "ftp_toggle": "Servidor FTP",
+    "ftp_toggle_detail": "Somente leitura. Publica o cartão SD na sua rede local.",
+    "ftp_pin": "Senha do FTP",
+    "ftp_pin_detail": "De 4 a 8 dígitos.",
+    "ftp_pin_invalid": "A senha precisa ter de 4 a 8 dígitos.",
     "report_bug": "Mostrar logs recentes como códigos QR",
     "report_bug_detail": "Mostrar logs recentes como códigos QR para o desenvolvedor",
     "report_notice": "Nada é enviado a partir do console. O log abaixo é desenhado como códigos QR para você fotografar e enviar você mesmo.",
@@ -770,9 +762,15 @@
       "count": "{} itens",
       "empty": "Pasta vazia"
     },
+    "ftp": {
+      "off": "FTP desligado",
+      "no_address": "Ainda sem endereço",
+      "address": "Endereço FTP"
+    },
     "platforms": {
         "format_warning": "o emulador não abre este formato",
         "platform_warning": "o tico não emula este console",
+        "platform_badge": "Sem emulador",
         "download": "Baixar",
         "versions": "{} versões",
         "which_version": "Qual versão?",

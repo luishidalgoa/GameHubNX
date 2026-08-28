@@ -256,43 +256,10 @@ $(BUILD_DIR)/src/app/http_server.o: src/app/http_server.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -c -o $@ $<
 
-$(BUILD_DIR)/src/app/web_server.o: src/app/web_server.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -c -o $@ $<
-
-$(BUILD_DIR)/src/app/companion_settings.o: src/app/companion_settings.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -c -o $@ $<
-
-$(BUILD_DIR)/src/app/web_add_queue.o: src/app/web_add_queue.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -c -o $@ $<
-
 $(BUILD_DIR)/tests/test_http_server: tests/test_http_server.cpp $(BUILD_DIR)/src/app/http_server.o \
 		$(BUILD_DIR)/src/core/net.o $(BUILD_DIR)/src/core/util.o
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ -pthread
-
-$(BUILD_DIR)/tests/test_web_server: tests/test_web_server.cpp \
-		$(BUILD_DIR)/src/app/web_server.o $(BUILD_DIR)/src/app/companion_settings.o \
-		$(BUILD_DIR)/src/app/web_add_queue.o $(BUILD_DIR)/src/app/http_server.o \
-		src/app/app_settings.cpp \
-		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
-		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \
-		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
-		$(BUILD_DIR)/src/app/web_seed_source.o \
-		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
-		$(BUILD_DIR)/src/app/request_gate.o \
-		$(BUILD_DIR)/src/app/install_pacer.o \
-		$(BUILD_DIR)/src/app/debrid_transfer.o $(BUILD_DIR)/src/app/torbox_client.o \
-		$(BUILD_DIR)/src/app/torbox_provider.o $(BUILD_DIR)/src/app/torrserver_provider.o \
-		$(BUILD_DIR)/src/app/realdebrid_client.o $(BUILD_DIR)/src/app/realdebrid_provider.o \
-		$(BUILD_DIR)/src/install/package_stream.o $(BUILD_DIR)/src/install/install_journal.o \
-		$(BUILD_DIR)/src/install/install_backend_pc.o \
-		$(filter-out $(BUILD_DIR)/src/main_pc.o,$(OBJS)) $(UTP_OBJS)
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) \
-		$(INSTALL_LDFLAGS) -lz -pthread
 
 $(BUILD_DIR)/tests/test_catalog: tests/test_catalog.cpp \
 		$(BUILD_DIR)/src/app/catalog_service.o $(BUILD_DIR)/src/app/catalog_refresh.o \
@@ -319,6 +286,7 @@ $(BUILD_DIR)/tests/test_probe_report: tests/test_probe_report.c src/probe/probe_
 
 test: $(TEST_BINS)
 	python3 scripts/check_source_lists.py
+	python3 scripts/check_includes.py
 	@set -e; for t in $(TEST_BINS_EARLY); do echo "== $$t"; ./$$t; done
 	python3 tests/test_bug_report_decode.py
 	python3 tests/test_telemetry_analyzer.py
@@ -329,7 +297,7 @@ test: $(TEST_BINS)
 
 
 $(BUILD_DIR)/tests/test_app_settings: tests/test_app_settings.cpp src/app/app_settings.cpp \
-		$(BUILD_DIR)/src/app/companion_settings.o $(BUILD_DIR)/src/core/util.o \
+		$(BUILD_DIR)/src/core/util.o \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
@@ -418,7 +386,7 @@ $(BUILD_DIR)/tests/test_install_pacer: tests/test_install_pacer.cpp \
 $(BUILD_DIR)/tests/test_install_journal: tests/test_install_journal.cpp \
 		$(BUILD_DIR)/src/install/install_journal.o $(BUILD_DIR)/src/core/bencode.o
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ -Wl,--wrap=rename
 
 $(BUILD_DIR)/tests/test_package_coordinator: tests/test_package_coordinator.cpp \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
@@ -509,6 +477,10 @@ $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
 
+$(BUILD_DIR)/tests/test_ftp_session: tests/test_ftp_session.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+
 $(BUILD_DIR)/tests/test_file_browser: tests/test_file_browser.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
@@ -578,33 +550,6 @@ $(BUILD_DIR)/tests/test_torrent: tests/test_torrent.c src/core/torrent.c \
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -Isrc -o $@ $(filter-out src/core/torrent.c,$^) \
 		$(LDFLAGS) -lstdc++
-
-# Manual browser testing for the web companion (not part of all/test):
-#   make -f Makefile.pc webserver && ./build-pc/tools/webserver
-webserver: $(BUILD_DIR)/tools/webserver
-
-$(BUILD_DIR)/tools/webserver: tools/web_server_main.cpp \
-		$(BUILD_DIR)/src/app/web_server.o $(BUILD_DIR)/src/app/companion_settings.o \
-		$(BUILD_DIR)/src/app/web_add_queue.o $(BUILD_DIR)/src/app/http_server.o \
-		src/app/app_settings.cpp \
-		$(BUILD_DIR)/src/app/catalog_service.o $(BUILD_DIR)/src/app/catalog_refresh.o \
-		$(BUILD_DIR)/src/app/gamehub_catalog.o \
-		$(BUILD_DIR)/src/app/snapshot_zstd.o \
-		$(BUILD_DIR)/src/app/mod_index_service.o $(BUILD_DIR)/src/app/game_metadata_service.o \
-		$(BUILD_DIR)/src/app/magnet_resolver.o src/app/install_space.cpp \
-		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
-		$(BUILD_DIR)/src/app/web_seed_source.o \
-		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
-		$(BUILD_DIR)/src/app/request_gate.o \
-		$(BUILD_DIR)/src/app/install_pacer.o \
-		$(BUILD_DIR)/src/app/debrid_transfer.o $(BUILD_DIR)/src/app/torbox_client.o \
-		$(BUILD_DIR)/src/app/torbox_provider.o $(BUILD_DIR)/src/app/torrserver_provider.o \
-		$(BUILD_DIR)/src/app/realdebrid_client.o $(BUILD_DIR)/src/app/realdebrid_provider.o \
-		$(BUILD_DIR)/src/install/package_stream.o $(BUILD_DIR)/src/install/install_journal.o \
-		$(BUILD_DIR)/src/install/install_backend_pc.o \
-		$(filter-out $(BUILD_DIR)/src/main_pc.o,$(OBJS)) $(UTP_OBJS)
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) \
-		$(INSTALL_LDFLAGS) -lz -pthread
 
 # Optional libFuzzer targets (clang required):
 #   make -f Makefile.pc fuzz-bencode fuzz-metainfo

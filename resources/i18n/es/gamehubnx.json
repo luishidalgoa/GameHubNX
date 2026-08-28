@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "Salir",
-    "web_qr": "QR web"
-  },
-  "web": {
-    "off": "Web desactivada"
+    "exit": "Salir"
   },
   "nav": {
     "catalog": "Catálogo",
@@ -511,17 +507,7 @@
     "section_downloads": "Descargas",
     "section_diagnostics": "Diagnóstico",
     "section_general": "General",
-    "section_web": "Compañero web",
-    "web_toggle": "Compañero web",
-    "web_start_failed": "No se pudo iniciar el servidor web.",
-    "web_address": "Dirección",
-    "web_address_none": "Sin conexión de red",
-    "web_disabled": "Desactivado",
-    "web_qr_hint": "Escanea desde un teléfono en la misma red Wi‑Fi.",
-    "web_pin": "PIN",
     "web_pin_off": "Desactivado",
-    "web_pin_detail": "4-8 dígitos, vacío para desactivar",
-    "web_pin_invalid": "El PIN debe tener 4-8 dígitos (o estar vacío para desactivar).",
     "language": "Idioma",
     "language_auto": "Automático",
     "language_en": "English",
@@ -600,6 +586,12 @@
     "advanced_detail": "Diagnóstico, almacenamiento, restablecer",
     "storage": "Almacenamiento",
     "storage_detail": "Uso de la tarjeta SD y limpieza",
+    "section_ftp": "FTP",
+    "ftp_toggle": "Servidor FTP",
+    "ftp_toggle_detail": "Solo lectura. Publica la tarjeta en tu red local.",
+    "ftp_pin": "Clave del FTP",
+    "ftp_pin_detail": "De 4 a 8 dígitos.",
+    "ftp_pin_invalid": "La clave tiene que ser de 4 a 8 dígitos.",
     "report_bug": "Mostrar registros recientes como códigos QR",
     "report_bug_detail": "Mostrar registros recientes como códigos QR para el desarrollador",
     "report_notice": "No se envía nada desde la consola. El registro de abajo se muestra como códigos QR para que lo fotografíes y envíes tú mismo.",
@@ -770,9 +762,15 @@
       "count": "{} elementos",
       "empty": "Carpeta vacía"
     },
+    "ftp": {
+      "off": "FTP apagado",
+      "no_address": "Sin dirección todavía",
+      "address": "Dirección FTP"
+    },
     "platforms": {
         "format_warning": "el emulador no abre este formato",
         "platform_warning": "tico no emula esta consola",
+        "platform_badge": "Sin emulador",
         "download": "Descargar",
         "versions": "{} versiones",
         "which_version": "¿Qué versión?",

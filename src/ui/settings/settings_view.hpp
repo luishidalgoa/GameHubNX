@@ -19,9 +19,9 @@
 #include "app/installed_title_service.hpp"
 #include "app/mod_index_service.hpp"
 #include "app/update_service.hpp"
-#include "app/web_server.hpp"
+#include "app/ftp_server.hpp"
 #include "ui/common/ui_helpers.hpp"
-#include "ui/common/web_qr.hpp"
+#include "ui/common/ftp_address.hpp"
 #include "ui/debrid_ui.hpp"
 #include "ui/i18n.hpp"
 #include "ui/settings/advanced_settings.hpp"
@@ -37,10 +37,11 @@ public:
     SettingsView(AppSettings* settings, DownloadManager* manager,
                  CatalogService* catalog, GameMetadataService* metadata,
                  InstalledTitleService* installed, UpdateService* updater = nullptr,
-                 ModIndexService* mods = nullptr, WebServer* webServer = nullptr)
+                 ModIndexService* mods = nullptr,
+                 FtpServer* ftpServer = nullptr)
         : brls::Box(brls::Axis::COLUMN), settings_(settings), manager_(manager),
           catalog_(catalog), metadata_(metadata), installed_(installed), updater_(updater),
-          mods_(mods), webServer_(webServer),
+          mods_(mods), ftpServer_(ftpServer),
           alive_(std::make_shared<std::atomic<bool>>(true)) {
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setPadding(24, 34, 24, 34);
@@ -146,8 +147,7 @@ public:
                         true);
                     return;
                 }
-                if (webServer_)
-                    webServer_->setStreamSelection(values.streamSelection);
+
             });
         content->addView(streamSelection_);
 
@@ -234,34 +234,35 @@ public:
         // compilando sin parchearlo entero.
         refreshDebridLinkDetail();
 
-        addSection(content, tr("gamehubnx/settings/section_web"));
+        addSection(content, tr("gamehubnx/settings/section_ftp"));
         webToggle_ = new brls::BooleanCell();
-        webToggle_->init(tr("gamehubnx/settings/web_toggle"),
-            settings_->get().webServerEnabled,
+        webToggle_->init(tr("gamehubnx/settings/ftp_toggle"),
+            settings_->get().ftpEnabled,
             [this](bool enabled) {
                 AppSettingsData values = settings_->get();
-                bool previous = values.webServerEnabled;
-                values.webServerEnabled = enabled;
-                if (!persist(values, "web_server")) {
+                bool previous = values.ftpEnabled;
+                values.ftpEnabled = enabled;
+                if (!persist(values, "ftp")) {
                     webToggle_->setOn(previous, false);
                     return;
                 }
-                if (webServer_) {
+                if (ftpServer_) {
                     if (enabled) {
-                        if (!webServer_->start())
-                            brls::Application::notify(
-                                tr("gamehubnx/settings/web_start_failed"));
+                        std::string error;
+                        if (!ftpServer_->start(FtpServer::kDefaultPort, error))
+                            brls::Application::notify(error);
                     } else {
-                        webServer_->stop();
+                        ftpServer_->stop();
                     }
                 }
                 updateWebCells();
             });
+        webToggle_->setDetailText(tr("gamehubnx/settings/ftp_toggle_detail"));
         content->addView(webToggle_);
-        webAddress_ = actionCell(tr("gamehubnx/settings/web_address"),
-            "", [this] { showWebQr(); });
+        webAddress_ = actionCell(tr("gamehubnx/ftp/address"),
+            "", [this] { showFtpAddress(); });
         content->addView(webAddress_);
-        webPin_ = actionCell(tr("gamehubnx/settings/web_pin"),
+        webPin_ = actionCell(tr("gamehubnx/settings/ftp_pin"),
             "", [this] { editWebPin(); });
         content->addView(webPin_);
         updateWebCells();
@@ -306,10 +307,10 @@ private:
     }
 
     std::string webAddressText() const {
-        if (!settings_->get().webServerEnabled)
-            return tr("gamehubnx/settings/web_disabled");
-        std::string url = webCompanionUrl(webServer_, true);
-        return url.empty() ? tr("gamehubnx/settings/web_address_none") : url;
+        if (!settings_->get().ftpEnabled)
+            return tr("gamehubnx/ftp/off");
+        const std::string url = ftpAddress(ftpServer_, true);
+        return url.empty() ? tr("gamehubnx/ftp/no_address") : url;
     }
 
     void updateWebCells() {
@@ -317,16 +318,14 @@ private:
             webAddress_->setDetailText(webAddressText());
         if (webPin_)
             webPin_->setDetailText(
-                settings_->get().webServerPin.empty() ? "——" : "••••");
+                settings_->get().ftpPin.empty() ? "——" : "••••");
     }
 
-    void showWebQr() {
-        const std::string url = webAddressText();
-        if (url.rfind("http://", 0) != 0) {
-            brls::Application::notify(url);
-            return;
-        }
-        showWebQrDialog(url, settings_->get().webServerPin);
+    // Sin QR: un codigo servia para que un movil abriera una pagina. Esto se
+    // teclea en un cliente de FTP desde un ordenador, asi que lo util es que se
+    // lea la direccion.
+    void showFtpAddress() {
+        brls::Application::notify(webAddressText());
     }
 
     void editWebPin() {
@@ -334,20 +333,23 @@ private:
             [this](std::string text) {
                 if (!gamehubnx::isValidWebPin(text)) {
                     brls::Application::notify(
-                        tr("gamehubnx/settings/web_pin_invalid"));
+                        tr("gamehubnx/settings/ftp_pin_invalid"));
                     return;
                 }
                 AppSettingsData values = settings_->get();
-                values.webServerPin = text;
-                if (!persist(values, "web_pin"))
+                values.ftpPin = text;
+                if (!persist(values, "ftp_pin"))
                     return;
-                if (webServer_)
-                    webServer_->setPin(settings_->get().webServerPin);
+                // Solo afecta a las sesiones que empiecen despues: cortarle la
+                // conexion a quien esta descargando seria peor que dejarle
+                // terminar.
+                if (ftpServer_)
+                    ftpServer_->setPassword(settings_->get().ftpPin);
                 updateWebCells();
             },
-            tr("gamehubnx/settings/web_pin"),
-            tr("gamehubnx/settings/web_pin_detail"), 8,
-            settings_->get().webServerPin, brls::KEYBOARD_DISABLE_NONE);
+            tr("gamehubnx/settings/ftp_pin"),
+            tr("gamehubnx/settings/ftp_pin_detail"), 8,
+            settings_->get().ftpPin, brls::KEYBOARD_DISABLE_NONE);
     }
 
     void openAdvanced() {
@@ -693,7 +695,7 @@ private:
         showCompleted_->setOn(values.showCompletedDownloads, false);
         askRomDestination_->setOn(values.askRomDestination, false);
         checkForUpdates_->setOn(values.checkForUpdatesOnLaunch, false);
-        webToggle_->setOn(values.webServerEnabled, false);
+        webToggle_->setOn(values.ftpEnabled, false);
         updateWebCells();
         // Estos dos ya no se crean (seccion de debrid retirada), asi que el
         // puntero es nulo y hay que comprobarlo: esta funcion SI se ejecuta al
@@ -719,7 +721,7 @@ private:
     InstalledTitleService* installed_;
     UpdateService* updater_;
     ModIndexService* mods_;
-    WebServer* webServer_;
+    FtpServer* ftpServer_;
     std::shared_ptr<std::atomic<bool>> alive_;
     brls::SelectorCell* language_ = nullptr;
     brls::SelectorCell* catalogFilter_ = nullptr;

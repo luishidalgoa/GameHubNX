@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "Выход",
-    "web_qr": "Веб QR"
-  },
-  "web": {
-    "off": "Веб выкл"
+    "exit": "Выход"
   },
   "nav": {
     "catalog": "Каталог",
@@ -511,17 +507,7 @@
     "section_downloads": "Загрузки",
     "section_diagnostics": "Диагностика",
     "section_general": "Общие",
-    "section_web": "Веб-компаньон",
-    "web_toggle": "Веб-компаньон",
-    "web_start_failed": "Не удалось запустить веб-сервер.",
-    "web_address": "Адрес",
-    "web_address_none": "Нет подключения к сети",
-    "web_disabled": "Выкл",
-    "web_qr_hint": "Отсканируйте с телефона в той же Wi-Fi сети.",
-    "web_pin": "PIN-код",
     "web_pin_off": "Выкл",
-    "web_pin_detail": "4-8 цифр, пусто — отключить",
-    "web_pin_invalid": "PIN должен быть 4-8 цифр (или пустым — отключить).",
     "language": "Язык",
     "language_auto": "Авто",
     "language_en": "English",
@@ -602,6 +588,12 @@
     "advanced_detail": "Диагностика, хранилище, сброс",
     "storage": "Хранилище",
     "storage_detail": "Использование SD-карты и очистка",
+    "section_ftp": "FTP",
+    "ftp_toggle": "Сервер FTP",
+    "ftp_toggle_detail": "Только чтение. Открывает карту памяти в локальной сети.",
+    "ftp_pin": "Пароль FTP",
+    "ftp_pin_detail": "От 4 до 8 цифр.",
+    "ftp_pin_invalid": "Пароль должен состоять из 4–8 цифр.",
     "report_bug": "Показать последние логи в виде QR-кодов",
     "report_bug_detail": "Показать последние логи в виде QR-кодов для разработчика",
     "report_notice": "С консоли ничего не отправляется: лог показан QR-кодами, чтобы вы сами сфотографировали и прислали снимок.",
@@ -770,9 +762,15 @@
       "count": "элементов: {}",
       "empty": "Папка пуста"
     },
+    "ftp": {
+      "off": "FTP выключен",
+      "no_address": "Адреса пока нет",
+      "address": "Адрес FTP"
+    },
     "platforms": {
         "format_warning": "эмулятор не открывает этот формат",
         "platform_warning": "tico не эмулирует эту консоль",
+        "platform_badge": "Нет эмулятора",
         "download": "Скачать",
         "versions": "версий: {}",
         "which_version": "Какая версия?",

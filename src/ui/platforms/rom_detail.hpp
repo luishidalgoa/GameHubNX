@@ -46,18 +46,32 @@ public:
         columns->setPadding(18, 38, 18, 34);
 
         // ── Columna izquierda: portada y datos ──────────────────────────────
+        //
+        // Mismas medidas y mismo trato que la ficha de Switch: 320 de columna,
+        // 200 de alto de portada, y el ancho salido de la PROPORCION que
+        // publica la tienda. Antes era una caja de 320x320 con la imagen
+        // ajustada dentro, y como las portadas de consola son verticales,
+        // quedaban dos bandas negras enormes arriba y abajo -- que es lo que se
+        // veia en pantalla y parecia una captura rota.
         auto* left = new brls::Box(brls::Axis::COLUMN);
-        left->setWidth(320);
+        left->setWidth(kLeftColumnWidth);
         left->setMarginRight(28);
 
+        const float coverWidth =
+            std::min(kLeftColumnWidth, kCoverHeight * coverAspect());
         cover_ = new AsyncRgbaImage();
-        cover_->setWidth(320);
-        cover_->setHeight(320);
+        cover_->setWidth(coverWidth);
+        cover_->setHeight(kCoverHeight);
+        cover_->setMarginLeft((kLeftColumnWidth - coverWidth) / 2.0f);
+        cover_->setCornerRadius(theme::kRadiusLarge);
         cover_->setScalingType(brls::ImageScalingType::FIT);
+        // FIT deja bandas; con el recorte puesto, borealis rellena la vista
+        // entera con ellas. Es el mismo ajuste que la ficha de Switch.
+        cover_->setClipsToBounds(false);
         left->addView(cover_);
 
         facts_ = new brls::Label();
-        facts_->setFontSize(theme::kFontSmall);
+        facts_->setFontSize(theme::kFontCaption);
         facts_->setTextColor(theme::textSecondary());
         facts_->setMarginTop(16);
         left->addView(facts_);
@@ -81,6 +95,7 @@ public:
         title_->setText(entry_.title);
         right->addView(title_);
 
+
         status_ = new brls::Label();
         status_->setFontSize(theme::kFontCaption);
         status_->setTextColor(theme::textTertiary());
@@ -88,7 +103,12 @@ public:
         status_->setText(tr("gamehubnx/common/loading"));
         right->addView(status_);
 
+        // El carril de capturas, con el alto reservado como en la ficha de
+        // Switch: la fila mide mas que las imagenes para que el recuadro de
+        // foco quepa sin comerse el texto de al lado, que es justo lo que
+        // pasaba.
         shotsRow_ = new brls::Box(brls::Axis::ROW);
+        shotsRow_->setHeight(180);
         shotsRow_->setMarginTop(14);
         shotsRow_->setVisibility(brls::Visibility::GONE);
         right->addView(shotsRow_);
@@ -212,11 +232,20 @@ private:
                 detail_.title.empty() ? entry_.title : detail_.title;
             for (size_t i = 0; i < shots.size(); ++i) {
                 auto* thumb = new AsyncRgbaImage();
-                thumb->setWidth(200);
-                thumb->setHeight(112);
+                thumb->setWidth(300);
+                thumb->setHeight(170);
                 thumb->setMarginRight(12);
-                thumb->setScalingType(brls::ImageScalingType::FILL);
+                thumb->setCornerRadius(theme::kRadiusSmall);
+                thumb->setScalingType(brls::ImageScalingType::FIT);
+                // Sin recorte, para que FIT no pinte las bandas dentro de la
+                // vista. Mismo ajuste que la portada y que la ficha de Switch.
+                thumb->setClipsToBounds(false);
                 thumb->setFocusable(true);
+                // La ficha de Switch enruta ARRIBA a su boton principal porque
+                // el carril seria un callejon sin salida. Aqui NO se hace: no
+                // hay ningun otro enfocable en la pantalla --descargar es una
+                // accion del marco, con A-- asi que no habria a donde ir.
+                // Apuntar a una etiqueta seria aparentar un arreglo sin serlo.
                 thumb->registerClickAction(
                     [this, shots, i, viewerTitle](brls::View*) {
                         brls::Application::pushActivity(
@@ -315,6 +344,10 @@ private:
     std::string destination_;
     std::function<void(const CatalogEntry&, const std::string&)> onDownload_;
     gamehub::ShopGameDetail detail_;
+
+    // Mismas medidas que la ficha de Switch, para que las dos se vean iguales.
+    static constexpr float kLeftColumnWidth = 320.0f;
+    static constexpr float kCoverHeight = 200.0f;
 
     brls::AppletFrame* frame_ = nullptr;
     AsyncRgbaImage* cover_ = nullptr;

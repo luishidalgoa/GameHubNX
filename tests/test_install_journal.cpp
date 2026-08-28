@@ -1,9 +1,12 @@
 // Tests for InstallJournal bencode serialize/load (IMPROVEMENT_PLAN F-B).
 #include <cassert>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <string>
+
+#include <unistd.h>
 
 #include "install/install_journal.hpp"
 
@@ -11,6 +14,20 @@ using gamehubnx::install::InstallJournal;
 using gamehubnx::install::PackageStreamState;
 
 namespace {
+
+// Emula la tarjeta de la consola: alli rename() NO sobrescribe. Sin esto, en el
+// PC la prueba pasaba y en el aparato el journal solo se escribia una vez.
+bool emulateSwitchRename = false;
+
+extern "C" int __real_rename(const char* oldPath, const char* newPath);
+
+extern "C" int __wrap_rename(const char* oldPath, const char* newPath) {
+    if (emulateSwitchRename && access(newPath, F_OK) == 0) {
+        errno = EEXIST;
+        return -1;
+    }
+    return __real_rename(oldPath, newPath);
+}
 
 InstallJournal makeSample() {
     InstallJournal journal;
@@ -197,12 +214,44 @@ void testFileHelpers() {
 
 } // namespace
 
+// Guardar el journal DOS veces sobre el mismo fichero, que es lo que hace una
+// instalacion cada pocos megabytes. En la tarjeta el segundo guardado fallaba
+// porque rename() no sobrescribe, y el resultado era una instalacion de 503 MB
+// que al reanudar volvia siempre a los 8 MiB del primer y unico punto escrito.
+void testOverwritesExistingJournal() {
+    const std::string path = "/tmp/gamehubnx-journal-overwrite.bencode";
+    std::remove(path.c_str());
+    std::remove((path + ".tmp").c_str());
+
+    emulateSwitchRename = true;
+
+    InstallJournal first = makeSample();
+    first.state.consumed = 8388608;
+    assert(gamehubnx::install::saveInstallJournal(path, first));
+
+    // El segundo es el que fallaba.
+    InstallJournal second = makeSample();
+    second.state.consumed = 16777216;
+    assert(gamehubnx::install::saveInstallJournal(path, second));
+
+    InstallJournal loaded;
+    assert(gamehubnx::install::loadInstallJournal(path, loaded));
+    // Y lo que queda es el NUEVO punto, no el viejo.
+    assert(loaded.state.consumed == 16777216);
+    // Sin dejar el temporal detras.
+    assert(access((path + ".tmp").c_str(), F_OK) != 0);
+
+    emulateSwitchRename = false;
+    std::remove(path.c_str());
+}
+
 int main() {
     testRoundtrip();
     testRoundtripDefaults();
     testTruncationNeverLoads();
     testRejectsMalformed();
     testFileHelpers();
+    testOverwritesExistingJournal();
     std::cout << "install journal tests passed\n";
     return 0;
 }

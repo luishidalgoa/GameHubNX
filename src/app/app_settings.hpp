@@ -63,14 +63,17 @@ struct AppSettingsData {
     bool checkForUpdatesOnLaunch = true;
     // First-run disclaimer: catalog comes from a third party. Shown once.
     bool catalogDisclaimerAcknowledged = false;
-    // Web companion LAN server (plain HTTP, port 8080). The PIN gates
-    // mutating endpoints (fail-closed when empty). A missing or invalid PIN
-    // is replaced with a random 6-digit value on load/update so a fresh
-    // install is never open on the LAN. Digits only, 4-8 long when set by
-    // the user (enforced at parse time so a hand-edited settings.json
-    // cannot smuggle odd values).
-    bool webServerEnabled = true;
-    std::string webServerPin;
+    // Servidor FTP de SOLO LECTURA sobre la tarjeta, para sacar registros y
+    // ficheros de la consola sin depender de otro homebrew.
+    //
+    // Apagado por defecto, al reves que el acompanante web al que sustituye: es
+    // un servicio que publica la tarjeta entera en la red local, y eso no se
+    // enciende sin que alguien lo pida. La clave gobierna igual --digitos, de 4
+    // a 8, comprobado al leer para que un settings.json editado a mano no cuele
+    // valores raros-- y se rellena sola con seis digitos si esta vacia, para
+    // que encenderlo no lo deje abierto de par en par.
+    bool ftpEnabled = false;
+    std::string ftpPin;
     // How many torrents download at once. The default 1 is the serial
     // queue: nothing shares the link, so a single transfer runs at the speed
     // the swarm can actually give it. Raising it splits bandwidth, RAM budget
@@ -83,7 +86,7 @@ struct AppSettingsData {
     // A fresh install starts debrid-first, so torrenting is off until the user
     // opts in; settings files older than v3 predate the switch and are
     // migrated to true so an upgrade does not silently stop them. The key and
-    // the address are stored in the clear, like webServerPin — the SD card
+    // the address are stored in the clear, like ftpPin — the SD card
     // offers nothing better to hide them behind.
     bool torrentingEnabled = false;
     std::string torboxApiKey;

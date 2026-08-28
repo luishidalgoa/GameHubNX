@@ -1,11 +1,7 @@
 {
   "app": {
     "title": "GameHubNX",
-    "exit": "Quitter",
-    "web_qr": "QR Web"
-  },
-  "web": {
-    "off": "Web désactivé"
+    "exit": "Quitter"
   },
   "nav": {
     "catalog": "Catalogue",
@@ -511,17 +507,7 @@
     "section_downloads": "Téléchargements",
     "section_diagnostics": "Diagnostics",
     "section_general": "Général",
-    "section_web": "Companion web",
-    "web_toggle": "Companion web",
-    "web_start_failed": "Impossible de démarrer le serveur web.",
-    "web_address": "Adresse",
-    "web_address_none": "Pas de connexion réseau",
-    "web_disabled": "Désactivé",
-    "web_qr_hint": "Scannez depuis un téléphone sur le même Wi-Fi.",
-    "web_pin": "PIN",
     "web_pin_off": "Désactivé",
-    "web_pin_detail": "4-8 chiffres, vide pour désactiver",
-    "web_pin_invalid": "Le PIN doit contenir 4 à 8 chiffres (ou être vide pour désactiver).",
     "language": "Langue",
     "language_auto": "Auto",
     "language_en": "English",
@@ -602,6 +588,12 @@
     "advanced_detail": "Diagnostics, stockage, réinitialisation",
     "storage": "Stockage",
     "storage_detail": "Utilisation de la carte SD et nettoyage",
+    "section_ftp": "FTP",
+    "ftp_toggle": "Serveur FTP",
+    "ftp_toggle_detail": "Lecture seule. Publie la carte SD sur le réseau local.",
+    "ftp_pin": "Mot de passe FTP",
+    "ftp_pin_detail": "De 4 à 8 chiffres.",
+    "ftp_pin_invalid": "Le mot de passe doit faire de 4 à 8 chiffres.",
     "report_bug": "Afficher les journaux récents en QR",
     "report_bug_detail": "Afficher les journaux récents en codes QR pour le développeur",
     "report_notice": "Rien n'est envoyé depuis la console. Le journal ci-dessous est affiché en codes QR à photographier et envoyer vous-même.",
@@ -770,9 +762,15 @@
       "count": "{} éléments",
       "empty": "Dossier vide"
     },
+    "ftp": {
+      "off": "FTP éteint",
+      "no_address": "Pas encore d'adresse",
+      "address": "Adresse FTP"
+    },
     "platforms": {
         "format_warning": "l'émulateur n'ouvre pas ce format",
         "platform_warning": "tico n'émule pas cette console",
+        "platform_badge": "Pas d'émulateur",
         "download": "Télécharger",
         "versions": "{} versions",
         "which_version": "Quelle version ?",

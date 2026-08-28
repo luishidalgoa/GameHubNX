@@ -201,9 +201,7 @@ set(APP_SERVICE_SOURCES
     src/app/install_space.cpp
     src/app/magnet_resolver.cpp
     src/app/http_server.cpp
-    src/app/web_add_queue.cpp
-    src/app/web_server.cpp
-    src/app/companion_settings.cpp
+    src/app/ftp_server.cpp
     src/app/bug_report.cpp
     src/app/torbox_client.cpp
     src/app/torbox_pairing_server.cpp
@@ -477,12 +475,6 @@ add_custom_target(sync_i18n ALL
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n" "${ROMFS_DIR}/i18n"
     VERBATIM
 )
-# Web companion SPA, served from romfs:/web by src/app/web_server.cpp.
-add_custom_target(sync_web ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/resources/web" "${ROMFS_DIR}/web"
-    VERBATIM
-)
 file(COPY
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png
     DESTINATION ${ROMFS_DIR}
@@ -506,7 +498,6 @@ endif ()
 set(GAMEHUBNX_NRO_DEPENDS gamehubnx)
 list(APPEND GAMEHUBNX_NRO_DEPENDS sync_update_helper)
 list(APPEND GAMEHUBNX_NRO_DEPENDS sync_i18n)
-list(APPEND GAMEHUBNX_NRO_DEPENDS sync_web)
 # The two JSON snapshots are ~19 MB — over 80% of the NRO uncompressed — and
 # JSON compresses ~5x, so they ship as zstd frames that the load path
 # decompresses (src/app/snapshot_zstd.cpp). Host zstd is required for the
