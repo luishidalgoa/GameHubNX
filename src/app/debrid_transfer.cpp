@@ -1052,6 +1052,22 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     // punto guardado y el flujo restaurado vuelve a entregar esos bytes.
     constexpr uint64_t kJournalIntervalBytes = 8ull * 1024 * 1024;
     uint64_t journaled = startOffset;
+    // Por que se rinde un punto de retorno.
+    //
+    // En la consola el punto se escribio UNA vez y no volvio a avanzar, con 148
+    // MiB ya instalados: se reanudo en 8 MiB y se perdieron 140. En el PC la
+    // prueba pasa, asi que la diferencia esta en algo que solo ocurre alli y
+    // hay que verlo desde el aparato. Se dice el motivo una sola vez por
+    // paquete --si no, seria una linea cada megabyte-- y solo con el registro
+    // de diagnostico activo.
+    bool bailLogged = false;
+    auto bail = [&](const char* why) {
+        if (bailLogged)
+            return;
+        bailLogged = true;
+        log_msg("[debrid] sin punto de retorno (%s) en %llu bytes\n", why,
+                (unsigned long long)stream->consumed());
+    };
     auto checkpoint = [&](bool force) {
         const uint64_t consumed = stream->consumed();
         if (!force && consumed < journaled + kJournalIntervalBytes)
@@ -1059,17 +1075,26 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
         if (consumed <= journaled)
             return;
         install::InstallJournal point;
-        if (!stream->checkpoint(point.state) || point.state.consumed == 0)
+        if (!stream->checkpoint(point.state) || point.state.consumed == 0) {
+            bail("el flujo no da punto");
             return;
+        }
         point.backendState = backend->checkpointPackage();
-        if (point.backendState.empty())
+        if (point.backendState.empty()) {
+            bail("el backend no da estado");
             return;
+        }
         point.packageId = file.path;
         point.packageSize = file.bytes;
         point.compressed = compressed;
-        if (!install::saveInstallJournal(journalPath, point))
+        if (!install::saveInstallJournal(journalPath, point)) {
+            bail("no se pudo escribir el journal");
             return;
-        journaled = consumed;
+        }
+        // Se avanza al punto REALMENTE guardado, no a lo consumido: el flujo
+        // puede retroceder hasta un sitio seguro, y usar lo consumido dejaria
+        // el siguiente punto a mas de un intervalo de distancia.
+        journaled = point.state.consumed;
     };
 
     DebridStreamQueue queue(maximumBuffered, pacer, *ctx.shouldStop);
