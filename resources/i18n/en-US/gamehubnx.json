@@ -600,6 +600,8 @@
     "advanced_detail": "Diagnostics, storage, reset",
     "storage": "Storage",
     "storage_detail": "SD card breakdown and cleanup",
+    "browser": "File browser",
+    "browser_detail": "List, move, rename and delete files on the SD card",
     "network_health": "Network Health",
     "network_health_detail": "Connectivity and provider status",
     "report_bug": "Show recent logs as QR codes",
@@ -753,6 +755,21 @@
         "changed": "Will install to {}",
         "too_late": "Already installing: the storage cannot be changed now",
         "free": "  ({} free)"
+    },
+    "browser": {
+      "title": "File browser",
+      "up": "Up",
+      "actions": "Actions",
+      "mark": "Move somewhere else",
+      "paste": "Move it here",
+      "rename": "Rename",
+      "delete": "Delete",
+      "delete_empty": "Delete empty folder",
+      "delete_confirm": "Delete {}? There is no undo.",
+      "marked": "to move",
+      "marked_hint": "Waiting to be moved: {}",
+      "count": "{} items",
+      "empty": "Empty folder"
     },
     "platforms": {
         "format_warning": "the emulator cannot open this format",

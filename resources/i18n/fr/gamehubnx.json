@@ -602,6 +602,8 @@
     "advanced_detail": "Diagnostics, stockage, réinitialisation",
     "storage": "Stockage",
     "storage_detail": "Utilisation de la carte SD et nettoyage",
+    "browser": "Explorateur de fichiers",
+    "browser_detail": "Lister, déplacer, renommer et supprimer des fichiers de la carte SD",
     "report_bug": "Afficher les journaux récents en QR",
     "report_bug_detail": "Afficher les journaux récents en codes QR pour le développeur",
     "report_notice": "Rien n'est envoyé depuis la console. Le journal ci-dessous est affiché en codes QR à photographier et envoyer vous-même.",
@@ -753,6 +755,21 @@
         "changed": "Sera installé sur {}",
         "too_late": "L'installation a commencé : la mémoire ne peut plus changer",
         "free": "  ({} libres)"
+    },
+    "browser": {
+      "title": "Explorateur de fichiers",
+      "up": "Remonter",
+      "actions": "Actions",
+      "mark": "Déplacer ailleurs",
+      "paste": "L'amener ici",
+      "rename": "Renommer",
+      "delete": "Supprimer",
+      "delete_empty": "Supprimer le dossier vide",
+      "delete_confirm": "Supprimer {} ? C'est définitif.",
+      "marked": "à déplacer",
+      "marked_hint": "En attente de déplacement : {}",
+      "count": "{} éléments",
+      "empty": "Dossier vide"
     },
     "platforms": {
         "format_warning": "l'émulateur n'ouvre pas ce format",

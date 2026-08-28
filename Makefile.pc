@@ -509,6 +509,10 @@ $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
 
+$(BUILD_DIR)/tests/test_file_browser: tests/test_file_browser.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+
 $(BUILD_DIR)/tests/test_gamehub_provider: tests/test_gamehub_provider.cpp \
 		$(BUILD_DIR)/src/app/gamehub_provider.o \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o

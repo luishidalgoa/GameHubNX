@@ -600,6 +600,8 @@
     "advanced_detail": "Diagnóstico, almacenamiento, restablecer",
     "storage": "Almacenamiento",
     "storage_detail": "Uso de la tarjeta SD y limpieza",
+    "browser": "Explorador de ficheros",
+    "browser_detail": "Listar, mover, renombrar y borrar ficheros de la tarjeta",
     "report_bug": "Mostrar registros recientes como códigos QR",
     "report_bug_detail": "Mostrar registros recientes como códigos QR para el desarrollador",
     "report_notice": "No se envía nada desde la consola. El registro de abajo se muestra como códigos QR para que lo fotografíes y envíes tú mismo.",
@@ -753,6 +755,21 @@
         "changed": "Se instalará en {}",
         "too_late": "Ya ha empezado a instalarse: la memoria no se puede cambiar",
         "free": "  ({} libres)"
+    },
+    "browser": {
+      "title": "Explorador de ficheros",
+      "up": "Subir",
+      "actions": "Acciones",
+      "mark": "Mover a otro sitio",
+      "paste": "Traerlo aquí",
+      "rename": "Renombrar",
+      "delete": "Borrar",
+      "delete_empty": "Borrar la carpeta vacía",
+      "delete_confirm": "¿Borro {}? No hay vuelta atrás.",
+      "marked": "a mover",
+      "marked_hint": "Pendiente de mover: {}",
+      "count": "{} elementos",
+      "empty": "Carpeta vacía"
     },
     "platforms": {
         "format_warning": "el emulador no abre este formato",

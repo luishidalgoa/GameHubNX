@@ -602,6 +602,8 @@
     "advanced_detail": "Diagnóstico, armazenamento, redefinição",
     "storage": "Armazenamento",
     "storage_detail": "Uso do cartão SD e limpeza",
+    "browser": "Explorador de arquivos",
+    "browser_detail": "Listar, mover, renomear e excluir arquivos do cartão SD",
     "report_bug": "Mostrar logs recentes como códigos QR",
     "report_bug_detail": "Mostrar logs recentes como códigos QR para o desenvolvedor",
     "report_notice": "Nada é enviado a partir do console. O log abaixo é desenhado como códigos QR para você fotografar e enviar você mesmo.",
@@ -753,6 +755,21 @@
         "changed": "Será instalado em {}",
         "too_late": "A instalação já começou: a memória não pode mudar",
         "free": "  ({} livres)"
+    },
+    "browser": {
+      "title": "Explorador de arquivos",
+      "up": "Subir",
+      "actions": "Ações",
+      "mark": "Mover para outro lugar",
+      "paste": "Trazer para cá",
+      "rename": "Renomear",
+      "delete": "Excluir",
+      "delete_empty": "Excluir a pasta vazia",
+      "delete_confirm": "Excluir {}? Não dá para desfazer.",
+      "marked": "a mover",
+      "marked_hint": "Aguardando para mover: {}",
+      "count": "{} itens",
+      "empty": "Pasta vazia"
     },
     "platforms": {
         "format_warning": "o emulador não abre este formato",
