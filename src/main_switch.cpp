@@ -159,9 +159,9 @@ public:
         });
         tabs->addNavTab(tr("gamehubnx/platforms/title"),
                         NavIconType::Platforms,
-                        [catalog, metadata, manager, settings] {
+                        [catalog, metadata, manager, settings, favorites] {
             return new gamehubnx::ui::PlatformsView(catalog, metadata, manager,
-                                                    settings);
+                                                    settings, favorites);
         });
         tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
                         [manager, metadata, settings, deploy] {

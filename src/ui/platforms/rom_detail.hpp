@@ -10,6 +10,7 @@
 #include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/favorites_service.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
@@ -37,11 +38,12 @@ public:
                       CatalogService* catalog, GameMetadataService* metadata,
                       std::string destination,
                       std::function<void(const CatalogEntry&,
-                                         const std::string&)> onDownload)
+                                         const std::string&)> onDownload,
+                      FavoritesService* favorites)
         : entry_(std::move(entry)), platform_(std::move(platform)),
           catalog_(catalog), metadata_(metadata),
           destination_(std::move(destination)),
-          onDownload_(std::move(onDownload)) {
+          onDownload_(std::move(onDownload)), favorites_(favorites) {
         // La maqueta sale de detail_page, la misma que usa la ficha de Switch.
         // Copiarla a mano fue lo que dejo las dos pantallas descuadradas.
         auto* columns = detail_page::makeColumns();
@@ -72,6 +74,22 @@ public:
             return true;
         });
         left->addView(versions_);
+
+        // El ★, como en la ficha de Switch y con su mismo atajo. Cuadrado y al
+        // lado, no una fila entera: no es una accion que se busque, es una que
+        // se marca de paso.
+        favoriteButton_ = new brls::Button();
+        favoriteButton_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        favoriteButton_->setMarginTop(8);
+        favoriteButton_->setWidth(64);
+        favoriteButton_->setText("★");
+        favoriteButton_->registerClickAction([this](brls::View*) {
+            toggleFavorite();
+            return true;
+        });
+        if (!favorites_)
+            favoriteButton_->setVisibility(brls::Visibility::GONE);
+        left->addView(favoriteButton_);
 
         // El aviso de compatibilidad va aqui, pegado al boton: es lo que decide
         // si merece la pena pulsarlo.
@@ -127,6 +145,7 @@ public:
         // la enriquece: si el servidor es viejo y no publica /game/<id>, esto
         // se queda como esta en vez de dejar una pantalla en blanco.
         applyKnown();
+        refreshFavorite();
         load();
     }
 
@@ -135,6 +154,13 @@ public:
     brls::View* createContentView() override { return frame_; }
 
     void onContentAvailable() override {
+        if (favorites_) {
+            registerAction(tr("gamehubnx/catalog/action_favorite"),
+                           brls::BUTTON_RT, [this](brls::View*) {
+                toggleFavorite();
+                return true;
+            });
+        }
         registerAction(tr("gamehubnx/common/close"), brls::BUTTON_B,
                        [](brls::View*) {
                            brls::Application::popActivity();
@@ -144,6 +170,28 @@ public:
     }
 
 private:
+    void toggleFavorite() {
+        if (!favorites_)
+            return;
+        std::string error;
+        favorites_->toggle(entry_.infoHash, entry_.title, error);
+        if (!error.empty()) {
+            brls::Application::notify(error);
+            return;
+        }
+        refreshFavorite();
+    }
+
+    void refreshFavorite() {
+        if (!favoriteButton_ || !favorites_)
+            return;
+        // El estado se dice con el estilo del boton, no cambiando el simbolo:
+        // una estrella hueca y una llena se distinguen mal a distancia de sofa.
+        favoriteButton_->setStyle(favorites_->contains(entry_.infoHash)
+                                      ? &brls::BUTTONSTYLE_PRIMARY
+                                      : &brls::BUTTONSTYLE_DEFAULT);
+    }
+
     void applyKnown() {
         facts_->clearViews();
         detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_platform"), platform_.name);
@@ -295,6 +343,8 @@ private:
     std::string destination_;
     std::function<void(const CatalogEntry&, const std::string&)> onDownload_;
     gamehub::ShopGameDetail detail_;
+    FavoritesService* favorites_ = nullptr;
+    brls::Button* favoriteButton_ = nullptr;
 
     // Mismas medidas que la ficha de Switch, para que las dos se vean iguales.
     static constexpr float kLeftColumnWidth = 320.0f;

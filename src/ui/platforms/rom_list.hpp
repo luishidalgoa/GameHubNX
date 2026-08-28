@@ -11,6 +11,7 @@
 #include "app/catalog_service.hpp"
 #include "app/app_settings.hpp"
 #include "app/download_manager.hpp"
+#include "app/favorites_service.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_grid.hpp"
@@ -44,9 +45,10 @@ inline std::string upperExtension(std::string ext) {
 class RomDataSource : public brls::RecyclerDataSource {
 public:
     RomDataSource(RomListActivity* owner, GameMetadataService* metadata,
-                  std::shared_ptr<int> focusColumn)
+                  std::shared_ptr<int> focusColumn,
+                  FavoritesService* favorites)
         : owner_(owner), metadata_(metadata),
-          focusColumn_(std::move(focusColumn)) {}
+          focusColumn_(std::move(focusColumn)), favorites_(favorites) {}
 
     void setRoms(std::vector<CatalogEntry> roms) { roms_ = std::move(roms); }
     // Lo publica el servidor por plataforma; puede venir vacio.
@@ -72,6 +74,7 @@ private:
     RomListActivity* owner_;
     GameMetadataService* metadata_;
     std::shared_ptr<int> focusColumn_;
+    FavoritesService* favorites_;
     std::vector<CatalogEntry> roms_;
     std::string emulator_;
 };
@@ -86,9 +89,11 @@ class RomListActivity : public brls::Activity {
 public:
     RomListActivity(gamehub::ShopPlatform platform, CatalogService* catalog,
                     DownloadManager* manager, AppSettings* settings,
-                    GameMetadataService* metadata)
+                    GameMetadataService* metadata,
+                    FavoritesService* favorites)
         : platform_(std::move(platform)), catalog_(catalog),
-          manager_(manager), settings_(settings), metadata_(metadata) {
+          manager_(manager), settings_(settings), metadata_(metadata),
+          favorites_(favorites) {
         destination_ = resolvedDestination();
 
         auto* content = new brls::Box(brls::Axis::COLUMN);
@@ -124,13 +129,39 @@ public:
             content->addView(missing);
         }
 
+        // Fila de cabecera: el recuento a la izquierda y la chapa de favoritos
+        // a la derecha, como en el catalogo de Switch.
+        auto* headerRow = new brls::Box(brls::Axis::ROW);
+        headerRow->setAlignItems(brls::AlignItems::CENTER);
+        headerRow->setMarginTop(8);
+        headerRow->setMarginBottom(10);
+
         status_ = new brls::Label();
         status_->setFontSize(theme::kFontCaption);
         status_->setTextColor(theme::textTertiary());
-        status_->setMarginTop(8);
-        status_->setMarginBottom(10);
+        status_->setGrow(1);
         status_->setText(tr("gamehubnx/common/loading"));
-        content->addView(status_);
+        headerRow->addView(status_);
+
+        favoritesChip_ = new brls::Button();
+        favoritesChip_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        favoritesChip_->setHeight(40);
+        favoritesChip_->setFontSize(theme::kFontCaption);
+        favoritesChip_->setShrink(0.0f);
+        favoritesChip_->setPaddingLeft(14);
+        favoritesChip_->setPaddingRight(14);
+        favoritesChip_->setText("★");
+        favoritesChip_->registerClickAction([this](brls::View*) {
+            favoritesOnly_ = !favoritesOnly_;
+            rebuild();
+            return true;
+        });
+        // Sin servicio de favoritos no se ofrece un filtro que no puede
+        // responder nada.
+        if (!favorites_)
+            favoritesChip_->setVisibility(brls::Visibility::GONE);
+        headerRow->addView(favoritesChip_);
+        content->addView(headerRow);
 
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
@@ -138,7 +169,8 @@ public:
         recycler_->registerCell("GridRow", [column = focusColumn_] {
             return new GridRowCell(column);
         });
-        dataSource_ = new RomDataSource(this, metadata_, focusColumn_);
+        dataSource_ = new RomDataSource(this, metadata_, focusColumn_,
+                                        favorites_);
         dataSource_->setEmulator(platform_.emulator);
         recycler_->setDataSource(dataSource_);
         recyclerHost_ = recyclerHost(recycler_);
@@ -167,6 +199,13 @@ public:
                            brls::Application::popActivity();
                            return true;
                        });
+        if (favorites_) {
+            registerAction(tr("gamehubnx/catalog/action_favorite"),
+                           brls::BUTTON_RT, [this](brls::View*) {
+                toggleFocusedFavorite();
+                return true;
+            });
+        }
         registerAction(tr("gamehubnx/platforms/change_folder"), brls::BUTTON_Y,
                        [this](brls::View*) {
                            chooseFolder();
@@ -271,7 +310,8 @@ public:
             roms[index], platform_, catalog_, metadata_, destination_,
             [this](const CatalogEntry& rom, const std::string& destination) {
                 enqueueEntry(rom, destination);
-            }));
+            },
+            favorites_));
     }
 
     void download(size_t index) {
@@ -374,15 +414,16 @@ private:
                             gamehub::fileNameFromUrl(rom.directUrl)) ==
                         roms::RomCompat::Unplayable)
                         ++unplayable;
-                status_->setText(summaryText(fetched.size(), unplayable));
-                status_->setTextColor(unplayable ? theme::warning()
-                                                 : theme::textTertiary());
-                dataSource_->setRoms(std::move(fetched));
-                recyclerHost_->setVisibility(brls::Visibility::VISIBLE);
-                recycler_->reloadData();
+                summary_ = summaryText(fetched.size(), unplayable);
+                summaryWarns_ = unplayable > 0;
+                // Se guarda la lista COMPLETA: el filtro de favoritos es una
+                // vista, no una carga distinta, asi que quitarlo no puede
+                // obligar a volver a pedir el indice.
+                allRoms_ = std::move(fetched);
+                rebuild();
                 // Aqui SI se toma el foco: esta pantalla se abre a proposito
-            // eligiendo una plataforma, no se cruza uno con ella navegando.
-            brls::Application::giveFocus(recycler_);
+                // eligiendo una plataforma, no se cruza uno con ella navegando.
+                brls::Application::giveFocus(recycler_);
             });
         });
     }
@@ -412,6 +453,52 @@ private:
     // "63 juegos", o "63 juegos - 41 no los abre Azahar" cuando hay algo que
     // decir. El nombre del emulador lo publica el servidor; sin el, la frase
     // generica.
+    // Aplica el filtro y repinta. Con el filtro puesto y nada marcado se dice,
+    // en vez de dejar una rejilla vacia sin explicacion.
+    void rebuild() {
+        std::vector<CatalogEntry> shown;
+        for (const CatalogEntry& rom : allRoms_) {
+            if (favoritesOnly_ && favorites_ && !favorites_->contains(rom.infoHash))
+                continue;
+            shown.push_back(rom);
+        }
+        const size_t count = shown.size();
+        dataSource_->setRoms(std::move(shown));
+        if (favoritesOnly_ && count == 0)
+            status_->setText(tr("gamehubnx/platforms/no_favorites"));
+        else
+            status_->setText(summary_);
+        status_->setTextColor(summaryWarns_ && !favoritesOnly_
+                                  ? theme::warning()
+                                  : theme::textTertiary());
+        if (favoritesChip_)
+            favoritesChip_->setStyle(favoritesOnly_
+                                         ? &brls::BUTTONSTYLE_PRIMARY
+                                         : &brls::BUTTONSTYLE_DEFAULT);
+        recyclerHost_->setVisibility(count == 0 ? brls::Visibility::GONE
+                                                : brls::Visibility::VISIBLE);
+        recycler_->reloadData();
+    }
+
+    void toggleFocusedFavorite() {
+        if (!favorites_)
+            return;
+        const std::vector<CatalogEntry>& roms = dataSource_->roms();
+        const size_t row =
+            static_cast<size_t>(recycler_->getDefaultFocusedIndex());
+        const size_t index = row * grid::kColumns +
+                             static_cast<size_t>(*focusColumn_);
+        if (index >= roms.size())
+            return;
+        std::string error;
+        favorites_->toggle(roms[index].infoHash, roms[index].title, error);
+        if (!error.empty()) {
+            brls::Application::notify(error);
+            return;
+        }
+        rebuild();
+    }
+
     std::string summaryText(size_t total, size_t unplayable) const {
         if (unplayable == 0)
             return tr("gamehubnx/platforms/games", total);
@@ -428,6 +515,13 @@ private:
     AppSettings* settings_;
     // Solo para la ficha: es quien descarga y cachea portadas y capturas.
     GameMetadataService* metadata_;
+    FavoritesService* favorites_;
+    // La lista completa; lo que se ensena sale de filtrarla.
+    std::vector<CatalogEntry> allRoms_;
+    std::string summary_;
+    bool summaryWarns_ = false;
+    bool favoritesOnly_ = false;
+    brls::Button* favoritesChip_ = nullptr;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;
     brls::Label* pathLabel_ = nullptr;
@@ -455,6 +549,7 @@ inline GridCardInfo RomDataSource::makeInfo(size_t index) const {
     // Las portadas de consola son cajas verticales, no iconos cuadrados: sin
     // esto salen estiradas.
     info.iconPreserveAspect = true;
+    info.favorite = favorites_ && favorites_->contains(rom.infoHash);
 
     // La linea de debajo dice lo que hay que saber ANTES de abrir: el tamano, o
     // el aviso cuando el emulador no va a poder con ello. El aviso gana, porque

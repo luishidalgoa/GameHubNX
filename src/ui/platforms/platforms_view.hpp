@@ -9,6 +9,7 @@
 
 #include "app/catalog_service.hpp"
 #include "app/gamehub_catalog.hpp"
+#include "app/favorites_service.hpp"
 #include "app/game_metadata_service.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/common/async_image.hpp"
@@ -190,9 +191,11 @@ private:
 class PlatformsView : public brls::Box {
 public:
     PlatformsView(CatalogService* catalog, GameMetadataService* metadata,
-                  DownloadManager* manager, AppSettings* settings)
+                  DownloadManager* manager, AppSettings* settings,
+                  FavoritesService* favorites = nullptr)
         : brls::Box(brls::Axis::COLUMN), catalog_(catalog),
-          metadata_(metadata), manager_(manager), settings_(settings) {
+          metadata_(metadata), manager_(manager), settings_(settings),
+          favorites_(favorites) {
         setGrow(1);
         setPadding(20, 32, 0, 32);
 
@@ -233,7 +236,7 @@ public:
         }
         brls::Application::pushActivity(
             new RomListActivity(items[index], catalog_, manager_, settings_,
-                                metadata_));
+                                metadata_, favorites_));
     }
 
 private:
@@ -277,6 +280,7 @@ private:
     GameMetadataService* metadata_;
     DownloadManager* manager_;
     AppSettings* settings_;
+    FavoritesService* favorites_;
     brls::Label* status_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
