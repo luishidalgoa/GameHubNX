@@ -286,6 +286,7 @@ $(BUILD_DIR)/tests/test_probe_report: tests/test_probe_report.c src/probe/probe_
 
 test: $(TEST_BINS)
 	python3 scripts/check_source_lists.py
+	python3 scripts/check_includes.py
 	@set -e; for t in $(TEST_BINS_EARLY); do echo "== $$t"; ./$$t; done
 	python3 tests/test_bug_report_decode.py
 	python3 tests/test_telemetry_analyzer.py

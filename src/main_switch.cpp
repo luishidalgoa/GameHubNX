@@ -8,7 +8,6 @@
 #include "app/installed_title_service.hpp"
 #include "app/switch_deploy.hpp"
 #include "app/update_service.hpp"
-#include "app/web_server.hpp"
 #include "platform/switch_crashlog.h"
 #include "platform/switch_performance.hpp"
 
