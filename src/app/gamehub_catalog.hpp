@@ -40,6 +40,14 @@ extern const char* const kClientId;
 /// clasificarla.
 bool isBaseTitleId(const std::string& titleId);
 
+/// Cierto cuando el Title ID es el de la ACTUALIZACION de un juego.
+///
+/// Completa el trio con isBaseTitleId e isDlcTitleId: el discriminante de trece
+/// bits vale cero en el juego, exactamente 0x800 en la actualizacion y 0x1000 o
+/// mas en los DLC. Hacia falta para que la pestana de actualizaciones sepa
+/// cual de los complementos de la tienda es LA actualizacion.
+bool isUpdateTitleId(const std::string& titleId);
+
 /// Cierto cuando el Title ID es de un DLC (contenido adicional).
 ///
 /// Los trece bits bajos son el discriminante: el juego base los tiene a cero,

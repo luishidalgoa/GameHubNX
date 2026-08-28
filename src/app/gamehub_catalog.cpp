@@ -57,6 +57,21 @@ bool isBaseTitleId(const std::string& titleId) {
 
 
 
+bool isUpdateTitleId(const std::string& titleId) {
+    if (titleId.size() != 16)
+        return false;
+    uint64_t value = 0;
+    for (char c : titleId) {
+        int digit;
+        if (c >= '0' && c <= '9')      digit = c - '0';
+        else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+        else return false;
+        value = (value << 4) | static_cast<uint64_t>(digit);
+    }
+    return (value & 0x1FFF) == 0x800;
+}
+
 bool isDlcTitleId(const std::string& titleId) {
     if (titleId.size() != 16)
         return false;

@@ -45,6 +45,24 @@ public:
           cwd_(root_) {}
 
     const std::string& cwd() const { return cwd_; }
+
+    // La ruta TAL Y COMO SE LE ENSENA AL CLIENTE: relativa a la raiz servida y
+    // empezando por "/".
+    //
+    // Dentro se trabaja con "sdmc:/...", que es lo que entiende la consola,
+    // pero eso es un detalle del aparato y no puede salir por el cable. Un
+    // cliente de FTP espera una ruta de servidor: FileZilla recibia
+    // 257 "sdmc:/" y contestaba "Error al analizar la ruta devuelta", y se
+    // quedaba sin poder listar nada. curl lo toleraba, que es justamente por lo
+    // que no salio antes.
+    std::string displayPath(const std::string& internal) const {
+        if (internal.size() <= root_.size())
+            return "/";
+        std::string rest = internal.substr(root_.size());
+        if (rest.empty())
+            return "/";
+        return rest[0] == '/' ? rest : "/" + rest;
+    }
     const std::string& path() const { return path_; }
     bool authenticated() const { return authenticated_; }
     bool binary() const { return binary_; }
@@ -83,8 +101,24 @@ public:
 
         if (verb == "SYST")
             return {"215 UNIX Type: L8"};
-        if (verb == "FEAT")
-            return {"211-Extensiones\r\n SIZE\r\n211 Fin"};
+        if (verb == "FEAT") {
+            // UTF8 se anuncia porque los nombres van en UTF-8 tal cual salen de
+            // la tarjeta. Sin anunciarlo, FileZilla avisa de que "el servidor
+            // no permite caracteres no ASCII" y puede estropear los nombres con
+            // tildes, que en una biblioteca en espanol son muchos.
+            return {"211-Extensiones\r\n SIZE\r\n UTF8\r\n211 Fin"};
+        }
+        if (verb == "OPTS") {
+            std::string opcion = arg;
+            for (char& c : opcion)
+                c = static_cast<char>(std::toupper(
+                    static_cast<unsigned char>(c)));
+            // Ya se sirve en UTF-8, asi que activarlo es aceptar y seguir. No
+            // se acepta apagarlo: no hay otra codificacion que ofrecer.
+            if (opcion == "UTF8 ON" || opcion == "UTF8")
+                return {"200 Hecho"};
+            return {"501 Opcion desconocida"};
+        }
         if (verb == "NOOP")
             return {"200 Aqui sigo"};
         if (verb == "TYPE") {
@@ -94,7 +128,7 @@ public:
             return {"200 Modo fijado"};
         }
         if (verb == "PWD")
-            return {"257 \"" + cwd_ + "\""};
+            return {"257 \"" + displayPath(cwd_) + "\""};
         if (verb == "CWD") {
             std::string target;
             if (!resolve(arg, target))

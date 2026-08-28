@@ -17,6 +17,7 @@
 #include "ui/common/async_image.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/detail_page.hpp"
+#include "ui/detail/shop_addons.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
@@ -273,36 +274,40 @@ private:
         brls::Application::popActivity();
     }
 
+    // Elegir version: se reutiliza la pantalla de complementos, la misma que
+    // marca DLC y actualizaciones de un juego de Switch. Antes era un
+    // desplegable propio que ademas solo dejaba elegir UNA, y al elegir cerraba
+    // la ficha desde dentro de su propio callback -- que es lo que colgaba la
+    // aplicacion al volver.
     void chooseVersion() {
         if (detail_.files.size() <= 1)
             return;
-        std::vector<std::string> labels;
+        std::vector<ShopItem> items;
         for (const gamehub::ShopGameFile& file : detail_.files) {
-            std::string label = file.region.empty()
-                ? (file.title.empty() ? file.kind : file.title)
-                : file.region;
+            // Cada version es una entrada clonada con SU url y SU tamano:
+            // aguas abajo todo --el hash sintetico, el nombre del fichero, la
+            // carpeta de destino-- sale de ahi.
+            CatalogEntry copia = entry_;
+            copia.directUrl = file.url;
             if (file.size)
-                label += "   " + formatBytes(file.size);
-            labels.push_back(label);
+                copia.size = file.size;
+            if (!file.region.empty())
+                copia.title = entry_.title + "  (" + file.region + ")";
+            else if (!file.title.empty())
+                copia.title = file.title;
+            ShopItem item;
+            item.entry = std::move(copia);
+            item.kind = ShopItemKind::Game;
+            items.push_back(std::move(item));
         }
-        const std::vector<gamehub::ShopGameFile> files = detail_.files;
-        auto* dropdown = new brls::Dropdown(
-            tr("gamehubnx/platforms/which_version"), labels,
-            [this, files](int chosen) {
-                if (chosen < 0 || chosen >= static_cast<int>(files.size()))
-                    return;
-                // La entrada se clona con la URL elegida: aguas abajo todo
-                // --el hash sintetico, el nombre del fichero, la carpeta-- sale
-                // de ahi, asi que cambiarla es cambiar la descarga entera.
-                CatalogEntry picked = entry_;
-                picked.directUrl = files[static_cast<size_t>(chosen)].url;
-                if (files[static_cast<size_t>(chosen)].size)
-                    picked.size = files[static_cast<size_t>(chosen)].size;
-                onDownload_(picked, destination_);
-                brls::Application::popActivity();
-            },
-            0);
-        brls::Application::pushActivity(new brls::Activity(dropdown));
+        const std::string destination = destination_;
+        auto onDownload = onDownload_;
+        brls::Application::pushActivity(new ShopAddOnsActivity(
+            entry_.title, std::move(items), nullptr, nullptr, nullptr,
+            [onDownload, destination](std::vector<CatalogEntry> elegidas) {
+                for (const CatalogEntry& una : elegidas)
+                    onDownload(una, destination);
+            }));
     }
 
     void load() {

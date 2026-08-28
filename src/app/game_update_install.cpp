@@ -28,9 +28,15 @@ bool parseDecimal(const std::string& text, uint64_t& out) {
     return true;
 }
 
+} // namespace
+
 // First "[vN]" numeric tag in a file name
 // ("Minecraft [0100D71004694800][v10092544].nsp" -> 10092544). Returns false
 // when the name carries no numeric [vN] tag.
+//
+// Publica --antes vivia en el anonimo-- porque la pestana de actualizaciones la
+// necesita para quedarse con la mas nueva cuando la tienda sirve varias del
+// mismo juego.
 bool fileVersionTag(const std::string& path, uint64_t& value) {
     std::string lower = path;
     std::transform(lower.begin(), lower.end(), lower.begin(),
@@ -51,6 +57,8 @@ bool fileVersionTag(const std::string& path, uint64_t& value) {
     }
     return false;
 }
+
+namespace {
 
 bool isUpdateFile(const std::string& path) {
     std::string lower = path;

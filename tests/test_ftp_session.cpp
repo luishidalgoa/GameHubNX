@@ -45,12 +45,43 @@ void test_navegar() {
     assert(s.cwd() == "sdmc:/switch");
     assert(s.handle("CWD gamehubnx").text.rfind("250", 0) == 0);
     assert(s.cwd() == "sdmc:/switch/gamehubnx");
-    assert(s.handle("PWD").text == "257 \"sdmc:/switch/gamehubnx\"");
+    // Lo que se le ensena al cliente es una ruta de SERVIDOR, sin el prefijo
+    // del aparato. FileZilla recibia 257 "sdmc:/..." y contestaba "Error al
+    // analizar la ruta devuelta"; curl lo toleraba y por eso no salio antes.
+    assert(s.handle("PWD").text == "257 \"/switch/gamehubnx\"");
     s.handle("CDUP");
     assert(s.cwd() == "sdmc:/switch");
     // Una ruta absoluta se resuelve desde la raiz.
     assert(s.handle("CWD /switch/gamehubnx/downloads").text.rfind("250", 0) == 0);
     assert(s.cwd() == "sdmc:/switch/gamehubnx/downloads");
+}
+
+void test_ruta_que_se_ensena() {
+    FtpSession s = open();
+    // En la raiz servida, "/".
+    assert(s.handle("PWD").text == "257 \"/\"");
+    s.handle("CWD switch");
+    assert(s.handle("PWD").text == "257 \"/switch\"");
+    // Y con una raiz que no es la del volumen, sigue siendo relativa a ella.
+    FtpSession t("sdmc:/switch", "");
+    t.handle("USER x");
+    assert(t.handle("PWD").text == "257 \"/\"");
+    t.handle("CWD gamehubnx");
+    assert(t.handle("PWD").text == "257 \"/gamehubnx\"");
+}
+
+void test_utf8() {
+    FtpSession s = open();
+    // Se anuncia UTF8: sin eso, FileZilla avisa de que el servidor no admite
+    // caracteres no ASCII y puede estropear los nombres con tildes.
+    const std::string feat = s.handle("FEAT").text;
+    assert(feat.find("UTF8") != std::string::npos);
+    assert(feat.find("SIZE") != std::string::npos);
+    // Y activarlo se acepta, porque ya se sirve asi.
+    assert(s.handle("OPTS UTF8 ON").text.rfind("200", 0) == 0);
+    assert(s.handle("OPTS utf8 on").text.rfind("200", 0) == 0);
+    // Cualquier otra opcion se rechaza en vez de fingir que se aplico.
+    assert(s.handle("OPTS MLST size").text.rfind("501", 0) == 0);
 }
 
 void test_no_se_sale_del_arbol() {
@@ -144,6 +175,8 @@ void test_acciones() {
 int main() {
     test_entrada();
     test_navegar();
+    test_ruta_que_se_ensena();
+    test_utf8();
     test_no_se_sale_del_arbol();
     test_solo_lectura();
     test_acciones();

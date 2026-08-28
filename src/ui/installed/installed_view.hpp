@@ -562,11 +562,108 @@ private:
         dialog->open();
     }
 
-    // Резолв magnet'а в .torrent (паттерн из game_detail), затем импорт
-    // торрента с установкой только файлов-апдейтов.
+    // La actualizacion en la tienda, si esta.
+    //
+    // El servidor publica las actualizaciones en /api/shop/updates con su
+    // enlace directo, y la ficha de un juego ya las instala por ahi. Esta
+    // pestana no: seguia resolviendo un magnet y buscando peers, que es el
+    // flujo del proyecto del que viene este fork. En una biblioteca propia no
+    // hay enjambre que encontrar, asi que se quedaba en "buscando pares" para
+    // siempre.
+    //
+    // El emparejado es el mismo que usa el catalogo para los complementos, y
+    // por el mismo orden de fiabilidad: gh_id primero --lo sabe el servidor
+    // desde que escaneo-- y el Title ID base como respaldo.
+    const CatalogEntry* shopUpdateFor(const GameMetadata& entry) const {
+        return shopUpdateFor(entry.titleId, entry.infoHash);
+    }
+
+    // La misma busqueda partiendo de lo que hay INSTALADO, que es lo unico que
+    // conoce la pestana de actualizaciones: ahi no hay ficha de catalogo, solo
+    // el Title ID que devuelve la consola. `versionOut` recibe la version de la
+    // que se ha elegido, para poder compararla con la instalada.
+    const CatalogEntry* shopUpdateFor(const std::string& titleId,
+                                      const std::string& infoHash,
+                                      uint64_t* versionOut = nullptr) const {
+        if (versionOut)
+            *versionOut = 0;
+        if (!catalog_)
+            return nullptr;
+        const CatalogEntry* base =
+            infoHash.empty() ? nullptr : catalog_->findByInfoHash(infoHash);
+        const std::string baseId = gamehub::baseTitleIdOf(titleId);
+        const CatalogEntry* mejor = nullptr;
+        uint64_t mejorVersion = 0;
+        for (const CatalogEntry& other : catalog_->entries()) {
+            if (other.directUrl.empty())
+                continue;                   // no es de la tienda
+            if (!other.fromSubIndex)
+                continue;                   // no es un complemento
+            if (!gamehub::isUpdateTitleId(other.titleId))
+                continue;                   // es un DLC, no la actualizacion
+            bool mismo = false;
+            if (base && base->gameId != 0 && other.gameId != 0)
+                mismo = other.gameId == base->gameId;
+            else if (!baseId.empty())
+                mismo = gamehub::baseTitleIdOf(other.titleId) == baseId;
+            if (!mismo)
+                continue;
+            // La tienda puede servir VARIAS actualizaciones del mismo juego
+            // --Just Dance 2023 tiene tres, una de ellas la v65536-- y ofrecer
+            // una vieja es peor que no ofrecer ninguna: se instala, no falla, y
+            // deja el juego por detras de donde estaba. Se elige la mas alta.
+            uint64_t suya = 0;
+            if (!fileVersionTag(gamehub::fileNameFromUrl(other.directUrl),
+                                suya))
+                continue;   // sin etiqueta no hay forma de ordenarla
+            if (!mejor || suya > mejorVersion) {
+                mejor = &other;
+                mejorVersion = suya;
+            }
+        }
+        if (versionOut)
+            *versionOut = mejorVersion;
+        return mejor;
+    }
+
+    // Encolar la actualizacion de la tienda: un fichero, enlace directo, nada
+    // que resolver ni enjambre al que preguntar. Es el mismo camino que ya usa
+    // la ficha de un juego para sus complementos.
+    void queueShopUpdate(const CatalogEntry& update) {
+        DebridImport import;
+        import.infoHash = catalogLower(update.infoHash);
+        import.name = update.title;
+        import.totalBytes = update.size;
+        import.debridId = update.transferHandle();
+        // Un parche es un paquete: se instala, no se deja suelto en la tarjeta.
+        import.mode = TransferMode::StreamInstall;
+        import.fileSelection = {static_cast<uint8_t>(FileAction::Install)};
+        import.packageCount = 1u;
+        import.hasInstallTarget = true;
+        import.installTarget = settings_
+            ? installTargetFor(settings_->get().installLocation)
+            : manager_->installTarget();
+
+        std::string taskId;
+        std::string error;
+        if (!manager_->importDebrid(import, taskId, error)) {
+            status_->setText(error);
+            brls::Application::notify(error);
+            return;
+        }
+        status_->setText(tr("gamehubnx/detail/shop_queued"));
+    }
+
+    // Resolver el magnet a .torrent y luego importarlo instalando solo los
+    // ficheros de actualizacion. Solo se llega aqui cuando la actualizacion NO
+    // esta en la tienda.
     void beginUpdateInstall(GameMetadata entry) {
         if (updateInFlight_)
             return;
+        if (const CatalogEntry* fromShop = shopUpdateFor(entry)) {
+            queueShopUpdate(*fromShop);
+            return;
+        }
         updateInFlight_ = true;
         cancelled_->store(false);
         status_->setText(tr("gamehubnx/installed/update_resolving"));
@@ -837,20 +934,64 @@ private:
         });
     }
 
+    // Que juegos salen en la pestana de actualizaciones.
+    //
+    // MANDA LA TIENDA, y es la correccion de fondo. Antes decidia el indice de
+    // metadatos, que es de la epoca del torrent: sus candidatos son PACKS
+    // --juego + parche + DLC en un solo archivo-- y su version es la que
+    // llevaba el pack. De ahi las dos quejas a la vez: ofrecia juegos que ya
+    // estaban al dia ("actualizaciones que no tengo") y lo que ofrecia no era
+    // el parche del juego sino otro paquete entero ("no es la update directa").
+    //
+    // Con la tienda hay parche de verdad, con su version, y se compara con la
+    // que la consola dice tener instalada. Solo si la tienda no sabe nada de
+    // ese juego se recurre al veredicto viejo, para no dejar a ciegas a quien
+    // siga con biblioteca de torrent.
+    std::vector<InstalledTitle> onlyWithUpdate(
+        std::vector<InstalledTitle> titles) const {
+        const GameUpdateResults& results = updates_->results();
+        std::vector<InstalledTitle> filtered;
+        filtered.reserve(titles.size());
+        for (InstalledTitle& title : titles) {
+            uint64_t disponible = 0;
+            if (shopUpdateFor(title.titleId, std::string(), &disponible)) {
+                // Sin version instalada legible no se puede comparar, y
+                // ensenarla "por si acaso" es justo el ruido del que se
+                // quejaba: se calla.
+                uint64_t instalada = 0;
+                if (!parseVersionTag(title.version, instalada))
+                    continue;
+                if (disponible > instalada)
+                    filtered.push_back(std::move(title));
+                continue;
+            }
+            auto it = results.find(title.titleId);
+            if (it != results.end() &&
+                it->second.state == GameUpdateState::UpdateAvailable)
+                filtered.push_back(std::move(title));
+        }
+        return filtered;
+    }
+
+    // Una version de titulo en decimal ("0", "131072"). Vacia o con cualquier
+    // caracter que no sea digito, no vale.
+    static bool parseVersionTag(const std::string& text, uint64_t& out) {
+        if (text.empty())
+            return false;
+        uint64_t value = 0;
+        for (char c : text) {
+            if (c < '0' || c > '9')
+                return false;
+            value = value * 10 + static_cast<uint64_t>(c - '0');
+        }
+        out = value;
+        return true;
+    }
+
     void reload() {
         std::vector<InstalledTitle> titles = installed_->titles();
-        if (mode_ == Mode::Updates) {
-            const GameUpdateResults& results = updates_->results();
-            std::vector<InstalledTitle> filtered;
-            filtered.reserve(titles.size());
-            for (InstalledTitle& title : titles) {
-                auto it = results.find(title.titleId);
-                if (it != results.end() &&
-                    it->second.state == GameUpdateState::UpdateAvailable)
-                    filtered.push_back(std::move(title));
-            }
-            titles = std::move(filtered);
-        }
+        if (mode_ == Mode::Updates)
+            titles = onlyWithUpdate(std::move(titles));
         size_t count = titles.size();
         dataSource_->setTitles(std::move(titles));
         recycler_->reloadData();
