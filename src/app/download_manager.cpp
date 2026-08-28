@@ -142,6 +142,7 @@ std::string fileExtension(const std::string& name) {
 bool moveDirectoryContents(const std::string& source,
                            const std::string& destination,
                            const std::string& preferredBaseName,
+                           std::vector<std::string>& movedPaths,
                            std::string& error) {
     if (!makeDirectories(destination)) {
         error = "No se pudo crear " + destination;
@@ -189,8 +190,10 @@ bool moveDirectoryContents(const std::string& source,
         const std::string from = source + "/" + name;
         const std::string to =
             destination + "/" + (renameTo.empty() ? name : renameTo);
-        if (rename(from.c_str(), to.c_str()) == 0)
+        if (rename(from.c_str(), to.c_str()) == 0) {
+            movedPaths.push_back(to);
             continue;
+        }
         std::ifstream in(from, std::ios::binary);
         std::ofstream out(to, std::ios::binary | std::ios::trunc);
         if (!in || !out) {
@@ -209,6 +212,7 @@ bool moveDirectoryContents(const std::string& source,
         in.close();
         out.close();
         unlink(from.c_str());
+        movedPaths.push_back(to);
     }
     // La carpeta de trabajo se va con su contenido: dejarla vacia es lo que
     // llena downloads/ de carpetas huerfanas.
@@ -1340,6 +1344,7 @@ bool DownloadManager::saveLocked(std::string& error) const {
         state << "9:completed" << bint(task.completedBytes);
         state << "4:data" << bstr(task.dataPath);
         state << "9:debrid-id" << bstr(task.debridId);
+        state << "9:delivered" << bstr(task.deliveredPath);
         state << "11:destination" << bstr(task.destinationDir);
         state << "5:error" << bstr(task.error);
         state << "2:id" << bstr(task.id);
@@ -1466,6 +1471,7 @@ void DownloadManager::load() {
                     static_cast<uint32_t>(packagesDone);
         }
         dictionaryString(item, "destination", task.destinationDir);
+        dictionaryString(item, "delivered", task.deliveredPath);
         uint64_t persistedTarget = 0;
         if (dictionaryInteger(item, "install-target", persistedTarget)) {
             task.installTarget = persistedTarget == 1
@@ -1600,7 +1606,18 @@ bool DownloadManager::removeLocked(std::unique_lock<std::mutex>& lock,
         // looked crashed.
         if (deleteData) {
             const std::string dataPath = it->dataPath;
+            // El fichero movido fuera de la carpeta de descargas se borra
+            // aparte, y de la unica forma que se puede permitir: un unlink del
+            // fichero CONCRETO que escribio la app y cuya ruta guardo. Ni un
+            // recorrido de arbol ni una ruta que venga de fuera --el guardia de
+            // arriba sigue prohibiendo eso--; solo deshacer lo que hizo ella.
+            const std::string delivered = it->deliveredPath;
             lock.unlock();
+            if (!delivered.empty()) {
+                struct stat st {};
+                if (stat(delivered.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+                    unlink(delivered.c_str());
+            }
             const bool ok = removeTree(dataPath);
             lock.lock();
             it = tasks_.end();
@@ -2008,10 +2025,22 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
         }
         if (!destination.empty()) {
             std::string moveError;
-            if (moveDirectoryContents(dataPath, destination, title,
+            std::vector<std::string> moved;
+            if (moveDirectoryContents(dataPath, destination, title, moved,
                                       moveError)) {
                 log_msg("[roms] %s -> %s\n", dataPath.c_str(),
                         destination.c_str());
+                // Se apunta donde quedo para poder borrarlo despues. Solo con
+                // UN fichero: con varios no hay "el fichero" que senalar, y
+                // adivinar cual seria peor que no apuntar ninguno.
+                if (moved.size() == 1) {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    if (DownloadTask* task = findLocked(activeId)) {
+                        task->deliveredPath = moved.front();
+                        std::string ignored;
+                        saveLocked(ignored);
+                    }
+                }
             } else {
                 // El fichero esta bajado y entero; lo unico que fallo fue
                 // moverlo. Se marca error para que se vea y se diga donde
