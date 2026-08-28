@@ -15,6 +15,7 @@
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/ui_helpers.hpp"
+#include "ui/detail/detail_page.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
@@ -41,34 +42,11 @@ public:
           catalog_(catalog), metadata_(metadata),
           destination_(std::move(destination)),
           onDownload_(std::move(onDownload)) {
-        auto* columns = new brls::Box(brls::Axis::ROW);
-        columns->setGrow(1);
-        columns->setPadding(18, 38, 18, 34);
-
-        // ── Columna izquierda: portada y datos ──────────────────────────────
-        //
-        // Mismas medidas y mismo trato que la ficha de Switch: 320 de columna,
-        // 200 de alto de portada, y el ancho salido de la PROPORCION que
-        // publica la tienda. Antes era una caja de 320x320 con la imagen
-        // ajustada dentro, y como las portadas de consola son verticales,
-        // quedaban dos bandas negras enormes arriba y abajo -- que es lo que se
-        // veia en pantalla y parecia una captura rota.
-        auto* left = new brls::Box(brls::Axis::COLUMN);
-        left->setWidth(kLeftColumnWidth);
-        left->setMarginRight(28);
-
-        const float coverWidth =
-            std::min(kLeftColumnWidth, kCoverHeight * coverAspect());
-        cover_ = new AsyncRgbaImage();
-        cover_->setWidth(coverWidth);
-        cover_->setHeight(kCoverHeight);
-        cover_->setMarginLeft((kLeftColumnWidth - coverWidth) / 2.0f);
-        cover_->setCornerRadius(theme::kRadiusLarge);
-        cover_->setScalingType(brls::ImageScalingType::FIT);
-        // FIT deja bandas; con el recorte puesto, borealis rellena la vista
-        // entera con ellas. Es el mismo ajuste que la ficha de Switch.
-        cover_->setClipsToBounds(false);
-        left->addView(cover_);
+        // La maqueta sale de detail_page, la misma que usa la ficha de Switch.
+        // Copiarla a mano fue lo que dejo las dos pantallas descuadradas.
+        auto* columns = detail_page::makeColumns();
+        auto* left = detail_page::makeLeftColumn();
+        cover_ = detail_page::makeCover(left);
 
         // Los BOTONES, como en la ficha de Switch. Antes descargar era solo la
         // accion A del marco y no habia nada que mirar ni que pulsar: la
@@ -105,9 +83,8 @@ public:
 
         columns->addView(left);
 
-        // ── Columna derecha: capturas y descripcion, con scroll ─────────────
-        auto* right = new brls::Box(brls::Axis::COLUMN);
-        right->setGrow(1);
+        brls::Box* right = detail_page::makeRightColumn(columns);
+        right_ = right;
 
         title_ = new brls::Label();
         title_->setFontSize(theme::kFontHeading);
@@ -130,16 +107,6 @@ public:
         facts_->setMarginTop(8);
         right->addView(facts_);
 
-        // El carril de capturas, con el alto reservado como en la ficha de
-        // Switch: la fila mide mas que las imagenes para que el recuadro de
-        // foco quepa sin comerse el texto de al lado, que es justo lo que
-        // pasaba.
-        shotsRow_ = new brls::Box(brls::Axis::ROW);
-        shotsRow_->setHeight(180);
-        shotsRow_->setMarginTop(14);
-        shotsRow_->setVisibility(brls::Visibility::GONE);
-        right->addView(shotsRow_);
-
         description_ = new brls::Label();
         description_->setFontSize(theme::kFontSmall);
         description_->setTextColor(theme::textSecondary());
@@ -152,11 +119,6 @@ public:
         trailer_->setMarginTop(14);
         trailer_->setVisibility(brls::Visibility::GONE);
         right->addView(trailer_);
-
-        auto* scroll = new brls::ScrollingFrame();
-        scroll->setGrow(1);
-        scroll->setContentView(right);
-        columns->addView(scroll);
 
         frame_ = new brls::AppletFrame(columns);
         frame_->setTitle(platform_.name);
@@ -182,40 +144,20 @@ public:
     }
 
 private:
-    void addFactRow(const std::string& name, const std::string& value) {
-        if (value.empty())
-            return;
-        auto* row = new brls::Box(brls::Axis::ROW);
-        row->setMarginTop(8);
-        auto* key = new brls::Label();
-        key->setFontSize(theme::kFontCaption);
-        key->setTextColor(theme::textTertiary());
-        key->setWidth(160);
-        key->setText(name);
-        row->addView(key);
-        auto* val = new brls::Label();
-        val->setFontSize(theme::kFontCaption);
-        val->setTextColor(theme::textSecondary());
-        val->setGrow(1);
-        val->setText(value);
-        row->addView(val);
-        facts_->addView(row);
-    }
-
     void applyKnown() {
         facts_->clearViews();
-        addFactRow(tr("gamehubnx/detail/fact_platform"), platform_.name);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_platform"), platform_.name);
         if (entry_.size)
-            addFactRow(tr("gamehubnx/detail/fact_size"),
+            detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_size"),
                        formatBytes(entry_.size));
-        addFactRow(tr("gamehubnx/detail/fact_release"), detail_.year);
-        addFactRow(tr("gamehubnx/detail/fact_genre"), detail_.genre);
-        addFactRow(tr("gamehubnx/detail/fact_developer"), detail_.developer);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_release"), detail_.year);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_genre"), detail_.genre);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_developer"), detail_.developer);
         if (detail_.publisher != detail_.developer)
-            addFactRow(tr("gamehubnx/detail/fact_publisher"),
+            detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_publisher"),
                        detail_.publisher);
-        addFactRow(tr("gamehubnx/detail/fact_region"), detail_.region);
-        addFactRow(tr("gamehubnx/detail/fact_languages"), detail_.languages);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_region"), detail_.region);
+        detail_page::addFactRow(facts_, tr("gamehubnx/detail/fact_languages"), detail_.languages);
 
         const std::string file =
             gamehub::fileNameFromUrl(entry_.directUrl);
@@ -255,43 +197,12 @@ private:
                                     ? brls::Visibility::GONE
                                     : brls::Visibility::VISIBLE);
 
-        // Las miniaturas se crean una sola vez, al llegar la ficha: esta
-        // pantalla no se recicla como una lista.
-        if (!detail_.screenshots.empty() && metadata_) {
-            const std::vector<std::string> shots = detail_.screenshots;
-            const std::string viewerTitle =
-                detail_.title.empty() ? entry_.title : detail_.title;
-            for (size_t i = 0; i < shots.size(); ++i) {
-                auto* thumb = new AsyncRgbaImage();
-                thumb->setWidth(300);
-                thumb->setHeight(170);
-                thumb->setMarginRight(12);
-                thumb->setCornerRadius(theme::kRadiusSmall);
-                thumb->setScalingType(brls::ImageScalingType::FIT);
-                // Sin recorte, para que FIT no pinte las bandas dentro de la
-                // vista. Mismo ajuste que la portada y que la ficha de Switch.
-                thumb->setClipsToBounds(false);
-                thumb->setFocusable(true);
-                // ARRIBA lleva al boton principal, como en la ficha de
-                // Switch. Ahora si hay a donde ir --antes no habia ningun otro
-                // enfocable-- y sin esto el carril es un callejon: el paseo del
-                // foco no encuentra nada, choca con el eje horizontal del
-                // contenedor (que ignora ARRIBA) y muere ahi.
-                thumb->setCustomNavigationRoute(brls::FocusDirection::UP,
-                                                primary_);
-                thumb->registerClickAction(
-                    [this, shots, i, viewerTitle](brls::View*) {
-                        brls::Application::pushActivity(
-                            new ScreenshotViewerActivity(metadata_, shots, i,
-                                                         viewerTitle));
-                        return true;
-                    });
-                shotsRow_->addView(thumb);
-                loadImageInto(thumb, metadata_, shots[i],
-                              GameMetadataService::kImageDimCard);
-            }
-            shotsRow_->setVisibility(brls::Visibility::VISIBLE);
-        }
+        // El carril compartido: mismas medidas, mismo trato de las bandas y
+        // misma ruta de foco que la ficha de Switch. Se construye una sola vez,
+        // al llegar la ficha; esta pantalla no se recicla como una lista.
+        detail_page::addScreenshotRail(
+            right_, metadata_, detail_.screenshots,
+            detail_.title.empty() ? entry_.title : detail_.title, primary_);
 
         // El boton de versiones solo aparece cuando hay mas de una. "1 version"
         // no ofrece nada y estorba.
@@ -393,11 +304,11 @@ private:
     AsyncRgbaImage* cover_ = nullptr;
     brls::Label* title_ = nullptr;
     brls::Box* facts_ = nullptr;
+    brls::Box* right_ = nullptr;
     brls::Button* primary_ = nullptr;
     brls::Button* versions_ = nullptr;
     brls::Label* warning_ = nullptr;
     brls::Label* status_ = nullptr;
-    brls::Box* shotsRow_ = nullptr;
     brls::Label* description_ = nullptr;
     brls::Label* trailer_ = nullptr;
     std::shared_ptr<std::atomic<bool>> alive_ =

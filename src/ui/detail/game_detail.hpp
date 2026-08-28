@@ -33,6 +33,7 @@
 #include "ui/common/install_target_dialog.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
+#include "ui/detail/detail_page.hpp"
 #include "ui/detail/screenshot_viewer.hpp"
 #include "ui/detail/torrent_selection.hpp"
 #include "ui/debrid_ui.hpp"
@@ -187,11 +188,13 @@ public:
     }
 
 private:
-    static constexpr float kLeftColumnWidth = 320.0f;
+    // Las medidas viven en detail_page para que las dos fichas no puedan
+    // discrepar. El comentario de por que son estas y no otras esta alli.
+    static constexpr float kLeftColumnWidth = detail_page::kLeftColumnWidth;
     // coverUrl is the metadata banner for nearly every real entry, and an
     // eShop banner is 16:9 — at 320 wide it already draws 180 tall under FIT,
     // so anything past 200 was letterbox the column could not afford.
-    static constexpr float kCoverHeight = 200.0f;
+    static constexpr float kCoverHeight = detail_page::kCoverHeight;
 
     // Left column: cover, full-width Install / Select files, size, status (F3).
     //
@@ -358,54 +361,12 @@ private:
 
         buildFactsTable(right);
 
-        const std::vector<std::string>& screenshots = presentation_.screenshots;
-        if (!screenshots.empty()) {
-            auto* shots = new brls::Label();
-            shots->setFontSize(theme::kFontSmall);
-            shots->setMarginTop(24);
-            shots->setMarginBottom(8);
-            shots->setTextColor(theme::textSecondary());
-            shots->setText(tr("gamehubnx/detail/screenshots"));
-            right->addView(shots);
-
-            std::string viewerTitle = presentation_.title;
-            auto* rail = new brls::Box(brls::Axis::ROW);
-            rail->setHeight(180);
-            for (size_t i = 0; i < screenshots.size(); ++i) {
-                auto* image = new AsyncRgbaImage();
-                image->setWidth(300);
-                image->setHeight(170);
-                image->setMarginRight(12);
-                image->setCornerRadius(theme::kRadiusSmall);
-                image->setFocusable(true);
-                image->setScalingType(brls::ImageScalingType::FIT);
-                image->setClipsToBounds(false);  // no letterbox edge bands
-                // The rail is the only focusable thing in this column — the
-                // fact table and the description are plain Labels. So the
-                // upward walk finds nothing here, then hits content's ROW axis
-                // (which ignores UP) and dies at the frame: the rail reads as a
-                // dead end. Route UP to the primary action explicitly. DOWN is
-                // left to the normal walk, which reaches "show more" when the
-                // description has one; a dead end at a column's bottom is what
-                // anyone expects anyway.
-                image->setCustomNavigationRoute(brls::FocusDirection::UP,
-                                                primary_);
-                // O6: A opens the fullscreen pager at this shot.
-                image->registerClickAction(
-                    [this, screenshots, i, viewerTitle](brls::View*) {
-                        brls::Application::pushActivity(
-                            new ScreenshotViewerActivity(metadata_, screenshots,
-                                                         i, viewerTitle));
-                        return true;
-                    });
-                loadImageInto(image, metadata_, screenshots[i]);
-                rail->addView(image);
-            }
-            auto* gallery = new brls::HScrollingFrame();
-            gallery->setHeight(190);
-            gallery->setContentView(rail);
-            right->addView(gallery);
-        }
+        // El carril lo pinta detail_page, igual que en la ficha de ROM: mismas
+        // medidas, mismo trato de las bandas del ajuste y misma ruta de foco
+        // hacia el boton principal.
+        detail_page::addScreenshotRail(right, metadata_,
+                                       presentation_.screenshots,
+                                       presentation_.title, primary_);
 
         buildDescription(right);
 
@@ -547,25 +508,11 @@ private:
         return tr("gamehubnx/detail/mods_count", count);
     }
 
+    // La fila la pinta detail_page, compartida con la ficha de ROM. Tener dos
+    // copias fue lo que dejo las dos pantallas con distinto aspecto.
     void addFactRow(brls::Box* table, const std::string& name,
                     const std::string& value) {
-        if (value.empty())
-            return;
-        auto* row = new brls::Box(brls::Axis::ROW);
-        row->setMarginTop(8);
-        auto* key = new brls::Label();
-        key->setFontSize(theme::kFontCaption);
-        key->setTextColor(theme::textTertiary());
-        key->setWidth(160);
-        key->setText(name);
-        row->addView(key);
-        auto* val = new brls::Label();
-        val->setFontSize(theme::kFontCaption);
-        val->setTextColor(theme::textSecondary());
-        val->setGrow(1);
-        val->setText(value);
-        row->addView(val);
-        table->addView(row);
+        detail_page::addFactRow(table, name, value);
     }
 
     // S5: reversible "Show more" instead of a hard cut.

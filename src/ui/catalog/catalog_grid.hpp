@@ -248,6 +248,20 @@ public:
         cover_->setBorderColor(highlight ? theme::accent()
                                          : brls::TRANSPARENT);
         iconPreserveAspect_ = info.iconPreserveAspect;
+        // La tarjeta se recicla: la proporcion de la imagen anterior no vale
+        // para esta, y dejarla puesta pintaria la caja con la forma del juego
+        // que ocupaba antes esta celda.
+        ownAspect_ = 0.0f;
+        image_->setOnDecoded([this](int width, int height) {
+            if (width <= 0 || height <= 0)
+                return;
+            const float aspecto =
+                static_cast<float>(width) / static_cast<float>(height);
+            if (aspecto == ownAspect_)
+                return;
+            ownAspect_ = aspecto;
+            applyZoom(focused_);
+        });
         // Sin arte tampoco se ensancha: una tarjeta con la inicial de relleno
         // al lado de otras con portada 2:3 rompia la reja visualmente.
         posterPlate_ = info.iconPreserveAspect || info.iconUrl.empty();
@@ -270,6 +284,7 @@ public:
 
     void onFocusGained() override {
         brls::Box::onFocusGained();
+        focused_ = true;
         applyZoom(true);
         name_->setAnimated(true);
         if (onFocus_)
@@ -278,6 +293,7 @@ public:
 
     void onFocusLost() override {
         brls::Box::onFocusLost();
+        focused_ = false;
         applyZoom(false);
         name_->setAnimated(false);
     }
@@ -290,23 +306,45 @@ public:
 private:
     // UI_PLAN F5: subtle cover zoom while the card is focused. The cover box
     // clips, so the art scales in place without shifting the layout.
+    // Caja que ocupa la portada dentro del hueco de la tarjeta, ajustada a la
+    // proporcion de ESTA imagen cuando ya se conoce.
+    //
+    // La proporcion no se puede fijar por plataforma: en 3DS conviven cajas
+    // apaisadas de 1200x1029 con arte vertical de 1200x1800, asi que cualquier
+    // valor unico deja bandas en la mitad de las tarjetas. Hasta que la imagen
+    // llega se usa la que publica la tienda, que evita el salto; al decodificar
+    // se corrige con la de verdad.
+    void coverBox(float& width, float& height) const {
+        const float aspecto = ownAspect_ > 0.0f ? ownAspect_ : coverAspect();
+        if (aspecto <= 0.0f) {
+            width = grid::kCardWidth;
+            height = grid::kCoverHeight;
+            return;
+        }
+        width = grid::kCoverHeight * aspecto;
+        if (width > grid::kCardWidth)
+            width = grid::kCardWidth;
+        height = width / aspecto;
+        if (height > grid::kCoverHeight)
+            height = grid::kCoverHeight;
+    }
+
     void applyZoom(bool focused) {
         const float zoom = focused ? grid::kFocusZoom : 1.0f;
-        const float baseWidth = iconPreserveAspect_
-            ? grid::gameCoverWidth()
-            : grid::kCardWidth;
-        const float baseHeight = iconPreserveAspect_
-            ? grid::gameCoverHeight()
-            : grid::kCoverHeight;
+        float fitWidth = 0.0f;
+        float fitHeight = 0.0f;
+        coverBox(fitWidth, fitHeight);
+        const float baseWidth = iconPreserveAspect_ ? fitWidth
+                                                    : grid::kCardWidth;
+        const float baseHeight = iconPreserveAspect_ ? fitHeight
+                                                     : grid::kCoverHeight;
         // El RECUADRO, no solo la imagen. Se quedaba con los 180 de la tarjeta
         // mientras el arte se dibujaba a 120 centrado dentro: el resultado eran
         // dos bandas de fondo a los lados de cada portada. Ahora el plato mide
         // lo que la portada y se centra en el hueco de la tarjeta, que sigue
         // midiendo lo mismo para que las columnas no bailen.
-        const float plateWidth = posterPlate_ ? grid::gameCoverWidth()
-                                              : grid::kCardWidth;
-        const float plateHeight = posterPlate_ ? grid::gameCoverHeight()
-                                               : grid::kCoverHeight;
+        const float plateWidth = posterPlate_ ? fitWidth : grid::kCardWidth;
+        const float plateHeight = posterPlate_ ? fitHeight : grid::kCoverHeight;
         cover_->setWidth(plateWidth);
         cover_->setHeight(plateHeight);
         cover_->setMarginLeft((grid::kCardWidth - plateWidth) / 2.0f);
@@ -338,6 +376,11 @@ private:
     std::string infoHash_;
     int shelfRow_ = -1;
     bool iconPreserveAspect_ = false;
+    // Proporcion de la portada de ESTA tarjeta, 0 hasta que la imagen llega.
+    float ownAspect_ = 0.0f;
+    // Se recuerda para poder recolocar la caja al decodificar sin perder el
+    // aumento del foco.
+    bool focused_ = false;
     bool posterPlate_ = false;
     Activate onActivate_;
     Focused onFocus_;
