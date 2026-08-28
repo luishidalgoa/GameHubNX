@@ -342,13 +342,22 @@ void testPartialStreamFailureRetriesWithoutPacerDeadlock() {
         error = "intentional partial failure";
         return false;
     };
+    // Un enlace por intento. El ultimo se queda corto a proposito: cuando el
+    // proveedor ya no da enlace nuevo, la instalacion tiene que seguir con el
+    // que tenia --pedir el enlace es red, y es lo que falla en un corte-- en
+    // vez de abandonar ahi.
     std::vector<std::pair<std::string, std::string>> script = {
         {"mylist", infoReadyJson("Example/game.nsp", content.size())},
         {"requestdl", "{\"success\":true,\"data\":\"https://x/first\"}"},
         {"requestdl", "{\"success\":true,\"data\":\"https://x/second\"}"},
+        {"requestdl", "{\"success\":true,\"data\":\"https://x/third\"}"},
+        {"requestdl", "{\"success\":true,\"data\":\"https://x/fourth\"}"},
     };
     TorboxProvider provider("k", scriptedTransport(&script));
     DebridTransfer transfer(provider, fetcher);
+    // Cinco intentos, sin dormir: la escalera de produccion suma 52 segundos y
+    // aqui lo que se comprueba es que reintenta, no cuanto espera.
+    transfer.setRetryWaits({0, 0, 0, 0, 0});
     DebridTaskSpec spec;
     spec.taskId = "aabbccddaabbccddaabbccddaabbccddaabbccdd";
     spec.debridId = "42";
@@ -362,7 +371,9 @@ void testPartialStreamFailureRetriesWithoutPacerDeadlock() {
         spec, [] { return false; }, [](const DebridProgress&) {}, debridId,
         error);
     assert(result == DebridRunResult::Failed);
-    assert(attempts == 2);
+    assert(attempts == 5);
+    // Y el motivo que llega arriba es el de la transferencia, no el del ultimo
+    // intento de pedir enlace: ese fallo es opcional y no puede tapar el real.
     assert(error == "intentional partial failure");
 }
 
