@@ -33,7 +33,11 @@ extern "C" int __wrap_rename(const char* oldPath, const char* newPath) {
             errno = EACCES;
             return -1;
         }
-        if (std::strcmp(newPath, Target) == 0 && access(Target, F_OK) == 0) {
+        // En la tarjeta, rename() no sobrescribe NINGUN destino. Antes esto
+        // solo se emulaba para el NRO, y por eso la prueba no vio que publicar
+        // el ayudante fallaba en la segunda actualizacion y en todas las
+        // siguientes.
+        if (access(newPath, F_OK) == 0) {
             errno = EEXIST;
             return -1;
         }
@@ -328,6 +332,55 @@ void testHelperPublishFailurePreservesPreviousHelper() {
     unlink(HelperSource);
 }
 
+// Actualizar dos veces seguidas. Es el fallo que se veia en el aparato:
+// "Unable to publish update helper: File exists" en cada intento a partir del
+// segundo, porque el ayudante de la vez anterior seguia ahi y en la tarjeta
+// rename() no sobrescribe.
+void testSecondUpdateRepublishesHelper() {
+    unlink(Target);
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
+    unlink("/tmp/gamehubnx-updater.nro");
+    unlink("/tmp/gamehubnx-updater.nro.tmp");
+    unlink("/tmp/gamehubnx-updater.nro.prev");
+    write(Target, "old");
+    write(HelperSource, "new minimal updater helper");
+    const std::string payload = "new verified gamehubnx nro";
+    const std::string checksum =
+        "678bf7872903344e3bec856a3e801bc39186daead368f725e4efb566c15ef8c9";
+    gamehubnx::UpdateService service(Target,
+        [checksum](const std::string&, size_t, std::string& body,
+                   std::string&) { body = checksum + "  gamehubnx.nro\n"; return true; },
+        [payload](const std::string&, const std::string& path, size_t,
+                  std::string&) { write(path, payload); return true; },
+        HelperSource);
+    gamehubnx::ReleaseInfo release{"v1.2.3",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro",
+        "https://github.com/luishidalgoa/GameHubNX/releases/download/v1.2.3/gamehubnx.nro.sha256"};
+
+    emulateSwitchRename = true;
+    std::string error;
+    assert(service.install(release, error));
+    assert(access(service.helperPath().c_str(), F_OK) == 0);
+
+    // La segunda, con el ayudante de la primera ya en su sitio.
+    error.clear();
+    const bool second = service.install(release, error);
+    emulateSwitchRename = false;
+    assert(second);
+    assert(error.empty());
+    assert(access(service.helperPath().c_str(), F_OK) == 0);
+    // Y sin dejar el apartado detras.
+    assert(access("/tmp/gamehubnx-updater.nro.prev", F_OK) != 0);
+    assert(access("/tmp/gamehubnx-updater.nro.tmp", F_OK) != 0);
+
+    unlink(Target);
+    unlink("/tmp/gamehubnx-update-test.nro.update");
+    unlink("/tmp/gamehubnx-update-test.nro.update.sha256");
+    unlink(service.helperPath().c_str());
+    unlink(HelperSource);
+}
+
 } // namespace
 
 int main() {
@@ -338,6 +391,7 @@ int main() {
     testInstallNeverTouchesRunningNro();
     testShutdownInterruptsRetryWait();
     testHelperPublishFailurePreservesPreviousHelper();
+    testSecondUpdateRepublishesHelper();
     std::puts("update service tests passed");
     return 0;
 }

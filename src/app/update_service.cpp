@@ -554,7 +554,26 @@ bool UpdateService::install(const ReleaseInfo& release, std::string& error) cons
         error = "Unable to verify update helper: " + helperError;
         return false;
     }
-    if (rename(helperTemporary.c_str(), helper.c_str()) != 0) {
+    // Hay que dejar libre el destino ANTES de renombrar.
+    //
+    // En la tarjeta de la consola rename() NO sobrescribe: si el destino
+    // existe, falla con EEXIST. Y el ayudante de la actualizacion anterior
+    // sigue ahi --solo se borra al confirmar una actualizacion completa-- asi
+    // que la PRIMERA actualizacion funcionaba y TODAS las siguientes morian con
+    // "Unable to publish update helper: File exists". Salia en el log del
+    // aparato, dos veces seguidas, tras cada intento de actualizar. No es un
+    // caso nuevo: update_transaction.c ya libera el destino antes de cada
+    // rename por lo mismo.
+    //
+    // Pero el anterior se APARTA, no se borra: si el renombrado falla despues,
+    // hay que poder devolverlo. Borrarlo a secas dejaria a la app sin ayudante
+    // tras un fallo, y entonces no podria ni actualizar ni recuperarse -- peor
+    // que no haber intentado nada. Es lo que exige
+    // testHelperPublishFailurePreservesPreviousHelper.
+    const std::string helperPrevious = helper + ".prev";
+    unlink(helperPrevious.c_str());
+    const bool hadHelper = access(helper.c_str(), F_OK) == 0;
+    if (hadHelper && rename(helper.c_str(), helperPrevious.c_str()) != 0) {
         helperError = std::strerror(errno);
         unlink(helperTemporary.c_str());
         unlink(marker.c_str());
@@ -562,6 +581,18 @@ bool UpdateService::install(const ReleaseInfo& release, std::string& error) cons
         error = "Unable to publish update helper: " + helperError;
         return false;
     }
+    if (rename(helperTemporary.c_str(), helper.c_str()) != 0) {
+        helperError = std::strerror(errno);
+        if (hadHelper)
+            rename(helperPrevious.c_str(), helper.c_str());
+        unlink(helperPrevious.c_str());
+        unlink(helperTemporary.c_str());
+        unlink(marker.c_str());
+        unlink(temporary.c_str());
+        error = "Unable to publish update helper: " + helperError;
+        return false;
+    }
+    unlink(helperPrevious.c_str());
 #ifdef __SWITCH__
     const Result commit = fsdevCommitDevice("sdmc");
     if (R_FAILED(commit)) {
