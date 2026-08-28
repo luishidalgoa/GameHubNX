@@ -26,6 +26,11 @@ using Json = nlohmann::json;
 
 // Fill an empty PIN with a random 6-digit value. Returns true when a new PIN
 // was written into `values` (caller should persist).
+// La clave del FTP se rellena sola SOLO la primera vez, cuando no hay fichero
+// de ajustes todavia. Vaciarla a mano despues es una eleccion valida --deja el
+// servidor abierto en la red local, que es cosa de quien lo enciende-- y la
+// aplicacion no la deshace por su cuenta. Antes se regeneraba siempre y era
+// imposible dejarlo sin clave.
 bool ensureWebPin(AppSettingsData& values) {
     if (!values.ftpPin.empty())
         return false;
@@ -178,6 +183,9 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
     // kSettingsVersion, so a count the user raises afterwards sticks.
     if (fileVersion < 2)
         values.maxActiveDownloads = kMinActiveDownloads;
+    // Una clave editada a mano que no valga se limpia --dejarla puesta seria
+    // una clave que no funciona-- pero NO se sustituye por otra: quedarse sin
+    // clave es un estado legitimo.
     if (!isValidWebPin(values.ftpPin))
         values.ftpPin.clear();
     // v3 keys: absent in an older file, so only read them when present and
@@ -511,16 +519,10 @@ bool AppSettings::load(std::string& error) {
     AppSettingsData parsed;
     if (!parseSettings(buffer.str(), parsed, error))
         return false;
-    if (ensureWebPin(parsed)) {
-        // Persist the generated PIN when possible, but keep the parsed file
-        // in memory either way — a full/RO SD must not discard the rest of
-        // the settings the user already had.
-        std::string writeError;
-        if (!write(parsed, writeError)) {
-            diagnostic_error("settings", "web_pin", "error=%s",
-                             writeError.c_str());
-        }
-    }
+    // NO se rellena la clave aqui. Un fichero que ya existe con la clave vacia
+    // es alguien que la borro a proposito, y regenerarla convertia "sin clave"
+    // en un estado imposible de alcanzar. La clave solo se genera en una
+    // instalacion nueva, mas arriba.
     values_ = parsed;
     ++generation_;
     return true;
@@ -564,7 +566,6 @@ bool AppSettings::update(const AppSettingsData& values, std::string& error) {
         error = "La clave del FTP tiene que ser de 4 a 8 digitos.";
         return false;
     }
-    ensureWebPin(next);
     if (!write(next, error))
         return false;
     values_ = next;

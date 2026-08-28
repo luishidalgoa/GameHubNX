@@ -699,7 +699,8 @@ bool CatalogService::fetchGameDetail(int gameId,
 
 bool CatalogService::fetchPlatformIndex(const std::string& slug,
                                         std::vector<CatalogEntry>& out,
-                                        std::string& error) const {
+                                        std::string& error,
+                                        float* aspect) const {
     if (slug.empty()) {
         error = "gamehub: platform index needs a slug";
         return false;
@@ -721,6 +722,14 @@ bool CatalogService::fetchPlatformIndex(const std::string& slug,
     std::string body;
     if (!httpGet(url, body, error, gamehub::kCatalogUrl))
         return false;
+    if (aspect) {
+        int width = 0;
+        int height = 0;
+        *aspect = gamehub::parseCoverAspect(body, width, height) &&
+                          width > 0 && height > 0
+                      ? static_cast<float>(width) / static_cast<float>(height)
+                      : 0.0f;
+    }
     return gamehub::parsePlatformIndex(body, slug, out, error);
 }
 

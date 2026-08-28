@@ -70,18 +70,37 @@ public:
         cover_->setClipsToBounds(false);
         left->addView(cover_);
 
-        facts_ = new brls::Label();
-        facts_->setFontSize(theme::kFontCaption);
-        facts_->setTextColor(theme::textSecondary());
-        facts_->setMarginTop(16);
-        left->addView(facts_);
+        // Los BOTONES, como en la ficha de Switch. Antes descargar era solo la
+        // accion A del marco y no habia nada que mirar ni que pulsar: la
+        // pantalla parecia una lectura, no una ficha desde la que se hace algo.
+        primary_ = new brls::Button();
+        primary_->setStyle(&brls::BUTTONSTYLE_PRIMARY);
+        primary_->setText(tr("gamehubnx/platforms/download"));
+        primary_->setMarginTop(20);
+        primary_->registerClickAction([this](brls::View*) {
+            startDownload();
+            return true;
+        });
+        left->addView(primary_);
 
-        // El aviso de compatibilidad va aqui y no escondido en la lista: es lo
-        // que decide si merece la pena descargar esto.
+        // Solo aparece cuando hay mas de una edicion. Un boton "Versiones (1)"
+        // no ofrece nada y estorba.
+        versions_ = new brls::Button();
+        versions_->setStyle(&brls::BUTTONSTYLE_BORDERLESS);
+        versions_->setMarginTop(8);
+        versions_->setVisibility(brls::Visibility::GONE);
+        versions_->registerClickAction([this](brls::View*) {
+            chooseVersion();
+            return true;
+        });
+        left->addView(versions_);
+
+        // El aviso de compatibilidad va aqui, pegado al boton: es lo que decide
+        // si merece la pena pulsarlo.
         warning_ = new brls::Label();
         warning_->setFontSize(theme::kFontCaption);
         warning_->setTextColor(theme::warning());
-        warning_->setMarginTop(10);
+        warning_->setMarginTop(12);
         left->addView(warning_);
 
         columns->addView(left);
@@ -102,6 +121,14 @@ public:
         status_->setMarginTop(6);
         status_->setText(tr("gamehubnx/common/loading"));
         right->addView(status_);
+
+        // Tabla de datos, en la columna derecha y con el mismo formato que la
+        // ficha de Switch: etiqueta a la izquierda, valor a la derecha. Antes
+        // eran ocho lineas sueltas debajo de la portada, sin decir que era cada
+        // una, y se salian por abajo de la columna.
+        facts_ = new brls::Box(brls::Axis::COLUMN);
+        facts_->setMarginTop(8);
+        right->addView(facts_);
 
         // El carril de capturas, con el alto reservado como en la ficha de
         // Switch: la fila mide mas que las imagenes para que el recuadro de
@@ -151,40 +178,44 @@ public:
                            brls::Application::popActivity();
                            return true;
                        });
-        registerAction(tr("gamehubnx/platforms/download"), brls::BUTTON_A,
-                       [this](brls::View*) {
-                           startDownload();
-                           return true;
-                       });
+
     }
 
 private:
+    void addFactRow(const std::string& name, const std::string& value) {
+        if (value.empty())
+            return;
+        auto* row = new brls::Box(brls::Axis::ROW);
+        row->setMarginTop(8);
+        auto* key = new brls::Label();
+        key->setFontSize(theme::kFontCaption);
+        key->setTextColor(theme::textTertiary());
+        key->setWidth(160);
+        key->setText(name);
+        row->addView(key);
+        auto* val = new brls::Label();
+        val->setFontSize(theme::kFontCaption);
+        val->setTextColor(theme::textSecondary());
+        val->setGrow(1);
+        val->setText(value);
+        row->addView(val);
+        facts_->addView(row);
+    }
+
     void applyKnown() {
-        std::string facts;
-        auto line = [&facts](const std::string& text) {
-            if (text.empty())
-                return;
-            if (!facts.empty())
-                facts += "\n";
-            facts += text;
-        };
-        line(platform_.name);
+        facts_->clearViews();
+        addFactRow(tr("gamehubnx/detail/fact_platform"), platform_.name);
         if (entry_.size)
-            line(formatBytes(entry_.size));
-        if (!detail_.year.empty())
-            line(detail_.year);
-        if (!detail_.genre.empty())
-            line(detail_.genre);
-        if (!detail_.developer.empty())
-            line(detail_.developer);
-        if (!detail_.publisher.empty() &&
-            detail_.publisher != detail_.developer)
-            line(detail_.publisher);
-        if (!detail_.region.empty())
-            line(detail_.region);
-        if (!detail_.languages.empty())
-            line(detail_.languages);
-        facts_->setText(facts);
+            addFactRow(tr("gamehubnx/detail/fact_size"),
+                       formatBytes(entry_.size));
+        addFactRow(tr("gamehubnx/detail/fact_release"), detail_.year);
+        addFactRow(tr("gamehubnx/detail/fact_genre"), detail_.genre);
+        addFactRow(tr("gamehubnx/detail/fact_developer"), detail_.developer);
+        if (detail_.publisher != detail_.developer)
+            addFactRow(tr("gamehubnx/detail/fact_publisher"),
+                       detail_.publisher);
+        addFactRow(tr("gamehubnx/detail/fact_region"), detail_.region);
+        addFactRow(tr("gamehubnx/detail/fact_languages"), detail_.languages);
 
         const std::string file =
             gamehub::fileNameFromUrl(entry_.directUrl);
@@ -241,11 +272,13 @@ private:
                 // vista. Mismo ajuste que la portada y que la ficha de Switch.
                 thumb->setClipsToBounds(false);
                 thumb->setFocusable(true);
-                // La ficha de Switch enruta ARRIBA a su boton principal porque
-                // el carril seria un callejon sin salida. Aqui NO se hace: no
-                // hay ningun otro enfocable en la pantalla --descargar es una
-                // accion del marco, con A-- asi que no habria a donde ir.
-                // Apuntar a una etiqueta seria aparentar un arreglo sin serlo.
+                // ARRIBA lleva al boton principal, como en la ficha de
+                // Switch. Ahora si hay a donde ir --antes no habia ningun otro
+                // enfocable-- y sin esto el carril es un callejon: el paseo del
+                // foco no encuentra nada, choca con el eje horizontal del
+                // contenedor (que ignora ARRIBA) y muere ahi.
+                thumb->setCustomNavigationRoute(brls::FocusDirection::UP,
+                                                primary_);
                 thumb->registerClickAction(
                     [this, shots, i, viewerTitle](brls::View*) {
                         brls::Application::pushActivity(
@@ -260,23 +293,30 @@ private:
             shotsRow_->setVisibility(brls::Visibility::VISIBLE);
         }
 
-        // El recuento de versiones solo se dice cuando hay mas de una: "1
-        // versión" no es informacion, es ruido.
-        status_->setText(detail_.files.size() > 1
-                             ? tr("gamehubnx/platforms/versions",
-                                  detail_.files.size())
-                             : std::string());
+        // El boton de versiones solo aparece cuando hay mas de una. "1 version"
+        // no ofrece nada y estorba.
+        if (detail_.files.size() > 1) {
+            versions_->setText(
+                tr("gamehubnx/platforms/versions", detail_.files.size()));
+            versions_->setVisibility(brls::Visibility::VISIBLE);
+        }
+        status_->setText(std::string());
     }
 
     // Con una sola descarga se encola y ya. Con varias se pregunta: son las
     // ediciones regionales del mismo juego, y bajar la primera a ciegas es lo
     // que hacia la lista antes de existir esta pantalla.
+    // Descargar la edicion principal. Elegir otra es el otro boton: mezclar
+    // las dos cosas en uno obligaba a pasar por un menu incluso cuando solo hay
+    // una version.
     void startDownload() {
-        if (detail_.files.size() <= 1) {
-            onDownload_(entry_, destination_);
-            brls::Application::popActivity();
+        onDownload_(entry_, destination_);
+        brls::Application::popActivity();
+    }
+
+    void chooseVersion() {
+        if (detail_.files.size() <= 1)
             return;
-        }
         std::vector<std::string> labels;
         for (const gamehub::ShopGameFile& file : detail_.files) {
             std::string label = file.region.empty()
@@ -352,7 +392,9 @@ private:
     brls::AppletFrame* frame_ = nullptr;
     AsyncRgbaImage* cover_ = nullptr;
     brls::Label* title_ = nullptr;
-    brls::Label* facts_ = nullptr;
+    brls::Box* facts_ = nullptr;
+    brls::Button* primary_ = nullptr;
+    brls::Button* versions_ = nullptr;
     brls::Label* warning_ = nullptr;
     brls::Label* status_ = nullptr;
     brls::Box* shotsRow_ = nullptr;

@@ -188,7 +188,7 @@ public:
         //
         // Arranca en la raiz de la tarjeta y no en la carpeta de descargas: lo
         // que hay que recolocar suele estar justamente fuera de ella.
-        tabs->addNavTab(tr("gamehubnx/browser/title"), NavIconType::Files,
+        tabs->addNavTab(tr("gamehubnx/browser/tab"), NavIconType::Files,
                         [] { return new FileBrowserView("sdmc:/"); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,

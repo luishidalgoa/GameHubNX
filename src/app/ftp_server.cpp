@@ -7,6 +7,8 @@ extern "C" {
 #include "../core/util.h"
 }
 
+#include "app_paths.h"
+
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
@@ -30,6 +32,9 @@ constexpr size_t kChunk = 64 * 1024;
 // Si no llega nada en este tiempo se corta: un cliente que se va sin decir
 // adios dejaria el servidor ocupado para siempre.
 constexpr int kIdleSeconds = 120;
+
+// El registro de la aplicacion, que necesita un camino propio para leerse.
+const char* const kLogPath = GHNX_PATH("gamehubnx.log");
 
 bool sendAll(socket_t fd, const char* data, size_t size,
              const std::atomic<bool>& stopping) {
@@ -197,6 +202,21 @@ void FtpServer::serve() {
                     continue;
                 }
 
+                if (reply.action == FtpSession::Action::ReportSize) {
+                    struct stat st {};
+                    if (stat(session.path().c_str(), &st) != 0 ||
+                        !S_ISREG(st.st_mode)) {
+                        sendLine(control, "550 No se puede medir", stopping_);
+                    } else {
+                        char text[64];
+                        std::snprintf(text, sizeof(text), "213 %llu",
+                                      static_cast<unsigned long long>(
+                                          st.st_size));
+                        sendLine(control, text, stopping_);
+                    }
+                    continue;
+                }
+
                 if (reply.action == FtpSession::Action::SendListing ||
                     reply.action == FtpSession::Action::SendFile) {
                     if (dataListener < 0) {
@@ -228,6 +248,21 @@ void FtpServer::serve() {
                             session.path());
                         ok = sendAll(data, listing.data(), listing.size(),
                                      stopping_);
+                    } else if (session.path() == kLogPath) {
+                        // El registro de la aplicacion NO se puede abrir con
+                        // fopen: en la consola, un segundo fopen de un fichero
+                        // que este proceso ya tiene abierto devuelve NULL, y el
+                        // registro esta abierto todo el rato. Esta documentado
+                        // en core/util.c, que por eso ofrece log_read_tail para
+                        // leerlo por el mismo descriptor.
+                        //
+                        // Merece el caso especial: sacar el registro es
+                        // justamente para lo que existe este servidor, y era el
+                        // unico fichero que no podia dar.
+                        std::vector<char> texto(4 * 1024 * 1024);
+                        const size_t leidos =
+                            log_read_tail(texto.data(), texto.size());
+                        ok = sendAll(data, texto.data(), leidos, stopping_);
                     } else {
                         std::FILE* file =
                             std::fopen(session.path().c_str(), "rb");

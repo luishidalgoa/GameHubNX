@@ -27,6 +27,23 @@ extern "C" {
 
 namespace gamehubnx::ui {
 
+// Cierto cuando el foco esta DENTRO de esta vista.
+//
+// Sirve para no robar el foco al cargar. Una pantalla que hace giveFocus al
+// terminar de cargar se lo quita a la barra lateral mientras el usuario solo
+// esta pasando por encima de su pestana: la carga es asincrona y termina
+// cuando le da la gana, asi que te saca de la navegacion sin haber pedido
+// entrar. Con esto solo se recoloca el foco si ya estaba aqui.
+inline bool focusIsInside(brls::View* view) {
+    if (!view)
+        return false;
+    for (brls::View* current = brls::Application::getCurrentFocus(); current;
+         current = current->getParent())
+        if (current == view)
+            return true;
+    return false;
+}
+
 // ── Proporcion de portada ────────────────────────────────────────────────────
 // Ancho/alto con que se pintan las cajas. El valor por defecto es el del
 // catalogo Langegen (box-art ~393x640 dibujado a 112x180); la tienda GameHub

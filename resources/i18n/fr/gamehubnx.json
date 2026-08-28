@@ -153,6 +153,7 @@
     "players_up_to": "jusqu'à {}",
     "players_single": "1 joueur",
     "fact_size": "Taille",
+    "fact_platform": "Plateforme",
     "fact_title_id": "Title ID",
     "fact_dlc": "DLC",
     "dlc_installed": "{} installés",
@@ -748,6 +749,7 @@
     },
     "browser": {
       "title": "Explorateur de fichiers",
+      "tab": "Fichiers",
       "up": "Remonter",
       "actions": "Actions",
       "mark": "Déplacer ailleurs",

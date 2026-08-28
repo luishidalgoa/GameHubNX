@@ -35,9 +35,29 @@ inline constexpr float kCoverHeight = 180.0f;
 // 180px card slot so they do not get stretched/cropped like square icons.
 inline constexpr float kGameCoverWidth = 112.0f;
 
-/// Ancho de portada para la proporcion en vigor (ver coverAspect() en
-/// ui_helpers.hpp): la tienda publica la suya y sustituye a la constante.
-inline float gameCoverWidth() { return kCoverHeight * coverAspect(); }
+/// Portada para la proporcion en vigor (ver coverAspect() en ui_helpers.hpp):
+/// la tienda publica una por plataforma y sustituye a la constante.
+///
+/// La caja se ajusta DENTRO del hueco de la tarjeta, no solo a lo alto. Las
+/// portadas verticales --Switch, PSP-- caben sobradas de ancho, pero hay
+/// consolas cuya caja es MAS ANCHA que alta: SNES esta en 1,43 y 3DS y DS en
+/// 1,17. Escalando solo por el alto, SNES pedia 257 px de ancho en una tarjeta
+/// de 180 y se subia encima de la vecina. Escalando por el lado que se queda
+/// corto, la portada llena lo que puede sin salirse ni dejar bandas.
+inline float gameCoverWidth() {
+    const float porAlto = kCoverHeight * coverAspect();
+    return porAlto > kCardWidth ? kCardWidth : porAlto;
+}
+
+/// Alto de esa misma caja. Para una portada apaisada sale menor que
+/// kCoverHeight: es lo que evita el relleno negro arriba y abajo.
+inline float gameCoverHeight() {
+    const float aspecto = coverAspect();
+    if (aspecto <= 0.0f)
+        return kCoverHeight;
+    const float porAncho = gameCoverWidth() / aspecto;
+    return porAncho > kCoverHeight ? kCoverHeight : porAncho;
+}
 // Cover + name line (17px) + sub line (15px) + inner margins.
 inline constexpr float kCardHeight = 232.0f;
 inline constexpr float kRowHeight = 248.0f;
@@ -275,6 +295,9 @@ private:
         const float baseWidth = iconPreserveAspect_
             ? grid::gameCoverWidth()
             : grid::kCardWidth;
+        const float baseHeight = iconPreserveAspect_
+            ? grid::gameCoverHeight()
+            : grid::kCoverHeight;
         // El RECUADRO, no solo la imagen. Se quedaba con los 180 de la tarjeta
         // mientras el arte se dibujaba a 120 centrado dentro: el resultado eran
         // dos bandas de fondo a los lados de cada portada. Ahora el plato mide
@@ -282,10 +305,16 @@ private:
         // midiendo lo mismo para que las columnas no bailen.
         const float plateWidth = posterPlate_ ? grid::gameCoverWidth()
                                               : grid::kCardWidth;
+        const float plateHeight = posterPlate_ ? grid::gameCoverHeight()
+                                               : grid::kCoverHeight;
         cover_->setWidth(plateWidth);
+        cover_->setHeight(plateHeight);
         cover_->setMarginLeft((grid::kCardWidth - plateWidth) / 2.0f);
-        image_->setDimensions(baseWidth * zoom, grid::kCoverHeight * zoom);
-        image_->setPositionTop(-(zoom - 1.0f) * grid::kCoverHeight / 2.0f);
+        // Centrada tambien a lo alto: con una portada apaisada sobra hueco en
+        // la tarjeta, y pegarla arriba dejaria las filas descuadradas.
+        cover_->setMarginTop((grid::kCoverHeight - plateHeight) / 2.0f);
+        image_->setDimensions(baseWidth * zoom, baseHeight * zoom);
+        image_->setPositionTop(-(zoom - 1.0f) * baseHeight / 2.0f);
         // El desplazamiento es DENTRO del plato, asi que se mide contra su
         // ancho y no contra el de la tarjeta.
         image_->setPositionLeft((plateWidth - baseWidth * zoom) / 2.0f);

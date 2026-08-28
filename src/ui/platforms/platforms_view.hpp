@@ -265,6 +265,9 @@ private:
                 dataSource_->setPlatforms(std::move(fetched));
                 recyclerHost_->setVisibility(brls::Visibility::VISIBLE);
                 recycler_->reloadData();
+                // Solo si el foco YA estaba aqui: si no, se lo robariamos a la
+            // barra lateral por el mero hecho de pasar por esta pestana.
+            if (focusIsInside(this) || focusIsInside(recyclerHost_))
                 brls::Application::giveFocus(recycler_);
             });
         });

@@ -150,7 +150,14 @@ public:
         load();
     }
 
-    ~RomListActivity() override { alive_->store(false); }
+    ~RomListActivity() override {
+        alive_->store(false);
+        // La proporcion es un ajuste GLOBAL que comparten esta pantalla y el
+        // catalogo de Switch. Se devuelve al salir: si no, las cajas de Switch
+        // se quedarian con la forma de la ultima consola que se abrio.
+        if (previousAspect_ > 0.0f)
+            setCoverAspect(previousAspect_);
+    }
 
     brls::View* createContentView() override { return frame_; }
 
@@ -338,11 +345,20 @@ private:
         brls::async([this, alive, catalog, slug] {
             std::vector<CatalogEntry> fetched;
             std::string error;
-            const bool ok = catalog->fetchPlatformIndex(slug, fetched, error);
-            brls::sync([this, alive, ok, error = std::move(error),
+            float aspect = 0.0f;
+            const bool ok =
+                catalog->fetchPlatformIndex(slug, fetched, error, &aspect);
+            brls::sync([this, alive, ok, aspect, error = std::move(error),
                         fetched = std::move(fetched)]() mutable {
                 if (!alive->load())
                     return;
+                // La forma de la caja de ESTA consola, antes de crear ninguna
+                // tarjeta. Sin esto se pintaban todas con la de Switch y las
+                // portadas salian con bandas negras arriba y abajo.
+                if (aspect > 0.0f) {
+                    previousAspect_ = coverAspect();
+                    setCoverAspect(aspect);
+                }
                 if (!ok) {
                     status_->setText(error);
                     return;
@@ -364,7 +380,9 @@ private:
                 dataSource_->setRoms(std::move(fetched));
                 recyclerHost_->setVisibility(brls::Visibility::VISIBLE);
                 recycler_->reloadData();
-                brls::Application::giveFocus(recycler_);
+                // Aqui SI se toma el foco: esta pantalla se abre a proposito
+            // eligiendo una plataforma, no se cruza uno con ella navegando.
+            brls::Application::giveFocus(recycler_);
             });
         });
     }
@@ -421,6 +439,8 @@ private:
     // Compartida con las tarjetas: recuerda en que columna estaba el foco al
     // cambiar de fila, igual que en el catalogo.
     std::shared_ptr<int> focusColumn_ = std::make_shared<int>(0);
+    // La proporcion que habia antes de entrar, para devolverla al salir.
+    float previousAspect_ = 0.0f;
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };
