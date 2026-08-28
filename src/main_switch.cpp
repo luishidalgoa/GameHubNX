@@ -538,12 +538,17 @@ int main(int argc, char** argv) {
                 // absoluto, asi que Yoga le sigue asignando un left propio y
                 // los dos pueden sumarse.
                 brls::View* parent = view->getParent();
+                // getX() = padre->getX() + getLocalX(), y getLocalX() es la
+                // suma de los tres terminos locales: el left que calcula Yoga,
+                // la traslacion y --si la vista esta desacoplada-- el origen
+                // desacoplado. Separar padre de local basta para discriminar:
+                // dos filas hermanas comparten padre, asi que si una sale
+                // corrida la diferencia esta en su parte local.
                 log_msg("[focus] %s x=%.0f y=%.0f w=%.0f h=%.0f "
-                        "| padre=%.0f yoga=%.0f desacoplada=%d\n",
+                        "| padre=%.0f local=%.0f desacoplada=%d\n",
                         view->describe().c_str(), view->getX(), view->getY(),
                         view->getWidth(), view->getHeight(),
-                        parent ? parent->getX() : 0.0f,
-                        YGNodeLayoutGetLeft(view->getYGNode()),
+                        parent ? parent->getX() : 0.0f, view->getLocalX(),
                         view->isDetached() ? 1 : 0);
             });
 
