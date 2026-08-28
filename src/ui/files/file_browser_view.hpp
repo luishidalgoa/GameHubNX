@@ -193,41 +193,46 @@ private:
             labels.push_back(tr("gamehubnx/browser/paste"));
             actions.push_back(Paste);
         }
+        // Las mismas acciones para fichero y carpeta: mover, renombrar y
+        // borrar. Lo unico que cambia es que borrar una carpeta se lleva lo que
+        // hay dentro, y por eso pregunta con el recuento delante.
         const bool valid = index < entries.size();
-        if (valid && !entries[index].directory) {
+        if (valid) {
             labels.push_back(tr("gamehubnx/browser/mark"));
             actions.push_back(Mark);
             labels.push_back(tr("gamehubnx/browser/rename"));
             actions.push_back(Rename);
-            labels.push_back(tr("gamehubnx/browser/delete"));
-            actions.push_back(DeleteFile);
-        } else if (valid) {
-            labels.push_back(tr("gamehubnx/browser/delete_empty"));
-            actions.push_back(DeleteDirectory);
+            labels.push_back(entries[index].directory
+                                 ? tr("gamehubnx/browser/delete_folder")
+                                 : tr("gamehubnx/browser/delete"));
+            actions.push_back(entries[index].directory ? DeleteDirectory
+                                                       : DeleteFile);
         }
         if (labels.empty())
             return;
 
         const std::string name = valid ? entries[index].name : std::string();
+        const bool isDirectory = valid && entries[index].directory;
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/browser/actions"), labels,
-            [this, actions, name](int chosen) {
+            [this, actions, name, isDirectory](int chosen) {
                 if (chosen < 0 || chosen >= static_cast<int>(actions.size()))
                     return;
                 switch (actions[static_cast<size_t>(chosen)]) {
                     case Paste: paste(); break;
-                    case Mark: mark(name); break;
-                    case Rename: rename(name); break;
+                    case Mark: mark(name, isDirectory); break;
+                    case Rename: rename(name, isDirectory); break;
                     case DeleteFile: confirmDeleteFile(name); break;
-                    case DeleteDirectory: deleteEmptyDirectory(name); break;
+                    case DeleteDirectory: confirmDeleteDirectory(name); break;
                 }
             },
             0);
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
-    void mark(const std::string& name) {
+    void mark(const std::string& name, bool directory) {
         dataSource_->setMarked(files::joinPath(path_, name));
+        markedIsDirectory_ = directory;
         refreshLabels();
         recycler_->reloadData();
     }
@@ -240,7 +245,8 @@ private:
         const std::string base = slash == std::string::npos
             ? from : from.substr(slash + 1);
         std::string error;
-        if (!files::moveFile(from, files::joinPath(path_, base), error)) {
+        if (!files::moveEntry(from, files::joinPath(path_, base),
+                              markedIsDirectory_, error)) {
             brls::Application::notify(error);
             return;
         }
@@ -248,16 +254,17 @@ private:
         reload();
     }
 
-    void rename(const std::string& name) {
+    void rename(const std::string& name, bool directory) {
         brls::Application::getImeManager()->openForText(
-            [this, name](std::string text) {
+            [this, name, directory](std::string text) {
                 // Una barra convertiria un renombrado en un movimiento a otra
                 // carpeta sin que el usuario lo haya pedido.
                 if (text.empty() || text.find('/') != std::string::npos)
                     return;
                 std::string error;
-                if (!files::moveFile(files::joinPath(path_, name),
-                                     files::joinPath(path_, text), error)) {
+                if (!files::moveEntry(files::joinPath(path_, name),
+                                      files::joinPath(path_, text), directory,
+                                      error)) {
                     brls::Application::notify(error);
                     return;
                 }
@@ -284,14 +291,29 @@ private:
         dialog->open();
     }
 
-    void deleteEmptyDirectory(const std::string& name) {
-        std::string error;
-        if (!files::removeEmptyDirectory(files::joinPath(path_, name),
-                                         error)) {
-            brls::Application::notify(error);
-            return;
-        }
-        reload();
+    // Borrar una carpeta se lleva lo que hay dentro, asi que primero se cuenta
+    // y se ensena. Un "¿seguro?" a secas no dice nada; "234 ficheros, 18,4 GB"
+    // deja decidir con la informacion delante, que es lo unico que separa un
+    // borrado querido de un accidente.
+    void confirmDeleteDirectory(const std::string& name) {
+        const std::string full = files::joinPath(path_, name);
+        files::TreeCount count;
+        files::countTree(full, count);
+        const std::string question = count.files == 0
+            ? tr("gamehubnx/browser/delete_confirm", name)
+            : tr("gamehubnx/browser/delete_folder_confirm", name, count.files,
+                 formatBytes(count.bytes));
+        auto* dialog = new brls::Dialog(question);
+        dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
+        dialog->addButton(tr("gamehubnx/browser/delete"), [this, full] {
+            std::string error;
+            if (!files::removeDirectoryTree(full, error)) {
+                brls::Application::notify(error);
+                return;
+            }
+            reload();
+        });
+        dialog->open();
     }
 
     void refreshLabels() {
@@ -331,6 +353,7 @@ private:
     }
 
     std::string path_;
+    bool markedIsDirectory_ = false;
     brls::AppletFrame* frame_ = nullptr;
     brls::Label* pathLabel_ = nullptr;
     brls::Label* markedLabel_ = nullptr;

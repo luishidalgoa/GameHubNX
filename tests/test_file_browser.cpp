@@ -86,11 +86,6 @@ void test_borrar() {
 
     // Y lo que no existe se dice.
     assert(!files::removeFile(kRoot + "/fantasma", error));
-
-    // Carpeta vacia si, con contenido no: es la unica forma de quitar una
-    // carpeta sin llevarse por delante algo que no se ha visto.
-    assert(files::removeEmptyDirectory(kRoot + "/alfa", error));
-    assert(!files::removeEmptyDirectory(kRoot, error));
 }
 
 void test_mover_y_renombrar() {
@@ -130,6 +125,65 @@ void test_mover_y_renombrar() {
     assert(stat((kRoot + "/otro.nds").c_str(), &st) == 0);
 }
 
+void test_borrar_carpeta_con_contenido() {
+    assert(system(("rm -rf " + kRoot).c_str()) != -1);
+    assert(mkdir(kRoot.c_str(), 0755) == 0);
+    const std::string tree = kRoot + "/arbol";
+    assert(mkdir(tree.c_str(), 0755) == 0);
+    assert(mkdir((tree + "/dentro").c_str(), 0755) == 0);
+    writeFile(tree + "/uno.nds", "12345");
+    writeFile(tree + "/dentro/dos.nds", "123");
+    writeFile(kRoot + "/fuera.nds", "no me toques");
+
+    // Antes de borrar se cuenta, que es lo que se le ensena al usuario. Un
+    // "seguro?" a secas no dice nada; "2 ficheros, 8 B" si.
+    files::TreeCount count;
+    assert(files::countTree(tree, count));
+    assert(count.files == 2);
+    assert(count.directories == 1);
+    assert(count.bytes == 8);
+
+    std::string error;
+    assert(files::removeDirectoryTree(tree, error));
+    struct stat st {};
+    assert(stat(tree.c_str(), &st) != 0);
+    // Y lo de al lado sigue donde estaba.
+    assert(stat((kRoot + "/fuera.nds").c_str(), &st) == 0);
+
+    // La raiz de un volumen no se toca ni pidiendolo: vaciar la tarjeta entera
+    // no es nunca lo que alguien queria hacer, y no hay papelera.
+    assert(!files::removeDirectoryTree("sdmc:/", error));
+    assert(!error.empty());
+
+    // Un fichero tampoco se borra por esta puerta.
+    assert(!files::removeDirectoryTree(kRoot + "/fuera.nds", error));
+    assert(stat((kRoot + "/fuera.nds").c_str(), &st) == 0);
+}
+
+void test_mover_carpetas() {
+    std::string error;
+    const std::string a = kRoot + "/carpeta";
+    assert(mkdir(a.c_str(), 0755) == 0);
+    writeFile(a + "/rom.nds", "x");
+
+    // Renombrar una carpeta se lleva su contenido con ella.
+    assert(files::moveEntry(a, kRoot + "/renombrada", /*directory=*/true,
+                            error));
+    struct stat st {};
+    assert(stat((kRoot + "/renombrada/rom.nds").c_str(), &st) == 0);
+
+    // Dentro de si misma, no: dejaria el arbol colgando de ninguna parte.
+    assert(!files::moveEntry(kRoot + "/renombrada",
+                             kRoot + "/renombrada/otra", true, error));
+    assert(!error.empty());
+
+    // Y no se pisa lo que ya hay.
+    assert(mkdir((kRoot + "/ocupada").c_str(), 0755) == 0);
+    assert(!files::moveEntry(kRoot + "/renombrada", kRoot + "/ocupada", true,
+                             error));
+    assert(stat((kRoot + "/renombrada/rom.nds").c_str(), &st) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -137,6 +191,8 @@ int main() {
     test_listar();
     test_borrar();
     test_mover_y_renombrar();
+    test_borrar_carpeta_con_contenido();
+    test_mover_carpetas();
     assert(system(("rm -rf " + kRoot).c_str()) != -1);
     std::printf("file browser tests passed\n");
     return 0;

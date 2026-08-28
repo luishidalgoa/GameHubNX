@@ -20,10 +20,12 @@ namespace gamehubnx::files {
 // se pueden montar arboles de mentira y comprobar los casos raros. La pantalla
 // solo pinta lo que sale de aqui.
 //
-// Deliberadamente NO hay borrado recursivo. Un gestor de ficheros con permiso
-// para vaciar carpetas en la raiz de la SD es lo mas peligroso que podria tener
-// esta aplicacion, y el caso de uso que lo pedia --recolocar ROMs que cayeron
-// en la carpeta equivocada-- se resuelve con ficheros sueltos.
+// El borrado de carpetas SI arrastra su contenido, por peticion expresa. Es lo
+// mas peligroso que hace esta aplicacion, asi que va con tres frenos que no son
+// negociables: se cuenta antes lo que se va a llevar por delante y se ensena,
+// se prohibe la raiz de un volumen --nadie quiere vaciar la tarjeta entera, y
+// ahi no hay vuelta atras-- y hay un tope de profundidad para que un arbol
+// enlazado en circulo no se coma la pila.
 
 // Tope de ruta de la consola. Pasarse no da un error claro: la llamada falla
 // sin mas, o peor, se trunca. Se comprueba antes de tocar nada.
@@ -156,11 +158,63 @@ inline bool removeFile(const std::string& path, std::string& error) {
     return true;
 }
 
-// Borra una carpeta VACIA. Es la unica forma de carpeta que se puede quitar sin
-// riesgo de llevarse por delante algo que no se ha visto.
-inline bool removeEmptyDirectory(const std::string& path, std::string& error) {
+// Cuantos ficheros y cuantos bytes hay bajo una carpeta, contando hacia dentro.
+//
+// Es lo que se le ensena al usuario ANTES de borrar. Un "¿seguro?" a secas no
+// dice nada; "234 ficheros, 18,4 GB" si.
+struct TreeCount {
+    uint64_t files = 0;
+    uint64_t directories = 0;
+    uint64_t bytes = 0;
+};
+
+inline constexpr int kMaxTreeDepth = 32;
+
+inline bool countTree(const std::string& path, TreeCount& out,
+                      int depth = 0) {
+    if (depth > kMaxTreeDepth || !pathWithinLimit(path))
+        return false;
+    DIR* dir = opendir(path.c_str());
+    if (!dir)
+        return false;
+    bool ok = true;
+    while (struct dirent* item = readdir(dir)) {
+        const std::string name = item->d_name;
+        if (name == "." || name == "..")
+            continue;
+        const std::string child = joinPath(path, name);
+        struct stat st {};
+        if (stat(child.c_str(), &st) != 0)
+            continue;
+        if (S_ISDIR(st.st_mode)) {
+            ++out.directories;
+            if (!countTree(child, out, depth + 1))
+                ok = false;
+        } else {
+            ++out.files;
+            out.bytes += static_cast<uint64_t>(st.st_size);
+        }
+    }
+    closedir(dir);
+    return ok;
+}
+
+// Borra una carpeta y todo lo que hay dentro.
+//
+// La raiz de un volumen no se toca ni pidiendolo: vaciar la tarjeta entera no
+// es nunca lo que alguien queria hacer, y no hay papelera de la que sacarlo.
+inline bool removeDirectoryTree(const std::string& path, std::string& error,
+                                int depth = 0) {
     if (!pathWithinLimit(path)) {
         error = "Ruta demasiado larga";
+        return false;
+    }
+    if (depth == 0 && isRootPath(path)) {
+        error = "No se puede borrar la raiz de la tarjeta";
+        return false;
+    }
+    if (depth > kMaxTreeDepth) {
+        error = "Carpetas demasiado anidadas";
         return false;
     }
     struct stat st {};
@@ -168,8 +222,36 @@ inline bool removeEmptyDirectory(const std::string& path, std::string& error) {
         error = "No es una carpeta";
         return false;
     }
+    DIR* dir = opendir(path.c_str());
+    if (!dir) {
+        error = "No se pudo abrir " + path;
+        return false;
+    }
+    std::vector<std::string> children;
+    while (struct dirent* item = readdir(dir)) {
+        const std::string name = item->d_name;
+        if (name == "." || name == "..")
+            continue;
+        children.push_back(name);
+    }
+    closedir(dir);
+    // Se cierra el directorio ANTES de tocarlo: borrar mientras se recorre con
+    // readdir es comportamiento indefinido, y en FAT32 se salta entradas.
+    for (const std::string& name : children) {
+        const std::string child = joinPath(path, name);
+        struct stat cst {};
+        if (stat(child.c_str(), &cst) != 0)
+            continue;
+        if (S_ISDIR(cst.st_mode)) {
+            if (!removeDirectoryTree(child, error, depth + 1))
+                return false;
+        } else if (unlink(child.c_str()) != 0) {
+            error = "No se pudo borrar " + child;
+            return false;
+        }
+    }
     if (rmdir(path.c_str()) != 0) {
-        error = "La carpeta no esta vacia";
+        error = "No se pudo borrar " + path;
         return false;
     }
     return true;
@@ -223,6 +305,40 @@ inline bool moveFile(const std::string& from, const std::string& to,
     in.close();
     out.close();
     unlink(from.c_str());
+    return true;
+}
+
+// Renombra o mueve tambien carpetas.
+//
+// Para una carpeta solo vale rename(): copiar un arbol entre volumenes seria
+// otra cosa --y con la SD de por medio, otra cosa que puede tardar horas--. Si
+// falla se dice, en vez de simularlo a medias.
+inline bool moveEntry(const std::string& from, const std::string& to,
+                      bool directory, std::string& error) {
+    if (!directory)
+        return moveFile(from, to, error);
+    if (!pathWithinLimit(from) || !pathWithinLimit(to)) {
+        error = "Ruta demasiado larga";
+        return false;
+    }
+    if (from == to)
+        return true;
+    struct stat dst {};
+    if (stat(to.c_str(), &dst) == 0) {
+        error = "Ya hay algo con ese nombre";
+        return false;
+    }
+    // Mover una carpeta DENTRO de si misma dejaria el arbol colgando de ninguna
+    // parte. rename() lo rechaza, pero decirlo aqui da un motivo entendible.
+    if (to.size() > from.size() && to.compare(0, from.size(), from) == 0 &&
+        to[from.size()] == '/') {
+        error = "No se puede mover una carpeta dentro de si misma";
+        return false;
+    }
+    if (rename(from.c_str(), to.c_str()) != 0) {
+        error = "No se pudo mover la carpeta";
+        return false;
+    }
     return true;
 }
 
