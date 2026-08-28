@@ -240,6 +240,18 @@ bool installs(const DebridTaskSpec& spec, size_t index,
     return true;
 }
 
+// Reintentos ante un corte de red.
+//
+// Cada intento vuelve a mirar el fichero en disco --o los paquetes ya
+// instalados-- antes de pedir nada, asi que reintentar CONTINUA donde iba en
+// vez de empezar de cero. Con dos intentos seguidos y sin espera, un corte de
+// unos segundos mataba la tarea y obligaba a reanudarla a mano.
+//
+// La espera crece para no machacar un servidor que esta caido, y se corta en
+// cuanto el usuario pausa o cierra.
+constexpr int kTransferAttempts = 5;
+constexpr int kRetryWaitMs[] = {0, 2000, 5000, 15000, 30000};
+
 bool sleepSlices(const std::function<bool()>& shouldStop, int totalMs) {
     int slices = totalMs / 250;
     for (int i = 0; i < slices; ++i) {
@@ -822,7 +834,9 @@ Step downloadPlainFile(RunContext& ctx, size_t kthSelected,
         return Step::Failed;
     }
 
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    for (int attempt = 0; attempt < kTransferAttempts; ++attempt) {
+        if (attempt > 0 && !sleepSlices(*ctx.shouldStop, kRetryWaitMs[attempt]))
+            return Step::Stopped;
         uint64_t offset = 0;
         statSize(localPath, offset);
         Step s = fetchAppend(ctx, url, localPath, offset, file.bytes,
@@ -831,21 +845,24 @@ Step downloadPlainFile(RunContext& ctx, size_t kthSelected,
             break;
         if (s == Step::Stopped)
             return Step::Stopped;
-        if (attempt == 0) {
-            std::string fresh;
-            if (ctx.provider.resolveDownloadUrl(ctx.debridId, info,
-                                                kthSelected, file, fresh,
-                                                ctx.error)) {
-                if (!linkAllowed(ctx.provider, fresh)) {
-                    ctx.error =
-                        "Debrid service returned a plaintext download link.";
-                    return Step::Failed;
-                }
-                url = fresh;
+        if (attempt + 1 == kTransferAttempts)
+            return Step::Failed;
+        // El enlace puede haber caducado mientras tanto, asi que se vuelve a
+        // pedir. Si el proveedor no lo da, se reintenta con el que hay: puede
+        // seguir siendo valido y el fallo haber sido solo de red.
+        log_msg("[debrid] reintento %d/%d de '%s': %s\n", attempt + 1,
+                kTransferAttempts - 1, file.path.c_str(), ctx.error.c_str());
+        std::string fresh;
+        if (ctx.provider.resolveDownloadUrl(ctx.debridId, info, kthSelected,
+                                            file, fresh, ctx.error)) {
+            if (!linkAllowed(ctx.provider, fresh)) {
+                ctx.error =
+                    "Debrid service returned a plaintext download link.";
+                return Step::Failed;
             }
-            continue;
+            url = fresh;
         }
-        return Step::Failed;
+        ctx.error.clear();
     }
 
     uint64_t finalSize = 0;
@@ -1030,7 +1047,9 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
 
 Step streamInstallPackage(RunContext& ctx, size_t kthSelected,
                           const DebridFile& file) {
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    for (int attempt = 0; attempt < kTransferAttempts; ++attempt) {
+        if (attempt > 0 && !sleepSlices(*ctx.shouldStop, kRetryWaitMs[attempt]))
+            return Step::Stopped;
         DebridInfo info;
         info.links = ctx.selectedLinks;
         std::string url;
@@ -1047,11 +1066,15 @@ Step streamInstallPackage(RunContext& ctx, size_t kthSelected,
             return Step::Ok;
         if (s == Step::Stopped)
             return Step::Stopped;
-        if (attempt == 0) {
-            ctx.error.clear();
-            continue;
-        }
-        return Step::Failed;
+        if (attempt + 1 == kTransferAttempts)
+            return Step::Failed;
+        // Reintentar una instalacion en streaming es seguro: el backend lleva
+        // journal y reengancha al paquete a medias --y se niega si el journal
+        // apunta a otra memoria o a otro paquete--, asi que no se instala nada
+        // dos veces ni se mezcla con otra cosa.
+        log_msg("[debrid] reintento %d/%d instalando '%s': %s\n", attempt + 1,
+                kTransferAttempts - 1, file.path.c_str(), ctx.error.c_str());
+        ctx.error.clear();
     }
     return Step::Failed;
 }

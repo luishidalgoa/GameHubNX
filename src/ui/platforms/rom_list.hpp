@@ -183,6 +183,10 @@ public:
         import.mode = TransferMode::DownloadOnly;
         import.fileSelection = {static_cast<uint8_t>(FileAction::Download)};
         import.packageCount = 0;
+        // Y aqui es donde tiene que acabar. Sin esto el rotulo de arriba era
+        // una promesa que el codigo no cumplia: el fichero se quedaba en
+        // downloads/.
+        import.destinationDir = destination_;
 
         std::string taskId;
         std::string error;

@@ -119,6 +119,13 @@ struct DownloadTask {
     // memoria despues, mientras no haya empezado a instalar.
     install::InstallStorageTarget installTarget =
         install::InstallStorageTarget::SdCard;
+
+    /* Carpeta a la que mover el fichero al terminar, cuando la descarga no se
+       instala. Es lo que hace que una ROM acabe donde el emulador la busca en
+       vez de en downloads/, y viaja con la tarea --igual que installTarget--
+       porque quien la eligio fue la pantalla que encolo, no un ajuste global
+       que pudo cambiar mientras se bajaba. */
+    std::string destinationDir;
 };
 
 // (done, total) download-progress byte pair. Falls back to the raw engine
@@ -169,6 +176,9 @@ struct DebridImport {
     bool hasInstallTarget = false;
     install::InstallStorageTarget installTarget =
         install::InstallStorageTarget::SdCard;
+    // Carpeta a la que mover el fichero cuando termine, para las descargas que
+    // no se instalan (ROMs). Vacia = se queda donde se bajo.
+    std::string destinationDir;
 };
 
 class DownloadManager {
