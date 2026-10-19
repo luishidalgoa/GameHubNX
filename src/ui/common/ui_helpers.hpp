@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../app/app_paths.h"
+#include <functional>
 #include <switch.h>
 #include <sys/statvfs.h>
 
@@ -456,13 +457,19 @@ inline std::string placeholderLetter(const std::string& title) {
     return letter;
 }
 
-// Cierra todas las pantallas apiladas encima de la raiz (la barra de pestanas).
-// Asi "Ver descargas" lleva a la pestana, y no a la pantalla de debajo.
-inline void popActivitiesToRoot() {
-    while (brls::Application::getActivitiesStack().size() > 1) {
-        if (!brls::Application::popActivity())
-            break;
+// Cierra las pantallas apiladas encima de la raiz (la barra de pestanas) y
+// despues llama a `then`. Hay que encadenarlo desde el callback de cada pop:
+// popActivity() saca la pantalla de la pila solo al terminar su animacion, y
+// suma un bloqueo de entrada que se quita en ese mismo callback. Un bucle
+// sincrono vuelve a popear la misma pantalla y deja los mandos bloqueados.
+inline void popActivitiesToRoot(std::function<void()> then = nullptr) {
+    if (brls::Application::getActivitiesStack().size() <= 1) {
+        if (then)
+            then();
+        return;
     }
+    brls::Application::popActivity(brls::TransitionAnimation::FADE,
+                                   [then] { popActivitiesToRoot(then); });
 }
 
 }  // namespace gamehubnx::ui

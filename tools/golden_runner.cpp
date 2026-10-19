@@ -54,6 +54,7 @@
 #include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
+#include "ui/homebrew/homebrew_view.hpp"
 #include "app/game_update_service.hpp"
 #include "app/install_space.hpp"
 #include "app/shop_update_source.hpp"
@@ -965,6 +966,29 @@ int main(int argc, char** argv) {
             return fail("network-health could not plant provider settings");
         activity = new NetworkHealthActivity(&manager, &settings,
                                              "192.168.1.5");
+    } else if (screen == "apps-store") {
+        auto* view = new gamehubnx::ui::HomebrewView(false);
+        std::vector<gamehubnx::HomebrewApp> storeApps;
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app0"; a.title = "green-nx"; a.author = "luishidalgoa";
+          gamehubnx::HomebrewRelease r; r.tag = "1.2.0"; r.version = "1.2.0"; r.nroName = "app0.nro";
+          r.nroUrl = "https://example.invalid/app0.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app1"; a.title = "Awoo Installer"; a.author = "Huntereb & Behemoth";
+          gamehubnx::HomebrewRelease r; r.tag = "1.3.6"; r.version = "1.3.6"; r.nroName = "app1.nro";
+          r.nroUrl = "https://example.invalid/app1.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app2"; a.title = "Daybreak"; a.author = "Atmosphere-NX";
+          gamehubnx::HomebrewRelease r; r.tag = "1.0.0"; r.version = "1.0.0"; r.nroName = "app2.nro";
+          r.nroUrl = "https://example.invalid/app2.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app3"; a.title = "Goldleaf"; a.author = "XorTroll";
+          gamehubnx::HomebrewRelease r; r.tag = "1.2.0"; r.version = "1.2.0"; r.nroName = "app3.nro";
+          r.nroUrl = "https://example.invalid/app3.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app4"; a.title = "EdiZon-SE"; a.author = "switchbrew";
+          gamehubnx::HomebrewRelease r; r.tag = "3.6.1"; r.version = "3.6.1"; r.nroName = "app4.nro";
+          r.nroUrl = "https://example.invalid/app4.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        { gamehubnx::HomebrewApp a; a.repo = "fixture/app5"; a.title = "Tico"; a.author = "ticohq";
+          gamehubnx::HomebrewRelease r; r.tag = "0.7.9"; r.version = "0.7.9"; r.nroName = "app5.nro";
+          r.nroUrl = "https://example.invalid/app5.nro"; a.releases.push_back(r); storeApps.push_back(a); }
+        view->loadCatalogForTesting(std::move(storeApps), true);
+        activity = new GoldenActivity(view);
     } else if (screen == "help") {
         activity = new GoldenActivity(
             new HelpView(&manager, &catalog, &metadata, &installed));

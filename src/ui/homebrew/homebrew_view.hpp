@@ -87,8 +87,9 @@ public:
 
         cover_ = new brls::Box(brls::Axis::COLUMN);
         cover_->setHeight(kCoverHeight);
-        cover_->setWidth(0.0f);
-        cover_->setGrow(1.0f);
+        // Dentro de una columna, la portada tiene que estirarse en ancho: con
+        // width 0 quedaba invisible, y con ella tambien su icono y la inicial.
+        cover_->setAlignSelf(brls::AlignSelf::STRETCH);
         cover_->setCornerRadius(theme::kRadiusMedium);
         cover_->setBackgroundColor(theme::surface());
         cover_->setAlignItems(brls::AlignItems::CENTER);
@@ -129,6 +130,7 @@ public:
         });
 
         title_ = new brls::Label();
+        title_->setAlignSelf(brls::AlignSelf::STRETCH);
         title_->setSingleLine(true);
         title_->setAutoAnimate(false);
         title_->setFontSize(theme::kFontSmall);
@@ -136,6 +138,7 @@ public:
         addView(title_);
 
         sub_ = new brls::Label();
+        sub_->setAlignSelf(brls::AlignSelf::STRETCH);
         sub_->setSingleLine(true);
         sub_->setAutoAnimate(false);
         sub_->setFontSize(theme::kFontCaption);
@@ -259,8 +262,16 @@ private:
 // disponibles), buscador y actualizacion de lo que tenga version nueva.
 class HomebrewView : public brls::Box {
 public:
-    HomebrewView();
+    // autoLoad = false: no toca la red; el catalogo lo da loadCatalogForTesting.
+    explicit HomebrewView(bool autoLoad = true);
     ~HomebrewView() override;
+
+    // Para el harness golden: catalogo fijo y la pestana que se muestra.
+    void loadCatalogForTesting(std::vector<HomebrewApp> apps, bool available) {
+        catalog_ = std::move(apps);
+        tab_ = available ? Tab::Available : Tab::Installed;
+        rebuild();
+    }
 
     // Lo que la cuadricula necesita para pintar la fila `row`.
     std::vector<StoreItem>& visibleItems() { return visible_; }
@@ -315,7 +326,7 @@ private:
     friend class StoreDataSource;
 };
 
-inline HomebrewView::HomebrewView() : brls::Box(brls::Axis::COLUMN) {
+inline HomebrewView::HomebrewView(bool autoLoad) : brls::Box(brls::Axis::COLUMN) {
     setGrow(1);
     setPadding(16, 32, 0, 32);
 
@@ -375,7 +386,8 @@ inline HomebrewView::HomebrewView() : brls::Box(brls::Axis::COLUMN) {
 
     iconThread_ = std::thread([this] { iconWorker(); });
     updateTabLabels();
-    load(false);
+    if (autoLoad)
+        load(false);
 }
 
 inline HomebrewView::~HomebrewView() {

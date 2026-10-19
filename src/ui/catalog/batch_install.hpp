@@ -258,9 +258,10 @@ public:
             // esta pantalla dejaba debajo "Que instalar" y la ficha del juego.
             auto callback = viewDownloads_;
             brls::delay(100, [callback] {
-                popActivitiesToRoot();
-                if (callback)
-                    callback();
+                popActivitiesToRoot([callback] {
+                    if (callback)
+                        callback();
+                });
             });
             return true;
         });
