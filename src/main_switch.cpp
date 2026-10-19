@@ -485,7 +485,7 @@ int main(int argc, char** argv) {
 
         startupStage("GameUpdateService load");
         // La tienda es la unica fuente de versiones nuevas (shop_update_source.hpp).
-        ShopUpdateSource shopUpdates(&catalog);
+        gamehubnx::ShopUpdateSource shopUpdates(&catalog);
         GameUpdateService gameUpdates(&shopUpdates,
                                       GHNX_PATH("game-updates.json"));
         std::string gameUpdatesError;
