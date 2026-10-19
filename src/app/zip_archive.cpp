@@ -1,5 +1,7 @@
 #include "zip_archive.hpp"
 
+#include "app/file_replace.hpp"
+
 #include <zlib.h>
 
 #include <cerrno>
@@ -289,7 +291,7 @@ bool ZipArchive::extract(const ZipEntry& entry, const std::string& destPath,
         error = "El fichero " + entry.name + " del zip esta corrupto.";
         return false;
     }
-    if (std::rename(partial.c_str(), destPath.c_str()) != 0) {
+    if (!replaceFile(partial, destPath)) {
         std::remove(partial.c_str());
         error = "No se pudo dejar " + destPath + " en su sitio.";
         return false;

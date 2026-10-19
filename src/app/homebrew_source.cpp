@@ -1,6 +1,7 @@
 #include "homebrew_source.hpp"
 
 #include "app/curl_https.hpp"
+#include "app/file_replace.hpp"
 #include "app/zip_archive.hpp"
 #include "core/md5.h"
 
@@ -377,7 +378,7 @@ bool installHomebrewRelease(const HomebrewRelease& release,
                           std::to_string(sink.written) + " bytes).";
         return false;
     }
-    if (std::rename(partial.c_str(), installedPath.c_str()) != 0) {
+    if (!replaceFile(partial, installedPath)) {
         std::remove(partial.c_str());
         error = "No se pudo dejar el .nro en su sitio.";
         return false;

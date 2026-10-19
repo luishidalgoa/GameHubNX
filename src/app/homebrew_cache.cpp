@@ -1,5 +1,7 @@
 #include "homebrew_cache.hpp"
 
+#include "app/file_replace.hpp"
+
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -90,7 +92,7 @@ bool writeHomebrewCache(const std::string& path, const HomebrewCacheEntry& entry
             return false;
         }
     }
-    if (std::rename(partial.c_str(), path.c_str()) != 0) {
+    if (!replaceFile(partial, path)) {
         std::remove(partial.c_str());
         error = "No se pudo guardar la cache.";
         return false;

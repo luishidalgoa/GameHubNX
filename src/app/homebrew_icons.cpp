@@ -2,6 +2,7 @@
 
 #include "app/homebrew_source.hpp"
 #include "app/nro_metadata.hpp"
+#include "app/file_replace.hpp"
 #include "app/rgba_image.hpp"
 
 #include <cerrno>
@@ -57,7 +58,7 @@ bool writeWhole(const std::string& path, const std::vector<uint8_t>& data) {
         if (!out.good())
             return false;
     }
-    return std::rename(partial.c_str(), path.c_str()) == 0;
+    return replaceFile(partial, path);
 }
 
 // Crea la ruta entera, nivel a nivel. Salta el prefijo "sdmc:/": mkdir sobre la

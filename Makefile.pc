@@ -357,6 +357,10 @@ $(BUILD_DIR)/tests/test_download_kind: tests/test_download_kind.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
 
+$(BUILD_DIR)/tests/test_file_replace: tests/test_file_replace.cpp src/app/file_replace.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_file_replace.cpp $(LDFLAGS)
+
 $(BUILD_DIR)/tests/test_rgba_image: tests/test_rgba_image.cpp src/app/rgba_image.hpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_rgba_image.cpp $(LDFLAGS)
