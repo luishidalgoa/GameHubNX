@@ -16,6 +16,12 @@ struct HomebrewCacheEntry {
 // horas de margen, un dia de uso normal son unas decenas de peticiones.
 constexpr int64_t kHomebrewCacheTtlSec = 6 * 60 * 60;
 
+// Releases de cada repo de GitHub. Una release publicada tiene que verse en la
+// app en media hora, no en seis horas: con seis, la app seguia ofreciendo la
+// version anterior tras publicar una nueva. Con tres repos son como mucho seis
+// peticiones por hora, dentro del limite de GitHub.
+constexpr int64_t kGithubReleasesCacheTtlSec = 30 * 60;
+
 // Carpeta de la cache en la SD.
 std::string homebrewCacheRoot();
 

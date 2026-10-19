@@ -60,7 +60,7 @@ inline HomebrewSourceLoad loadHomebrewSources(bool force, int64_t now) {
     for (const std::string& repo : repos) {
         const SourceBody src = loadSourceBody(
             root, homebrewCacheKeyForGithub(repo), force, now,
-            kHomebrewCacheTtlSec,
+            kGithubReleasesCacheTtlSec,
             [&repo](std::string& body, std::string& error) {
                 return downloadGithubReleases(repo, body, error);
             });
