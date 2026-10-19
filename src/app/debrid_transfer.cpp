@@ -1,5 +1,6 @@
 #include "debrid_transfer.hpp"
 #include "curl_https.hpp"
+#include "gamehub_catalog.hpp"
 #include "download_manager.hpp"
 #include "debrid_provider.hpp"
 #include "install_pacer.hpp"
@@ -359,6 +360,10 @@ RangeFetcher curlRangeFetcher() {
         }
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curlPinScheme(curl, url);
+        // Las descargas de GameHub se identifican como GameHubNX: el servidor no les
+        // aplica el limite de velocidad que pone a los navegadores.
+        if (gamehub::isTrustedUrl(url))
+            curl_easy_setopt(curl, CURLOPT_USERAGENT, gamehub::kClientId);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
         curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);

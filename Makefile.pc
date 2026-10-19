@@ -515,6 +515,7 @@ $(BUILD_DIR)/tests/test_ssl_cacert: tests/test_ssl_cacert.cpp
 
 $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 		$(BUILD_DIR)/src/app/debrid_transfer.o $(BUILD_DIR)/src/app/torbox_client.o \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
 		$(BUILD_DIR)/src/app/install_pacer.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o \
 		$(BUILD_DIR)/src/app/torbox_provider.o \
