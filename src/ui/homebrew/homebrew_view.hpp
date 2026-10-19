@@ -207,6 +207,7 @@ public:
     StoreRowCell() {
         setFocusable(false);
         setAxis(brls::Axis::ROW);
+        setAlignSelf(brls::AlignSelf::STRETCH);
         setHeight(rowHeight());
         setLineBottom(0);
         setLineColor(brls::TRANSPARENT);

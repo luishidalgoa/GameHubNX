@@ -55,6 +55,7 @@
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
 #include "ui/homebrew/homebrew_view.hpp"
+#include "ui/platforms/rom_grid.hpp"
 #include "app/game_update_service.hpp"
 #include "app/install_space.hpp"
 #include "app/shop_update_source.hpp"
@@ -600,6 +601,37 @@ int main(int argc, char** argv) {
                 cell->setCard(card, &metadata, [](int) {}, nullptr);
                 cell->setMarginRight(grid::kShelfSpacing);
                 row->addView(cell);
+            }
+            content->addView(row);
+        }
+        activity = new GoldenActivity(content);
+    } else if (screen == "rom-tiles") {
+        // Las tarjetas de ROMs de tamano fijo (RomTile), con la fila como la
+        // pone la pantalla de plataforma: una vertical (SNES) y otra apaisada
+        // (DS) bajo el mismo hueco. Sirve para ver que ninguna se monta sobre
+        // la de al lado ni cambia el tamano de la fila.
+        auto* content = new brls::Box(brls::Axis::COLUMN);
+        content->setPadding(32, 32, 32, 32);
+        auto* heading = new brls::Label();
+        heading->setText("ROM tiles");
+        heading->setFontSize(theme::kFontTitle);
+        heading->setMarginBottom(16);
+        content->addView(heading);
+        const char* fixtureNames[] = {"cover-portrait.jpg", "cover-landscape.jpg"};
+        const char* labels[] = {"SNES 2:3", "DS 1.17"};
+        for (int fila = 0; fila < 2; ++fila) {
+            auto* row = new brls::Box(brls::Axis::ROW);
+            row->setAlignSelf(brls::AlignSelf::STRETCH);
+            row->setMarginBottom(16);
+            for (int i = 0; i < gamehubnx::ui::RomRowCell::kColumns; ++i) {
+                GridCardInfo card;
+                card.entryIndex = i;
+                card.title = labels[fila];
+                card.sub = "Fixture";
+                card.iconUrl = (fixtures / fixtureNames[fila]).string();
+                auto* tile = new gamehubnx::ui::RomTile();
+                tile->setCard(card, &metadata, [](int) {}, nullptr);
+                row->addView(tile);
             }
             content->addView(row);
         }

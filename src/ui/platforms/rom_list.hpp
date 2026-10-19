@@ -15,6 +15,7 @@
 #include "app/gamehub_catalog.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_grid.hpp"
+#include "ui/platforms/rom_grid.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/platforms/rom_detail.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -25,12 +26,10 @@ namespace gamehubnx::ui {
 
 class RomListActivity;
 
-// Rejilla de ROMs, la misma que el catalogo de Switch.
-//
-// Antes era una lista de texto y desentonaba: la misma aplicacion ensenaba los
-// juegos de Switch con su portada y los de las demas consolas como renglones.
-// Se reutilizan GridRowCell y GameCard tal cual, que es lo que garantiza que se
-// vean IGUAL y no solo parecido.
+// Rejilla de ROMs. Cada consola usa la misma tarjeta de tamano fijo (RomTile):
+// antes la altura de la fila se adaptaba a la primera portada, y las verticales
+// se montaban sobre las de al lado. El catalogo de Switch sigue con su propia
+// rejilla (GridRowCell y GameCard), que no se toca desde aqui.
 //
 // El aviso de compatibilidad viaja en la linea de debajo del titulo --el `sub`
 // de la tarjeta-- como insignia, que es el hueco que esa tarjeta ya tiene para
@@ -56,13 +55,13 @@ public:
     const std::vector<CatalogEntry>& roms() const { return roms_; }
 
     int numberOfRows(brls::RecyclerFrame*, int) override {
-        return (static_cast<int>(roms_.size()) + grid::kColumns - 1) /
-               grid::kColumns;
+        return (static_cast<int>(roms_.size()) + RomRowCell::kColumns - 1) /
+               RomRowCell::kColumns;
     }
     brls::RecyclerCell* cellForRow(brls::RecyclerFrame* recycler,
                                    brls::IndexPath index) override;
     float heightForRow(brls::RecyclerFrame*, brls::IndexPath) override {
-        return grid::rowHeight();
+        return RomRowCell::rowHeight();
     }
     // Nada: la tarjeta se activa sola con su propio manejador, como en el
     // catalogo. Dejarlo aqui ademas abriria la ficha dos veces.
@@ -165,20 +164,9 @@ public:
 
         recycler_ = new brls::RecyclerFrame();
         recycler_->setGrow(1);
-        recycler_->estimatedRowHeight = grid::rowHeight();
-        // El hueco arranca cuadrado --lo que ya habia-- y toma la forma del
-        // arte en cuanto llega la primera portada.
-        grid::resetCoverSlot();
-        slotDecided_ = false;
-        {
-            auto alive = alive_;
-            grid::artworkAspectReporter() = [this, alive](float aspecto) {
-                if (alive->load())
-                    adoptArtworkAspect(aspecto);
-            };
-        }
-        recycler_->registerCell("GridRow", [column = focusColumn_] {
-            return new GridRowCell(column);
+        recycler_->estimatedRowHeight = RomRowCell::rowHeight();
+        recycler_->registerCell("RomRow", [column = focusColumn_] {
+            return new RomRowCell(column);
         });
         dataSource_ = new RomDataSource(this, metadata_, focusColumn_,
                                         favorites_);
@@ -195,36 +183,6 @@ public:
 
     ~RomListActivity() override {
         alive_->store(false);
-        // El hueco es un ajuste de la reja, compartido con el catalogo de
-        // Switch. Se devuelve al salir: si no, las tarjetas de Switch se
-        // quedarian con la forma de la ultima consola que se abrio.
-        grid::artworkAspectReporter() = nullptr;
-        // Solo se devuelve el valor: rehacer la reja de una pantalla que se
-        // esta destruyendo no pinta nada, y la que quede debajo recarga la
-        // suya al volver a mostrarse.
-        grid::resetCoverSlot();
-    }
-
-    // La forma del arte de ESTA consola, aprendida de la primera portada que
-    // llega.
-    //
-    // No se pregunta al servidor a proposito: el numero que publica por
-    // plataforma es la preferencia de maquetacion de la web y esta del reves
-    // en varias --SNES la da apaisada y todas sus portadas son verticales--.
-    // Lo que se mide no se puede equivocar.
-    //
-    // Se queda con la PRIMERA y no vuelve a cambiar. En 3DS y GBA conviven las
-    // dos formas, y perseguir cada portada dejaria la reja rehaciendose sola
-    // mientras se baja por ella; ahi la minoria seguira con banda, que es lo
-    // menos malo mientras el alto de fila tenga que ser uno solo.
-    void adoptArtworkAspect(float aspect) {
-        if (slotDecided_ || aspect <= 0.0f)
-            return;
-        slotDecided_ = true;
-        if (grid::setCoverSlotAspect(aspect) && recycler_) {
-            recycler_->estimatedRowHeight = grid::rowHeight();
-            recycler_->reloadData();
-        }
     }
 
     brls::View* createContentView() override { return frame_; }
@@ -529,7 +487,7 @@ private:
         const std::vector<CatalogEntry>& roms = dataSource_->roms();
         const size_t row =
             static_cast<size_t>(recycler_->getDefaultFocusedIndex());
-        const size_t index = row * grid::kColumns +
+        const size_t index = row * RomRowCell::kColumns +
                              static_cast<size_t>(*focusColumn_);
         if (index >= roms.size())
             return;
@@ -577,7 +535,6 @@ private:
     // cambiar de fila, igual que en el catalogo.
     std::shared_ptr<int> focusColumn_ = std::make_shared<int>(0);
     // Solo la primera portada decide la forma del hueco.
-    bool slotDecided_ = false;
     std::shared_ptr<std::atomic<bool>> alive_ =
         std::make_shared<std::atomic<bool>>(true);
 };
@@ -613,11 +570,11 @@ inline GridCardInfo RomDataSource::makeInfo(size_t index) const {
 inline brls::RecyclerCell* RomDataSource::cellForRow(
     brls::RecyclerFrame* recycler, brls::IndexPath index) {
     auto* cell =
-        static_cast<GridRowCell*>(recycler->dequeueReusableCell("GridRow"));
-    const size_t start = static_cast<size_t>(index.row) * grid::kColumns;
+        static_cast<RomRowCell*>(recycler->dequeueReusableCell("RomRow"));
+    const size_t start = static_cast<size_t>(index.row) * RomRowCell::kColumns;
     std::vector<GridCardInfo> infos;
     for (size_t i = start;
-         i < std::min(start + grid::kColumns, roms_.size()); ++i)
+         i < std::min(start + RomRowCell::kColumns, roms_.size()); ++i)
         infos.push_back(makeInfo(i));
     RomListActivity* owner = owner_;
     cell->setRow(infos, metadata_, [owner](int entryIndex) {
