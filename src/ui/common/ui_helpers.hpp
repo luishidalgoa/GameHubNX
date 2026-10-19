@@ -455,4 +455,14 @@ inline std::string placeholderLetter(const std::string& title) {
         letter[0] = static_cast<char>(std::toupper(lead));
     return letter;
 }
+
+// Cierra todas las pantallas apiladas encima de la raiz (la barra de pestanas).
+// Asi "Ver descargas" lleva a la pestana, y no a la pantalla de debajo.
+inline void popActivitiesToRoot() {
+    while (brls::Application::getActivitiesStack().size() > 1) {
+        if (!brls::Application::popActivity())
+            break;
+    }
+}
+
 }  // namespace gamehubnx::ui

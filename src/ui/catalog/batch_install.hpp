@@ -254,12 +254,14 @@ public:
         downloads->setMarginRight(10);
         downloads->setText(tr("gamehubnx/batch/view_downloads"));
         downloads->registerClickAction([this](brls::View*) {
+            // Vuelve a la raiz y de ahi a la pestana de descargas. Solo quitar
+            // esta pantalla dejaba debajo "Que instalar" y la ficha del juego.
             auto callback = viewDownloads_;
             brls::delay(100, [callback] {
+                popActivitiesToRoot();
                 if (callback)
                     callback();
             });
-            brls::Application::popActivity();
             return true;
         });
         resultControls_->addView(downloads);

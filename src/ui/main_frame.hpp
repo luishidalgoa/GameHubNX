@@ -32,7 +32,7 @@
 namespace gamehubnx::ui {
 
 enum class NavIconType {
-    Catalog, Platforms, Downloads, Installed, Updates, Files, Settings, Help,
+    Catalog, Platforms, Downloads, Installed, Updates, Files, Store, Settings, Help,
     About
 };
 
@@ -116,6 +116,7 @@ public:
             case NavIconType::Installed: drawInstalled(vg, gx, gy, s); break;
             case NavIconType::Updates:   drawUpdates(vg, gx, gy, s); break;
             case NavIconType::Files:     drawFiles(vg, gx, gy, s); break;
+            case NavIconType::Store:     drawStore(vg, gx, gy, s); break;
             case NavIconType::Settings:    drawSettings(vg, gx, gy, s); break;
             case NavIconType::Help:        drawPulse(vg, gx, gy, s); break;
             case NavIconType::About:       drawAbout(vg, gx, gy, s); break;
@@ -126,6 +127,31 @@ private:
     // Mando: cuerpo redondeado con cruceta y dos botones. El catalogo de Switch
     // es una rejilla de cajas; esto tenia que leerse distinto de un vistazo en
     // la barra, y una consola es lo que estas plataformas son.
+    // Escaparate: toldo con festones sobre una fachada con puerta. Es lo que
+    // se ve al entrar en una tienda; la app de tiendas lo lleva en la barra.
+    static void drawStore(NVGcontext* vg, float gx, float gy, float s) {
+        const float awningY = gy + s * 0.30f;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, gx, awningY);
+        nvgLineTo(vg, gx + s, awningY);
+        // Festones: cuatro arcos bajo el toldo.
+        const float scallop = s / 4.0f;
+        for (int i = 0; i < 4; ++i) {
+            const float x0 = gx + scallop * i;
+            nvgLineTo(vg, x0 + scallop, awningY);
+            nvgQuadTo(vg, x0 + scallop / 2.0f, awningY + s * 0.16f, x0, awningY);
+        }
+        nvgStroke(vg);
+
+        nvgBeginPath(vg);
+        nvgRect(vg, gx + s * 0.12f, awningY + s * 0.04f, s * 0.76f, s * 0.56f);
+        nvgStroke(vg);
+
+        nvgBeginPath(vg);
+        nvgRect(vg, gx + s * 0.40f, awningY + s * 0.30f, s * 0.20f, s * 0.30f);
+        nvgStroke(vg);
+    }
+
     static void drawPlatforms(NVGcontext* vg, float gx, float gy, float s) {
         const float top = gy + s * 0.24f;
         const float h = s * 0.52f;

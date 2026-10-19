@@ -4,7 +4,7 @@
     "exit": "Sair"
   },
   "nav": {
-    "homebrew": "Homebrew",
+    "homebrew": "Apps Store",
     "catalog": "Catálogo",
     "downloads": "Downloads",
     "installed": "Instalados",
@@ -821,6 +821,18 @@
     "failed": "Não foi possível instalar: {}",
     "repos": "{} repositórios",
     "refresh": "Atualizar",
-    "offline": "Sem conexão. Dados salvos de {} h atrás."
+    "offline": "Sem conexão. Dados salvos de {} h atrás.",
+    "search": "Buscar",
+    "search_placeholder": "Buscar no Apps Store",
+    "update_all": "Atualizar tudo",
+    "installed_tab": "Instaladas",
+    "available_tab": "Disponíveis",
+    "no_version": "sem versão",
+    "not_in_catalog": "Este app não tem release para baixar no catálogo.",
+    "empty_view": "Nenhum app nesta visualização.",
+    "sources": "Fontes: GitHub · HB App Store · GameHub",
+    "search_result": "{} resultados",
+    "nothing_to_update": "Tudo atualizado.",
+    "update_all_confirm": "Atualizar {} apps?"
   }
 }

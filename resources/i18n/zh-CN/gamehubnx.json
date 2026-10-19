@@ -4,7 +4,7 @@
     "exit": "退出"
   },
   "nav": {
-    "homebrew": "Homebrew",
+    "homebrew": "Apps Store",
     "catalog": "目录",
     "downloads": "下载",
     "installed": "已安装",
@@ -821,6 +821,18 @@
     "failed": "无法安装：{}",
     "repos": "{} 个仓库",
     "refresh": "刷新",
-    "offline": "无法联网，显示 {} 小时前保存的数据。"
+    "offline": "无法联网，显示 {} 小时前保存的数据。",
+    "search": "搜索",
+    "search_placeholder": "在 Apps Store 中搜索",
+    "update_all": "全部更新",
+    "installed_tab": "已安装",
+    "available_tab": "可安装",
+    "no_version": "无版本",
+    "not_in_catalog": "目录中没有可下载的发布版本。",
+    "empty_view": "此视图中没有应用。",
+    "sources": "来源：GitHub · HB App Store · GameHub",
+    "search_result": "{} 个结果",
+    "nothing_to_update": "已是最新。",
+    "update_all_confirm": "更新 {} 个应用？"
   }
 }

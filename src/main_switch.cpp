@@ -194,7 +194,7 @@ public:
                         [] { return new FileBrowserView("sdmc:/"); });
         // Homebrew: los .nro de los releases de GitHub de los repos conocidos.
         // Sin catalogo propio: la lista sale de GitHub en cada apertura.
-        tabs->addNavTab(tr("gamehubnx/nav/homebrew"), NavIconType::Files,
+        tabs->addNavTab(tr("gamehubnx/nav/homebrew"), NavIconType::Store,
                         [] { return new gamehubnx::ui::HomebrewView(); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,

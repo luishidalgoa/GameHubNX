@@ -4,7 +4,7 @@
     "exit": "Exit"
   },
   "nav": {
-    "homebrew": "Homebrew",
+    "homebrew": "Apps Store",
     "catalog": "Catalog",
     "downloads": "Downloads",
     "installed": "Installed",
@@ -821,6 +821,18 @@
     "failed": "Could not install: {}",
     "repos": "{} repos",
     "refresh": "Refresh",
-    "offline": "Offline. Showing saved data from {} h ago."
+    "offline": "Offline. Showing saved data from {} h ago.",
+    "search": "Search",
+    "search_placeholder": "Search Apps Store",
+    "update_all": "Update all",
+    "installed_tab": "Installed",
+    "available_tab": "Available",
+    "no_version": "no version",
+    "not_in_catalog": "This app has no downloadable release in the catalog.",
+    "empty_view": "No apps in this view.",
+    "sources": "Sources: GitHub · HB App Store · GameHub",
+    "search_result": "{} results",
+    "nothing_to_update": "Everything is up to date.",
+    "update_all_confirm": "Update {} apps?"
   }
 }

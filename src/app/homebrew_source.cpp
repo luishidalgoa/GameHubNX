@@ -712,4 +712,79 @@ bool parseHomebrewRepoList(const std::string& json,
     return true;
 }
 
+namespace {
+
+struct ByteSink {
+    std::vector<uint8_t>* out = nullptr;
+    size_t limit = 0;
+    bool overflow = false;
+};
+
+size_t appendBytes(char* bytes, size_t size, size_t count, void* opaque) {
+    auto* sink = static_cast<ByteSink*>(opaque);
+    const size_t received = size * count;
+    if (sink->out->size() + received > sink->limit) {
+        sink->overflow = true;
+        return 0;
+    }
+    sink->out->insert(sink->out->end(), reinterpret_cast<uint8_t*>(bytes),
+                      reinterpret_cast<uint8_t*>(bytes) + received);
+    return received;
+}
+
+} // namespace
+
+bool downloadBytes(const std::string& url, uint64_t offset, size_t length,
+                   size_t limit, std::vector<uint8_t>& out, std::string& error) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        error = "No se pudo iniciar el cliente HTTP.";
+        return false;
+    }
+    configureCommon(curl, url);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+    if (length > 0) {
+        const std::string range = std::to_string(offset) + "-" +
+                                  std::to_string(offset + length - 1);
+        curl_easy_setopt(curl, CURLOPT_RANGE, range.c_str());
+    }
+    out.clear();
+    ByteSink sink;
+    sink.out = &out;
+    sink.limit = length > 0 ? length : limit;
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, appendBytes);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &sink);
+    const CURLcode result = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+
+    if (result != CURLE_OK || sink.overflow) {
+        out.clear();
+        error = sink.overflow ? "La respuesta es mas grande de lo esperado."
+                              : "Sin conexion.";
+        return false;
+    }
+    // Con rango, un servidor que ignora la cabecera manda 200 y el recurso
+    // entero: no lo aceptamos, seria bajarse el .nro completo.
+    const bool ok = length > 0 ? status == 206 : status == 200;
+    if (!ok) {
+        out.clear();
+        error = "Respuesta " + std::to_string(status) + " al pedir " + url + ".";
+        return false;
+    }
+    error.clear();
+    return true;
+}
+
+NroReader remoteNroReader(const std::string& url) {
+    return [url](uint64_t offset, size_t length, std::vector<uint8_t>& out) {
+        std::string error;
+        return downloadBytes(url, offset, length, 0, out, error) &&
+               out.size() == length;
+    };
+}
+
+
+
 } // namespace gamehubnx

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "app/nro_metadata.hpp"
+
 namespace gamehubnx {
 
 // Una version publicada de una app homebrew: un release de GitHub con su .nro.
@@ -96,6 +98,15 @@ bool downloadHbRepo(const std::string& baseUrl, std::string& body,
 // Descarga y interpreta el repo.json completo (unos 1,6 MB para el repo Switch).
 bool fetchHbRepo(const std::string& baseUrl, std::vector<HomebrewApp>& out,
                  std::string& error);
+
+// Bytes de una URL. Con `length` > 0 pide solo ese rango (206): asi se lee la
+// cabecera y el icono de un .nro de GitHub sin bajarlo entero. Con `length` 0
+// baja el recurso completo, hasta `limit` bytes.
+bool downloadBytes(const std::string& url, uint64_t offset, size_t length,
+                   size_t limit, std::vector<uint8_t>& out, std::string& error);
+
+// Lector de .nro remoto para nro_metadata: cada lectura es un rango HTTP.
+NroReader remoteNroReader(const std::string& url);
 
 // Ruta de instalacion de un release: sdmc:/switch/<nombre>/<nombre>.nro, la
 // convencion del Homebrew Menu para que la app aparezca en su lista.

@@ -342,6 +342,21 @@ $(BUILD_DIR)/tests/test_homebrew_cache: tests/test_homebrew_cache.cpp \
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
 
+$(BUILD_DIR)/tests/test_nro_metadata: tests/test_nro_metadata.cpp \
+		src/app/nro_metadata.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
+
+$(BUILD_DIR)/tests/test_homebrew_installed: tests/test_homebrew_installed.cpp \
+		src/app/homebrew_installed.cpp src/app/nro_metadata.cpp src/app/homebrew_source.cpp \
+		src/app/zip_archive.cpp $(BUILD_DIR)/src/core/md5.o
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) -lz
+
+$(BUILD_DIR)/tests/test_download_kind: tests/test_download_kind.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
+
 $(BUILD_DIR)/tests/test_storage_manager: tests/test_storage_manager.cpp \
 		src/app/storage_manager.cpp src/app/install_space.cpp
 	@mkdir -p $(dir $@)

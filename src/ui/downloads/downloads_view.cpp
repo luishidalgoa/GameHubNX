@@ -1,59 +1,60 @@
 #include "ui/downloads/downloads_view.hpp"
+
+#include "app/download_kind.hpp"
 #include "ui/i18n.hpp"
+
+#include <algorithm>
 
 namespace gamehubnx::ui {
 
 void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
                                   std::string activeDeployTask) {
     sections_.clear();
-    // std::string, not const char*: the titles are now resolved per-locale at
-    // call time rather than being string literals with static storage.
+    // Secciones por tipo de contenido (juego, actualizacion, DLC), como en "Que
+    // instalar". Dentro de cada una, lo que esta en marcha va primero: activa,
+    // en cola, pausada, terminada y con error.
+    auto rank = [&activeDeployTask](const DownloadTask& task) {
+        if (task.id == activeDeployTask)
+            return 0;
+        switch (task.status) {
+        case DownloadStatus::Checking:
+        case DownloadStatus::Fetching:
+        case DownloadStatus::Downloading:
+        case DownloadStatus::Installing:
+        case DownloadStatus::Committing:
+        case DownloadStatus::Verifying:
+        case DownloadStatus::Removing:
+            return 0;
+        case DownloadStatus::Queued:
+            return 1;
+        case DownloadStatus::Paused:
+            return 2;
+        case DownloadStatus::Completed:
+        case DownloadStatus::Installed:
+            return 3;
+        case DownloadStatus::Error:
+            return 4;
+        }
+        return 5;
+    };
     const struct {
-        std::string title;
-        bool (*matches)(DownloadStatus);
+        DownloadKind kind;
+        const char* key;
     } groups[] = {
-        {tr("gamehubnx/downloads/section_active"), [](DownloadStatus s) {
-            // Fetching faltaba, y no era inocuo: solo lo produce el camino
-            // debrid/GameHub --un torrent jamas lo toma-- asi que una descarga
-            // de la tienda reanudada al abrir la app se caia de las cinco
-            // secciones y desaparecia de la lista mientras duraba ese estado.
-            // La pantalla se quedaba con la fila de relleno mientras el resto
-            // del codigo seguia creyendo que habia tareas.
-            return s == DownloadStatus::Checking ||
-                   s == DownloadStatus::Fetching ||
-                   s == DownloadStatus::Downloading ||
-                   s == DownloadStatus::Installing ||
-                   s == DownloadStatus::Committing ||
-                   s == DownloadStatus::Verifying ||
-                   s == DownloadStatus::Removing;
-        }},
-        {tr("gamehubnx/downloads/section_queue"), [](DownloadStatus s) {
-            return s == DownloadStatus::Queued;
-        }},
-        {tr("gamehubnx/downloads/section_paused"), [](DownloadStatus s) {
-            return s == DownloadStatus::Paused;
-        }},
-        {tr("gamehubnx/downloads/section_completed"), [](DownloadStatus s) {
-            return s == DownloadStatus::Completed ||
-                   s == DownloadStatus::Installed;
-        }},
-        {tr("gamehubnx/downloads/section_errors"), [](DownloadStatus s) {
-            return s == DownloadStatus::Error;
-        }},
+        {DownloadKind::Game, "gamehubnx/addons/kind_game"},
+        {DownloadKind::Update, "gamehubnx/addons/kind_update"},
+        {DownloadKind::Dlc, "gamehubnx/addons/kind_dlc"},
     };
     for (const auto& group : groups) {
         Section section;
-        section.title = group.title;
-        for (const auto& task : tasks) {
-            const bool deploying = task.id == activeDeployTask;
-            const bool activeGroup = group.matches(DownloadStatus::Checking);
-            const bool completedGroup = group.matches(DownloadStatus::Completed);
-            if ((deploying && activeGroup) ||
-                (!deploying && group.matches(task.status)) ||
-                (deploying && !activeGroup && !completedGroup &&
-                 group.matches(task.status)))
+        section.title = tr(group.key);
+        for (const auto& task : tasks)
+            if (downloadKindOf(task.name) == group.kind)
                 section.tasks.push_back(task);
-        }
+        std::stable_sort(section.tasks.begin(), section.tasks.end(),
+                         [&rank](const DownloadTask& a, const DownloadTask& b) {
+                             return rank(a) < rank(b);
+                         });
         if (!section.tasks.empty())
             sections_.push_back(std::move(section));
     }

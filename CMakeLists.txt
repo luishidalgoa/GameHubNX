@@ -199,6 +199,9 @@ set(APP_SERVICE_SOURCES
     src/app/homebrew_source.cpp
     src/app/zip_archive.cpp
     src/app/homebrew_cache.cpp
+    src/app/homebrew_installed.cpp
+    src/app/homebrew_icons.cpp
+    src/app/nro_metadata.cpp
     src/app/installed_title_service.cpp
     src/app/storage_manager.cpp
     src/app/mod_index_service.cpp

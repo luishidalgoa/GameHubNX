@@ -4,7 +4,7 @@
     "exit": "Выход"
   },
   "nav": {
-    "homebrew": "Homebrew",
+    "homebrew": "Apps Store",
     "catalog": "Каталог",
     "downloads": "Загрузки",
     "installed": "Мои игры",
@@ -821,6 +821,18 @@
     "failed": "Не удалось установить: {}",
     "repos": "Репозиториев: {}",
     "refresh": "Обновить",
-    "offline": "Нет сети. Сохранённые данные: {} ч назад."
+    "offline": "Нет сети. Сохранённые данные: {} ч назад.",
+    "search": "Поиск",
+    "search_placeholder": "Поиск в Apps Store",
+    "update_all": "Обновить всё",
+    "installed_tab": "Установленные",
+    "available_tab": "Доступные",
+    "no_version": "без версии",
+    "not_in_catalog": "Этого приложения нет в каталоге для загрузки.",
+    "empty_view": "В этом разделе нет приложений.",
+    "sources": "Источники: GitHub · HB App Store · GameHub",
+    "search_result": "Результатов: {}",
+    "nothing_to_update": "Всё актуально.",
+    "update_all_confirm": "Обновить приложений: {}?"
   }
 }
