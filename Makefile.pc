@@ -357,6 +357,10 @@ $(BUILD_DIR)/tests/test_download_kind: tests/test_download_kind.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
 
+$(BUILD_DIR)/tests/test_rgba_image: tests/test_rgba_image.cpp src/app/rgba_image.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_rgba_image.cpp $(LDFLAGS)
+
 $(BUILD_DIR)/tests/test_storage_manager: tests/test_storage_manager.cpp \
 		src/app/storage_manager.cpp src/app/install_space.cpp
 	@mkdir -p $(dir $@)

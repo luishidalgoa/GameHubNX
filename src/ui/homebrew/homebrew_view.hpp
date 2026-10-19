@@ -75,15 +75,19 @@ struct StoreIconPixels {
     std::vector<uint8_t> rgba;
 };
 
-// Una casilla de la cuadricula. Ocupa el ancho de su columna; la portada es un
-// rectangulo fijo y el icono se centra dentro.
+// Columnas de la cuadricula. El ancho de cada casilla es un porcentaje de la
+// fila, no lo que mida su texto: si no, cada app salia de un tamaño distinto.
+inline constexpr int kStoreColumns = 5;
+
+// Una casilla de la cuadricula. Ocupa su quinta parte de la fila; la portada es
+// un rectangulo fijo y el icono se centra dentro.
 class StoreTile : public brls::Box {
 public:
     StoreTile() : brls::Box(brls::Axis::COLUMN) {
         setFocusable(true);
-        setGrow(1.0f);
-        setMarginLeft(10.0f);
-        setMarginRight(10.0f);
+        setWidthPercentage(100.0f / kStoreColumns);
+        setPaddingLeft(10.0f);
+        setPaddingRight(10.0f);
 
         cover_ = new brls::Box(brls::Axis::COLUMN);
         cover_->setHeight(kCoverHeight);
@@ -217,20 +221,22 @@ public:
         }
     }
 
-    static constexpr int kColumns = 5;
+    static constexpr int kColumns = kStoreColumns;
     static float rowHeight() { return StoreTile::kCoverHeight + 76.0f; }
 
     // `items` es la lista visible; la fila muestra [first, first+kColumns).
+    // `icons` va por columna: icons[i] es el icono de la casilla i de la fila.
     void setRow(const std::vector<StoreItem>& items, size_t first,
                 const std::vector<const StoreIconPixels*>& icons,
                 std::function<void(size_t)> onActivate) {
         for (int i = 0; i < kColumns; ++i) {
             const size_t index = first + static_cast<size_t>(i);
+            const size_t column = static_cast<size_t>(i);
             if (index < items.size()) {
                 tiles_[i]->setVisibility(brls::Visibility::VISIBLE);
                 tiles_[i]->setFocusable(true);
                 tiles_[i]->setItem(items[index]);
-                tiles_[i]->setIcon(index < icons.size() ? icons[index] : nullptr);
+                tiles_[i]->setIcon(column < icons.size() ? icons[column] : nullptr);
                 tiles_[i]->setOnActivate([onActivate, index] { onActivate(index); });
             } else {
                 tiles_[i]->setVisibility(brls::Visibility::INVISIBLE);
@@ -293,6 +299,7 @@ private:
     void pumpUpdateAll();
     void refreshVisible();
     void requestIcon(const StoreItem& item);
+    void requestIconsFrom(size_t first);
     void iconWorker();
     void updateTabLabels();
 
@@ -412,6 +419,9 @@ inline brls::RecyclerCell* StoreDataSource::cellForRow(brls::RecyclerFrame* recy
     auto* cell = static_cast<StoreRowCell*>(recycler->dequeueReusableCell("StoreRow"));
     const size_t first = static_cast<size_t>(index.row) * StoreRowCell::kColumns;
     HomebrewView* owner = owner_;
+    // Los iconos se piden al pintar la fila, no al filtrar: asi llegan tambien
+    // los de las filas que solo se ven al bajar.
+    owner->requestIconsFrom(first);
     cell->setRow(owner->visibleItems(), first, owner->iconsFor(first),
                  [owner](size_t i) { owner->activate(i); });
     return cell;
@@ -488,9 +498,6 @@ inline void HomebrewView::applyFilter() {
         recyclerHost_->setVisibility(brls::Visibility::VISIBLE);
     }
     recycler_->reloadData();
-    // Pide los iconos de lo visible; el resto llega cuando se desplace.
-    for (size_t i = 0; i < visible_.size() && i < 25; ++i)
-        requestIcon(visible_[i]);
 }
 
 inline void HomebrewView::requestIcon(const StoreItem& item) {
@@ -502,6 +509,14 @@ inline void HomebrewView::requestIcon(const StoreItem& item) {
         iconQueue_.push_back(item.icon);
     }
     iconCv_.notify_one();
+}
+
+// Pide la fila que empieza en `first` y la siguiente: lo que se ve primero, y
+// lo de abajo ya en marcha. Lo ya pedido o ya bajado no se vuelve a pedir.
+inline void HomebrewView::requestIconsFrom(size_t first) {
+    const size_t end = std::min(visible_.size(), first + 2 * StoreRowCell::kColumns);
+    for (size_t i = first; i < end; ++i)
+        requestIcon(visible_[i]);
 }
 
 // Hilo de trabajo: baja (o lee) el icono, lo decodifica y lo entrega a la UI.

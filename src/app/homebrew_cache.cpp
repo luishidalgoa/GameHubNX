@@ -14,9 +14,15 @@ namespace {
 constexpr const char* kCacheRoot = "sdmc:/switch/gamehubnx/homebrew-cache";
 constexpr const char* kHbKey = "hb-switch";
 
-// Crea la ruta entera, nivel a nivel. Si ya existe, no pasa nada.
+// Crea la ruta entera, nivel a nivel. Si ya existe, no pasa nada. Salta el
+// prefijo "sdmc:/" como en homebrew_icons.cpp: mkdir sobre la raiz del montaje
+// falla en libnx y dejaba la cache sin escribir.
 bool makeDirectories(const std::string& path) {
-    for (size_t slash = path.find('/', 1); slash != std::string::npos;
+    size_t start = 1;
+    const size_t colon = path.find(':');
+    if (colon != std::string::npos && colon + 1 < path.size() && path[colon + 1] == '/')
+        start = colon + 2;
+    for (size_t slash = path.find('/', start); slash != std::string::npos;
          slash = path.find('/', slash + 1)) {
         const std::string part = path.substr(0, slash);
         if (mkdir(part.c_str(), 0777) != 0 && errno != EEXIST)

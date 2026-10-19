@@ -18,27 +18,38 @@
 
 namespace gamehubnx::ui {
 
-// Tarjeta de una ROM de plataforma. Tamaño FIJO para todas las consolas: la
-// portada tiene el mismo hueco (ancho de columna por kCoverHeight) y la
-// caratula se centra dentro sin recortarse. Antes la altura de la fila se
-// adaptaba a la primera portada de cada consola; una vertical montaba sobre
-// las de al lado y tapaba el titulo.
+// Columnas de la cuadricula de plataforma. Cada tarjeta ocupa una quinta parte
+// del ancho de su fila: el porcentaje fija el ancho, y el texto no lo cambia.
+inline constexpr int kRomColumns = 5;
+
+// Tarjeta de una ROM de plataforma. Mismo tamaño para todos los juegos: la caja
+// de portada mide lo mismo siempre y la imagen la llena recortando lo que sobra,
+// como object-cover en la web de GameHub. Antes la imagen se encajaba dentro de
+// la caja: se veian las bandas del arte --y el fondo borroso que algunas
+// portadas traen--, y como el ancho de cada tarjeta dependia de su titulo, cada
+// una parecia de un tamaño distinto.
 class RomTile : public brls::Box {
 public:
     using Activate = std::function<void(int)>;
     using Focused = std::function<void()>;
 
     static constexpr float kCoverHeight = 176.0f;
+    // Proporcion 112x180 del catalogo: la de casi todo el arte de consola. La
+    // tienda publica otra por plataforma, pero no coincide con su propio arte
+    // (ver RomListActivity::load), asi que no se adopta.
+    static constexpr float kCoverWidth = kCoverHeight * 112.0f / 180.0f;
+    static constexpr float kTilePadding = 10.0f;
 
     RomTile() : brls::Box(brls::Axis::COLUMN) {
         setFocusable(true);
-        setGrow(1.0f);
-        setMarginLeft(10.0f);
-        setMarginRight(10.0f);
+        setWidthPercentage(100.0f / kRomColumns);
+        setPaddingLeft(kTilePadding);
+        setPaddingRight(kTilePadding);
 
         cover_ = new brls::Box(brls::Axis::COLUMN);
-        cover_->setAlignSelf(brls::AlignSelf::STRETCH);
+        cover_->setWidth(kCoverWidth);
         cover_->setHeight(kCoverHeight);
+        cover_->setAlignSelf(brls::AlignSelf::CENTER);
         cover_->setCornerRadius(theme::kRadiusMedium);
         cover_->setBackgroundColor(theme::surface());
         cover_->setAlignItems(brls::AlignItems::CENTER);
@@ -50,10 +61,15 @@ public:
         placeholder_->setTextColor(theme::textSecondary());
         cover_->addView(placeholder_);
 
+        // Como en el catalogo: la imagen ocupa la caja entera y se recorta.
         image_ = new AsyncRgbaImage();
-        image_->setAlignSelf(brls::AlignSelf::STRETCH);
+        image_->setPositionType(brls::PositionType::ABSOLUTE);
+        image_->setPositionTop(0.0f);
+        image_->setPositionLeft(0.0f);
+        image_->setWidth(kCoverWidth);
         image_->setHeight(kCoverHeight);
-        image_->setScalingType(brls::ImageScalingType::FIT);
+        image_->setCornerRadius(theme::kRadiusMedium);
+        image_->setScalingType(brls::ImageScalingType::FILL);
         image_->setVisibility(brls::Visibility::GONE);
         cover_->addView(image_);
 
@@ -97,6 +113,8 @@ public:
         name_->setSingleLine(true);
         name_->setAutoAnimate(false);
         name_->setFontSize(theme::kFontSmall);
+        // Centrado bajo la portada, que tambien esta centrada en la columna.
+        name_->setHorizontalAlign(brls::HorizontalAlign::CENTER);
         name_->setMarginTop(8.0f);
         addView(name_);
 
@@ -104,6 +122,7 @@ public:
         sub_->setAlignSelf(brls::AlignSelf::STRETCH);
         sub_->setSingleLine(true);
         sub_->setAutoAnimate(false);
+        sub_->setHorizontalAlign(brls::HorizontalAlign::CENTER);
         sub_->setFontSize(theme::kFontCaption);
         sub_->setMarginTop(2.0f);
         sub_->setTextColor(theme::textTertiary());
@@ -184,7 +203,7 @@ private:
 // Izquierda y derecha se mueven entre ellas; arriba y abajo conservan la columna.
 class RomRowCell : public brls::RecyclerCell {
 public:
-    static constexpr int kColumns = 5;
+    static constexpr int kColumns = kRomColumns;
     static constexpr float kRowGap = 16.0f;
     static constexpr float kTextHeight = 52.0f;
     static float rowHeight() {
