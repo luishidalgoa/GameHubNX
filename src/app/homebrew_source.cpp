@@ -105,6 +105,16 @@ size_t appendToBuffer(char* bytes, size_t size, size_t count, void* opaque) {
     return received;
 }
 
+// Mensaje de una descarga que no llego a buen puerto. Lleva el codigo de curl,
+// el HTTP y los bytes recibidos: "se ha interrumpido" a secas no dice si fallo
+// la red, el servidor o la SD.
+std::string transferFailure(CURLcode result, long status, size_t received) {
+    return std::string("La descarga se ha interrumpido (curl ") +
+           std::to_string(static_cast<int>(result)) + ": " +
+           curl_easy_strerror(result) + ", HTTP " + std::to_string(status) +
+           ", " + std::to_string(received) + " bytes).";
+}
+
 struct FileSink {
     std::ofstream output;
     size_t written = 0;
@@ -360,8 +370,11 @@ bool installHomebrewRelease(const HomebrewRelease& release,
     if (result != CURLE_OK || status != 200 || sink.overflow ||
         (release.nroSize && sink.written != release.nroSize)) {
         std::remove(partial.c_str());
-        error = result != CURLE_OK ? "La descarga se ha interrumpido."
-                                   : "La descarga no coincide con el release.";
+        error = result != CURLE_OK
+                    ? transferFailure(result, status, sink.written)
+                    : std::string("La descarga no coincide con el release (HTTP ") +
+                          std::to_string(status) + ", " +
+                          std::to_string(sink.written) + " bytes).";
         return false;
     }
     if (std::rename(partial.c_str(), installedPath.c_str()) != 0) {
@@ -604,8 +617,11 @@ static bool installArchiveRelease(const HomebrewRelease& release,
 
     if (result != CURLE_OK || status != 200 || sink.overflow) {
         std::remove(zipPath.c_str());
-        error = result != CURLE_OK ? "La descarga se ha interrumpido."
-                                   : "La descarga no se completo.";
+        error = result != CURLE_OK
+                    ? transferFailure(result, status, sink.written)
+                    : std::string("La descarga no se completo (HTTP ") +
+                          std::to_string(status) + ", " +
+                          std::to_string(sink.written) + " bytes).";
         return false;
     }
     uint8_t digest[16];

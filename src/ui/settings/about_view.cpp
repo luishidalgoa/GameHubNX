@@ -123,7 +123,7 @@ AboutView::AboutView() : brls::Box(brls::Axis::COLUMN) {
                                 "https://t.me/i3sey");
     auto* github = makeQrCard("GitHub", "luishidalgoa/GameHubNX",
                               tr("gamehubnx/about/github_summary"),
-                              "https://github.com/luishidalgoa/GameHubNX");
+                              "https://github.com/luishidalgoa/green-nx/releases");
     github->setMarginLeft(kCardGap);
     qrRow->addView(telegram);
     qrRow->addView(github);

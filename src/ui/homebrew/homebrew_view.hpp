@@ -79,15 +79,26 @@ struct StoreIconPixels {
 // fila, no lo que mida su texto: si no, cada app salia de un tamaño distinto.
 inline constexpr int kStoreColumns = 5;
 
+class StoreTile;
+
+// Casillas pintadas ahora, con la clave de icono que muestran. Cuando llega un
+// icono se pone solo en sus casillas. Antes se reconstruia toda la lista con
+// cada icono, y eso reiniciaba el scroll y movia el foco.
+struct StoreTileIndex {
+    std::map<StoreTile*, std::string> keys;
+};
+
 // Una casilla de la cuadricula. Ocupa su quinta parte de la fila; la portada es
 // un rectangulo fijo y el icono se centra dentro.
 class StoreTile : public brls::Box {
 public:
-    StoreTile() : brls::Box(brls::Axis::COLUMN) {
+    explicit StoreTile(std::shared_ptr<StoreTileIndex> index)
+        : brls::Box(brls::Axis::COLUMN), index_(std::move(index)) {
         setFocusable(true);
         setWidthPercentage(100.0f / kStoreColumns);
         setPaddingLeft(10.0f);
         setPaddingRight(10.0f);
+        index_->keys[this];
 
         cover_ = new brls::Box(brls::Axis::COLUMN);
         cover_->setHeight(kCoverHeight);
@@ -151,10 +162,16 @@ public:
         addView(sub_);
     }
 
+    ~StoreTile() override { index_->keys.erase(this); }
+
     static constexpr float kCoverHeight = 156.0f;
     static constexpr float kIconSize = 120.0f;
 
+    // Sin app: la casilla no recibe iconos hasta que se le asigne una.
+    void clearKey() { index_->keys[this].clear(); }
+
     void setItem(const StoreItem& item) {
+        index_->keys[this] = item.key;
         setTextIfChanged(title_, item.title);
         setTextIfChanged(sub_, item.sub);
         setTextIfChanged(placeholder_, item.title.empty()
@@ -195,6 +212,7 @@ public:
     }
 
 private:
+    std::shared_ptr<StoreTileIndex> index_;
     brls::Box* cover_ = nullptr;
     AsyncRgbaImage* image_ = nullptr;
     brls::Label* placeholder_ = nullptr;
@@ -208,7 +226,7 @@ private:
 // Una fila de la cuadricula: hasta cinco casillas.
 class StoreRowCell : public brls::RecyclerCell {
 public:
-    StoreRowCell() {
+    explicit StoreRowCell(std::shared_ptr<StoreTileIndex> index) {
         setFocusable(false);
         setAxis(brls::Axis::ROW);
         setAlignSelf(brls::AlignSelf::STRETCH);
@@ -216,7 +234,7 @@ public:
         setLineBottom(0);
         setLineColor(brls::TRANSPARENT);
         for (int i = 0; i < kColumns; ++i) {
-            tiles_[i] = new StoreTile();
+            tiles_[i] = new StoreTile(index);
             addView(tiles_[i]);
         }
     }
@@ -241,6 +259,7 @@ public:
             } else {
                 tiles_[i]->setVisibility(brls::Visibility::INVISIBLE);
                 tiles_[i]->setFocusable(false);
+                tiles_[i]->clearKey();
             }
         }
     }
@@ -297,9 +316,9 @@ private:
     void installApp(size_t catalogApp, bool fromUpdateAll);
     void updateAll();
     void pumpUpdateAll();
-    void refreshVisible();
     void requestIcon(const StoreItem& item);
     void requestIconsFrom(size_t first);
+    void pushIcon(const std::string& key);
     void iconWorker();
     void updateTabLabels();
 
@@ -313,6 +332,7 @@ private:
     bool loading_ = false;
     bool busy_ = false;
     std::vector<size_t> updateQueue_;
+    std::shared_ptr<StoreTileIndex> tileIndex_ = std::make_shared<StoreTileIndex>();
 
     // Iconos: el hilo de trabajo baja y decodifica; la UI solo pinta lo listo.
     std::map<std::string, StoreIconPixels> icons_;
@@ -372,7 +392,8 @@ inline HomebrewView::HomebrewView(bool autoLoad) : brls::Box(brls::Axis::COLUMN)
     recycler_ = new brls::RecyclerFrame();
     recycler_->setGrow(1);
     recycler_->estimatedRowHeight = StoreRowCell::rowHeight();
-    recycler_->registerCell("StoreRow", [] { return new StoreRowCell(); });
+    std::shared_ptr<StoreTileIndex> tileIndex = tileIndex_;
+    recycler_->registerCell("StoreRow", [tileIndex] { return new StoreRowCell(tileIndex); });
     dataSource_ = new StoreDataSource(this);
     recycler_->setDataSource(dataSource_);
     recyclerHost_ = recyclerHost(recycler_);
@@ -550,13 +571,18 @@ inline void HomebrewView::iconWorker() {
                 icons_[key] = std::move(pixels);
             else
                 icons_[key] = StoreIconPixels();  // sin icono: no se vuelve a pedir
-            refreshVisible();
+            pushIcon(key);
         });
     }
 }
 
-inline void HomebrewView::refreshVisible() {
-    recycler_->reloadData();
+// Pone el icono recien llegado solo en las casillas que lo muestran. La lista no
+// se reconstruye, asi que el scroll y el foco se quedan donde estan.
+inline void HomebrewView::pushIcon(const std::string& key) {
+    const StoreIconPixels* pixels = &icons_[key];
+    for (const auto& [tile, tileKey] : tileIndex_->keys)
+        if (tileKey == key)
+            tile->setIcon(pixels);
 }
 
 // Carga el catalogo en un hilo de trabajo y reconstruye las dos vistas.
