@@ -4,6 +4,7 @@
     "exit": "Quitter"
   },
   "nav": {
+    "homebrew": "Homebrew",
     "catalog": "Catalogue",
     "downloads": "Téléchargements",
     "installed": "Installés",
@@ -804,5 +805,22 @@
         "native_hint": "S'installe sur la console",
         "emulated_hint": "Se télécharge sur la carte SD pour un émulateur",
         "empty": "Aucun jeu pour le moment"
-    }
+    },
+  "homebrew": {
+    "title": "Homebrew",
+    "loading": "Recherche des releases sur GitHub…",
+    "empty": "Aucun dépôt homebrew à afficher.",
+    "not_installed": "Non installé",
+    "installed": "Installé {}",
+    "update": "Mettre à jour vers {}",
+    "no_release": "Aucune release téléchargeable",
+    "install_confirm": "Installer {} {} sur la carte SD ?",
+    "install": "Installer",
+    "downloading": "Téléchargement de {}…",
+    "done": "{} installé. Ouvrez-le depuis le Homebrew Menu.",
+    "failed": "Installation impossible : {}",
+    "repos": "{} dépôts",
+    "refresh": "Actualiser",
+    "offline": "Hors ligne. Données enregistrées d'il y a {} h."
+  }
 }

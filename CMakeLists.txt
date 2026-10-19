@@ -157,6 +157,7 @@ target_compile_options(gamehubnx_utp PRIVATE
 set(CORE_SOURCES
     src/core/sha1.c
     src/core/sha256.c
+    src/core/md5.c
     src/core/mse.c
     src/core/bencode.c
     src/core/metainfo.c
@@ -195,6 +196,9 @@ set(APP_SERVICE_SOURCES
     src/app/game_metadata_service.cpp
     src/app/game_update_install.cpp
     src/app/game_update_service.cpp
+    src/app/homebrew_source.cpp
+    src/app/zip_archive.cpp
+    src/app/homebrew_cache.cpp
     src/app/installed_title_service.cpp
     src/app/storage_manager.cpp
     src/app/mod_index_service.cpp

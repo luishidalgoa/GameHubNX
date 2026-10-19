@@ -4,6 +4,7 @@
     "exit": "Sair"
   },
   "nav": {
+    "homebrew": "Homebrew",
     "catalog": "Catálogo",
     "downloads": "Downloads",
     "installed": "Instalados",
@@ -804,5 +805,22 @@
         "native_hint": "Instala no console",
         "emulated_hint": "Baixa para o cartão SD para um emulador",
         "empty": "Sem jogos ainda"
-    }
+    },
+  "homebrew": {
+    "title": "Homebrew",
+    "loading": "Buscando releases no GitHub…",
+    "empty": "Nenhum repositório homebrew para mostrar.",
+    "not_installed": "Não instalado",
+    "installed": "Instalado {}",
+    "update": "Atualizar para {}",
+    "no_release": "Nenhuma release baixável",
+    "install_confirm": "Instalar {} {} no cartão SD?",
+    "install": "Instalar",
+    "downloading": "Baixando {}…",
+    "done": "{} instalado. Abra pelo Homebrew Menu.",
+    "failed": "Não foi possível instalar: {}",
+    "repos": "{} repositórios",
+    "refresh": "Atualizar",
+    "offline": "Sem conexão. Dados salvos de {} h atrás."
+  }
 }

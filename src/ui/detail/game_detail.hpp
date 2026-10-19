@@ -13,6 +13,7 @@
 #include "app/app_settings.hpp"
 #include "app/catalog_presentation.hpp"
 #include "app/game_update_install.hpp"
+#include "app/shop_update_source.hpp"
 #include "ui/i18n.hpp"
 #include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
@@ -1291,9 +1292,10 @@ private:
         return {};
     }
 
+    // La version nueva la pone la TIENDA (las actualizaciones de este juego en
+    // addOns_), no el indice de metadatos: ver shop_update_source.hpp.
     std::string latestVersionForEntry() const {
-        const GameMetadata* metadata = metadata_->findByInfoHash(entry_.infoHash);
-        return metadata ? metadata->latestVersion : std::string();
+        return shopLatestVersion(addOns_, titleId_);
     }
 
     std::vector<std::string> installedDlcIds() const {

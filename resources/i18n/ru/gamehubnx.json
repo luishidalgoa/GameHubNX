@@ -4,6 +4,7 @@
     "exit": "Выход"
   },
   "nav": {
+    "homebrew": "Homebrew",
     "catalog": "Каталог",
     "downloads": "Загрузки",
     "installed": "Мои игры",
@@ -804,5 +805,22 @@
         "native_hint": "Устанавливается на консоль",
         "emulated_hint": "Скачивается на SD-карту для эмулятора",
         "empty": "Пока нет игр"
-    }
+    },
+  "homebrew": {
+    "title": "Homebrew",
+    "loading": "Поиск релизов на GitHub…",
+    "empty": "Нет репозиториев homebrew для показа.",
+    "not_installed": "Не установлено",
+    "installed": "Установлено: {}",
+    "update": "Обновить до {}",
+    "no_release": "Нет релиза для загрузки",
+    "install_confirm": "Установить {} {} на SD-карту?",
+    "install": "Установить",
+    "downloading": "Загрузка {}…",
+    "done": "{} установлено. Откройте через Homebrew Menu.",
+    "failed": "Не удалось установить: {}",
+    "repos": "Репозиториев: {}",
+    "refresh": "Обновить",
+    "offline": "Нет сети. Сохранённые данные: {} ч назад."
+  }
 }

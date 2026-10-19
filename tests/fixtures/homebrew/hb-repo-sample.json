@@ -1,0 +1,72 @@
+{
+  "packages": [
+    {
+      "name": "100boxesNX",
+      "title": "100 Boxes NX",
+      "author": "Cid2mizard",
+      "description": "A simple yet challenging puzzle game.",
+      "version": "1.1",
+      "binary": "/switch/100_Boxes_NX/100 Boxes NX.nro",
+      "md5": "bbca286e0024be96b2762441d6d77cfb",
+      "url": "https://github.com/Cid2mizard/100_Boxes_NX/releases",
+      "category": "game",
+      "license": "MIT",
+      "updated": "01/02/2020",
+      "app_dls": 578,
+      "filesize": 4571,
+      "extracted": 10533
+    },
+    {
+      "name": "2048",
+      "title": "2048",
+      "author": "TooTallNate",
+      "description": "Port of the game 2048",
+      "version": "1.2.0",
+      "binary": "/switch/2048.nro",
+      "md5": "316d699fe3873848cf20fdcb20775ca7",
+      "url": "https://github.com/TooTallNate/switch-2048",
+      "category": "game",
+      "license": "MIT",
+      "updated": "12/03/2026",
+      "app_dls": 9718,
+      "filesize": 3286,
+      "extracted": 7633
+    },
+    {
+      "name": "2planes",
+      "title": "2 Planes",
+      "author": "mactec0",
+      "description": "homebrew game",
+      "version": "1.0.1",
+      "binary": "/switch/2planes/2PlanesSwitch.nro",
+      "md5": "b747662f495fde2e8791604aace78d8e",
+      "url": "https://github.com/mactec0/2Planes_SWITCH/releases",
+      "category": "game",
+      "license": "none",
+      "updated": "12/10/2021",
+      "app_dls": 3075,
+      "filesize": 5138,
+      "extracted": 7211
+    },
+    {
+      "name": "../evil",
+      "title": "Evil",
+      "version": "1.0",
+      "binary": "/switch/evil/evil.nro",
+      "md5": "00000000000000000000000000000000"
+    },
+    {
+      "name": "wiiapp",
+      "title": "Wii app",
+      "version": "1.0",
+      "binary": "/wiiu/apps/wiiapp.rpx",
+      "md5": "00000000000000000000000000000000"
+    },
+    {
+      "name": "nobinary",
+      "title": "Sin binary",
+      "version": "1.0",
+      "md5": "00000000000000000000000000000000"
+    }
+  ]
+}

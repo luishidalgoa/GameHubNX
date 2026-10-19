@@ -365,7 +365,7 @@ private:
     void checkAllTitles() {
         std::string saveError;
         updates_->checkAll(installed_->titles(), installed_->generation(),
-                           settings_->get().lastMetadataRefreshMs, saveError);
+                           settings_->get().lastCatalogRefreshMs, saveError);
         if (!saveError.empty())
             diagnostic_error("game_updates", "save", "error=%s",
                              saveError.c_str());
@@ -389,23 +389,15 @@ private:
         updateAllAutoImport_ = false;
         if (refreshing_ || updateInFlight_ || uninstallInFlight_)
             return;
-        std::vector<const GameMetadata*> entries;
-        if (!metadata_ || !metadata_->findByTitleId(titleId, entries)) {
+        uint64_t version = 0;
+        const CatalogEntry* shop =
+            shopUpdateFor(titleId, std::string(), &version);
+        if (!shop) {
             brls::Application::notify(
                 tr("gamehubnx/installed/update_no_bundle"));
             return;
         }
-        if (entries.size() == 1) {
-            confirmUpdateInstall(GameMetadata(*entries.front()));
-            return;
-        }
-        // A title with several bundles pages through them one at a time —
-        // see chooseBundle. Entries arrive newest-first.
-        std::vector<GameMetadata> bundles;
-        bundles.reserve(entries.size());
-        for (const GameMetadata* entry : entries)
-            bundles.push_back(*entry);
-        chooseBundle(std::move(bundles), 0);
+        confirmUpdateInstall(*shop, version);
     }
 
     void queueAllUpdates() {
@@ -433,15 +425,13 @@ private:
         while (!pendingUpdateAll_.empty()) {
             const std::string titleId = pendingUpdateAll_.front();
             pendingUpdateAll_.erase(pendingUpdateAll_.begin());
-            std::vector<const GameMetadata*> entries;
-            if (!metadata_ || !metadata_->findByTitleId(titleId, entries) ||
-                entries.empty()) {
-                brls::Application::notify(
-                    tr("gamehubnx/installed/update_no_bundle"));
-                continue;
+            if (const CatalogEntry* shop =
+                    shopUpdateFor(titleId, std::string())) {
+                queueShopUpdate(*shop);
+                return;
             }
-            beginUpdateInstall(GameMetadata(*entries.front()));
-            return;
+            brls::Application::notify(
+                tr("gamehubnx/installed/update_no_bundle"));
         }
         updateAllAutoImport_ = false;
         reload();
@@ -497,67 +487,12 @@ private:
         });
     }
 
-    // brls::Dialog's third button claims a full-width top slot, so paging
-    // two bundles at a time put the auxiliary "more" button above both
-    // candidates. One bundle per page keeps the hierarchy honest: candidate
-    // in the left half, "more"/"later" in the right. Entries arrive
-    // newest-first, so the first candidate is the newest release.
-    void chooseBundle(std::vector<GameMetadata> bundles, size_t start) {
-        auto* dialog = new brls::Dialog(
-            tr("gamehubnx/installed/update_choose_bundle"));
-        if (start < bundles.size()) {
-            const GameMetadata& candidate = bundles[start];
-            // Two bundles of the same title can share a version (different
-            // builds); a bare version would then make the buttons identical,
-            // so pin the short info-hash suffix onto each twin.
-            bool twin = false;
-            for (size_t i = 0; i < bundles.size(); ++i)
-                if (i != start &&
-                    bundles[i].latestVersion == candidate.latestVersion) {
-                    twin = true;
-                    break;
-                }
-            dialog->addButton(bundleLabel(candidate, twin),
-                              [this, entry = bundles[start]] {
-                confirmUpdateInstall(entry);
-            });
-        }
-        const size_t remaining = bundles.size() - start - 1;
-        if (remaining > 0)
-            dialog->addButton(
-                tr("gamehubnx/installed/update_choose_more", remaining),
-                [this, bundles = std::move(bundles), start = start + 1] {
-                    chooseBundle(std::move(bundles), start);
-                });
-        else
-            dialog->addButton(tr("gamehubnx/common/later"), [] {});
-        dialog->open();
-    }
-
-    // Dialog buttons hold one line and half the dialog width, so a full game
-    // name cannot fit reliably: the old byte-capped "name  vN" label still
-    // ran over into the neighbouring button, because Cyrillic and Latin
-    // letters have different widths and a byte cap has nothing to do with
-    // pixels. The dialog is already about one title, so the version alone
-    // identifies the candidate — and a short info-hash suffix tells two
-    // same-version bundles apart.
-    static std::string bundleLabel(const GameMetadata& entry, bool twin) {
-        std::string label = "v" + entry.latestVersion;
-        if (twin && entry.infoHash.size() >= 8)
-            label += " (" + entry.infoHash.substr(0, 8) + ")";
-        return label;
-    }
-
-    void confirmUpdateInstall(GameMetadata entry) {
-        const std::string foundVersion =
-            entry.latestVersion.empty() ? std::string("?") : entry.latestVersion;
+    void confirmUpdateInstall(const CatalogEntry& update, uint64_t version) {
         auto* dialog = new brls::Dialog(tr(
-            "gamehubnx/installed/update_install_confirm", entry.name,
-            foundVersion));
+            "gamehubnx/installed/update_install_confirm", update.title,
+            std::to_string(version)));
         dialog->addButton(tr("gamehubnx/installed/update_download"),
-                          [this, entry = std::move(entry)] {
-            beginUpdateInstall(entry);
-        });
+                          [this, update] { queueShopUpdate(update); });
         dialog->addButton(tr("gamehubnx/common/later"), [] {});
         dialog->open();
     }
@@ -654,236 +589,6 @@ private:
         status_->setText(tr("gamehubnx/detail/shop_queued"));
     }
 
-    // Resolver el magnet a .torrent y luego importarlo instalando solo los
-    // ficheros de actualizacion. Solo se llega aqui cuando la actualizacion NO
-    // esta en la tienda.
-    void beginUpdateInstall(GameMetadata entry) {
-        if (updateInFlight_)
-            return;
-        if (const CatalogEntry* fromShop = shopUpdateFor(entry)) {
-            queueShopUpdate(*fromShop);
-            return;
-        }
-        updateInFlight_ = true;
-        cancelled_->store(false);
-        status_->setText(tr("gamehubnx/installed/update_resolving"));
-        // While the resolve is in flight no other action can start, so Y is
-        // the cancel: it flips the flag the resolver polls, and the
-        // completion path unlinks the tmp torrent and says so in a toast.
-        // Re-registering in a later beginUpdateInstall replaces the action;
-        // unregistering on completion removes the hint from the bar.
-        updateCancelAction_ = registerAction(
-            tr("gamehubnx/installed/update_cancel"), brls::BUTTON_Y,
-            [this](brls::View*) {
-                cancelled_->store(true);
-                return true;
-            });
-        const std::string hash = entry.infoHash;
-        const CatalogEntry* catalogEntry =
-            catalog_ ? catalog_->findByInfoHash(hash) : nullptr;
-        const std::string magnet = updateMagnetFor(hash, catalogEntry);
-        std::vector<uint8_t> infoDict =
-            catalogEntry ? catalogEntry->infoDict : std::vector<uint8_t>();
-        const std::string tmp = manager_->rootPath() + "/_update_tmp_" +
-                                catalogLower(hash) + "_" +
-                                std::to_string(updateTempSerial_.fetch_add(1)) +
-                                ".torrent";
-        auto alive = alive_;
-        auto cancelled = cancelled_;
-        const std::string latestVersion = entry.latestVersion;
-        const std::string titleId = entry.titleId;
-        brls::async([this, alive, cancelled, magnet, tmp,
-                     infoDict = std::move(infoDict), latestVersion, titleId] {
-            std::string err;
-            MagnetResolver resolver;
-            auto progress = [this, alive](const gamehubnx::MagnetProgress& p) {
-                std::string text;
-                switch (p.stage) {
-                    case gamehubnx::MagnetProgress::Stage::FindingPeers:
-                        text = tr("gamehubnx/detail/finding_peers");
-                        break;
-                    case gamehubnx::MagnetProgress::Stage::Connecting:
-                        text = tr("gamehubnx/detail/contacting_peer",
-                                  p.peerIndex, p.peerCount);
-                        break;
-                    case gamehubnx::MagnetProgress::Stage::FetchingMetadata:
-                        text = tr("gamehubnx/detail/fetching_metadata",
-                                  p.completedPieces, p.totalPieces);
-                        break;
-                    case gamehubnx::MagnetProgress::Stage::Validating:
-                        text = tr("gamehubnx/detail/validating");
-                        break;
-                }
-                brls::sync([this, alive, text] {
-                    if (alive->load())
-                        status_->setText(text);
-                });
-            };
-            std::vector<uint8_t> initialPeers;
-            const bool ok = resolver.resolveToFile(
-                magnet, tmp, *cancelled, progress, err, &initialPeers,
-                infoDict.empty() ? nullptr : &infoDict);
-            brls::sync([this, alive, ok, err = std::move(err), tmp,
-                        initialPeers = std::move(initialPeers),
-                        latestVersion, titleId]() mutable {
-                if (!alive->load()) {
-                    ::unlink(tmp.c_str());
-                    return;
-                }
-                updateInFlight_ = false;
-                if (updateCancelAction_ != ACTION_NONE) {
-                    unregisterAction(updateCancelAction_);
-                    updateCancelAction_ = ACTION_NONE;
-                }
-                if (!ok) {
-                    ::unlink(tmp.c_str());
-                    reload();
-                    // A user cancel is not an error: the resolver reports it
-                    // as a failure, so distinguish it from a genuine one
-                    // before the diagnostic and the toast.
-                    if (cancelled_->load()) {
-                        pendingUpdateAll_.clear();
-                        updateAllAutoImport_ = false;
-                        brls::Application::notify(
-                            tr("gamehubnx/installed/update_cancelled"));
-                        return;
-                    }
-                    diagnostic_error("game_updates", "resolve",
-                                     "title error=%s", err.c_str());
-                    brls::Application::notify(resolveErrorToast(err));
-                    pumpUpdateAll();
-                    return;
-                }
-                finishUpdateImport(tmp, std::move(initialPeers),
-                                   latestVersion, titleId);
-            });
-        });
-    }
-
-    // The resolver's errors are English diagnostic strings; what the user
-    // sees must be localized. Classify by the failure modes it actually
-    // emits (magnet_resolver.cpp resolveToFile) and keep the raw string in
-    // the diagnostic log either way.
-    static std::string resolveErrorToast(const std::string& err) {
-        const auto has = [&err](const char* needle) {
-            return err.find(needle) != std::string::npos;
-        };
-        if (has("not registered anymore"))
-            return tr("gamehubnx/installed/update_error_unregistered");
-        if (has("no usable peers") || has("could not connect to any of them") ||
-            has("none returned"))
-            return tr("gamehubnx/installed/update_error_no_peers");
-        if (has("rejected"))
-            return tr("gamehubnx/installed/update_error_rejected");
-        return tr("gamehubnx/installed/update_error_failed");
-    }
-
-    void finishUpdateImport(const std::string& path,
-                            std::vector<uint8_t> initialPeers,
-                            const std::string& latestVersion,
-                            const std::string& titleId) {
-        TorrentPreview preview;
-        std::string err;
-        if (!manager_->previewTorrent(path, preview, err)) {
-            ::unlink(path.c_str());
-            diagnostic_error("game_updates", "preview", "error=%s",
-                             err.c_str());
-            brls::Application::notify(
-                tr("gamehubnx/installed/update_error_preview"));
-            reload();
-            pumpUpdateAll();
-            return;
-        }
-        std::vector<uint8_t> actions =
-            selectUpdateFiles(preview, latestVersion, titleId);
-        if (updateAllAutoImport_) {
-            bool hasInstall = false;
-            for (uint8_t action : actions) {
-                if (action == static_cast<uint8_t>(FileAction::Install)) {
-                    hasInstall = true;
-                    break;
-                }
-            }
-            if (!hasInstall) {
-                ::unlink(path.c_str());
-                pumpUpdateAll();
-                return;
-            }
-            importUpdateTorrent(preview, path, std::move(initialPeers),
-                                std::move(actions));
-            return;
-        }
-        // Every update offer lands in the chooser with the recommended
-        // packages preselected. The old shortcut — importing straight away
-        // when exactly one package carried the update's version — is gone:
-        // the user always gets to see (and tune) what an update would pull.
-        chooseUpdateFile(preview, path, std::move(initialPeers),
-                         std::move(actions));
-    }
-
-    // The tmp torrent stays alive until the choice lands; the chooser hands
-    // the bootstrap peers straight back into the import, so a resolved
-    // torrent never loses its only way to start where the tracker is
-    // unreachable. Both exits (confirm and cancel) come back here, where the
-    // tmp torrent is owned. `actions` is the recommendation mask from
-    // selectUpdateFiles — the rows open with it preselected.
-    void chooseUpdateFile(const TorrentPreview& preview,
-                          const std::string& path,
-                          std::vector<uint8_t> initialPeers,
-                          std::vector<uint8_t> actions) {
-        auto alive = alive_;
-        brls::Application::pushActivity(new UpdateFileChooserActivity(
-            manager_, preview, std::move(actions), std::move(initialPeers),
-            [this, alive, preview, path](std::vector<uint8_t> mask,
-                                         std::vector<uint8_t> peers) {
-                if (!alive->load()) {
-                    ::unlink(path.c_str());
-                    return;
-                }
-                importUpdateTorrent(preview, path, std::move(peers),
-                                    std::move(mask));
-            },
-            [this, alive, path] {
-                ::unlink(path.c_str());
-                if (alive->load()) {
-                    pendingUpdateAll_.clear();
-                    updateAllAutoImport_ = false;
-                    reload();
-                }
-            }));
-    }
-
-    void importUpdateTorrent(const TorrentPreview& preview,
-                             const std::string& path,
-                             std::vector<uint8_t> initialPeers,
-                             std::vector<uint8_t> actions) {
-        std::string id;
-        std::string err;
-        if (manager_->importTorrentActions(path, actions, id, err,
-                                           initialPeers)) {
-            log_msg("[game_updates] imported update torrent %s\n", id.c_str());
-            brls::Application::notify(
-                tr("gamehubnx/installed/update_added"));
-            // Once the task settles (installed, failed or removed) refresh
-            // the installed list and re-check, so the row flips to Latest
-            // without another manual press.
-            pendingRecheckTaskId_ = catalogLower(id);
-            recheckTimer_.start(1000);
-        } else if (err.find("already in the download manager") !=
-                   std::string::npos) {
-            brls::Application::notify(
-                tr("gamehubnx/detail/already_in_downloads"));
-        } else {
-            diagnostic_error("game_updates", "import", "error=%s",
-                             err.c_str());
-            brls::Application::notify(
-                tr("gamehubnx/installed/update_error_import"));
-        }
-        ::unlink(path.c_str());
-        reload();
-        pumpUpdateAll();
-    }
-
     // UI-thread tick while an update task we started is in flight: wait for
     // a terminal state, then refresh installed titles and re-check them.
     void pollUpdateRecheck() {
@@ -934,37 +639,16 @@ private:
         });
     }
 
-    // Que juegos salen en la pestana de actualizaciones.
-    //
-    // MANDA LA TIENDA, y es la correccion de fondo. Antes decidia el indice de
-    // metadatos, que es de la epoca del torrent: sus candidatos son PACKS
-    // --juego + parche + DLC en un solo archivo-- y su version es la que
-    // llevaba el pack. De ahi las dos quejas a la vez: ofrecia juegos que ya
-    // estaban al dia ("actualizaciones que no tengo") y lo que ofrecia no era
-    // el parche del juego sino otro paquete entero ("no es la update directa").
-    //
-    // Con la tienda hay parche de verdad, con su version, y se compara con la
-    // que la consola dice tener instalada. Solo si la tienda no sabe nada de
-    // ese juego se recurre al veredicto viejo, para no dejar a ciegas a quien
-    // siga con biblioteca de torrent.
+    // Que juegos salen en la pestana de actualizaciones: los que la TIENDA
+    // tiene mas nuevos que la consola. Todo sale del veredicto del check
+    // (GameUpdateService con la tienda como unica fuente), asi que lo que se
+    // lista es siempre lo que se puede descargar.
     std::vector<InstalledTitle> onlyWithUpdate(
         std::vector<InstalledTitle> titles) const {
         const GameUpdateResults& results = updates_->results();
         std::vector<InstalledTitle> filtered;
         filtered.reserve(titles.size());
         for (InstalledTitle& title : titles) {
-            uint64_t disponible = 0;
-            if (shopUpdateFor(title.titleId, std::string(), &disponible)) {
-                // Sin version instalada legible no se puede comparar, y
-                // ensenarla "por si acaso" es justo el ruido del que se
-                // quejaba: se calla.
-                uint64_t instalada = 0;
-                if (!parseVersionTag(title.version, instalada))
-                    continue;
-                if (disponible > instalada)
-                    filtered.push_back(std::move(title));
-                continue;
-            }
             auto it = results.find(title.titleId);
             if (it != results.end() &&
                 it->second.state == GameUpdateState::UpdateAvailable)
@@ -1011,7 +695,7 @@ private:
             ? tr("gamehubnx/updates/count", count)
             : tr("gamehubnx/installed/count", count);
         if (updates_->stale(installed_->generation(),
-                            settings_->get().lastMetadataRefreshMs))
+                            settings_->get().lastCatalogRefreshMs))
             text += "   " + tr("gamehubnx/installed/update_stale");
         status_->setText(text);
     }

@@ -4,6 +4,7 @@
     "exit": "Exit"
   },
   "nav": {
+    "homebrew": "Homebrew",
     "catalog": "Catalog",
     "downloads": "Downloads",
     "installed": "Installed",
@@ -804,5 +805,22 @@
         "native_hint": "Installs on the console",
         "emulated_hint": "Downloads to the SD card for an emulator",
         "empty": "No games yet"
-    }
+    },
+  "homebrew": {
+    "title": "Homebrew",
+    "loading": "Looking up releases on GitHub…",
+    "empty": "No homebrew repos to show.",
+    "not_installed": "Not installed",
+    "installed": "Installed {}",
+    "update": "Update to {}",
+    "no_release": "No downloadable release",
+    "install_confirm": "Install {} {} on the SD card?",
+    "install": "Install",
+    "downloading": "Downloading {}…",
+    "done": "{} installed. Open it from the Homebrew Menu.",
+    "failed": "Could not install: {}",
+    "repos": "{} repos",
+    "refresh": "Refresh",
+    "offline": "Offline. Showing saved data from {} h ago."
+  }
 }

@@ -15,7 +15,9 @@ extern "C" {
 namespace gamehubnx {
 namespace {
 
-constexpr int kStateVersion = 1;
+// v2: la fuente de versiones pasa a ser la tienda. Los resultados v1 salieron
+// del indice de metadatos; al no cargar, el check arranca limpio y los rehace.
+constexpr int kStateVersion = 2;
 
 // Strict decimal parse ("131072"); rejects signs, whitespace and overflow.
 bool parseDecimal(const std::string& text, uint64_t& out) {

@@ -6,6 +6,7 @@
 #include "app/game_metadata_service.hpp"
 #include "app/game_update_service.hpp"
 #include "app/installed_title_service.hpp"
+#include "app/shop_update_source.hpp"
 #include "app/switch_deploy.hpp"
 #include "app/update_service.hpp"
 #include "platform/switch_crashlog.h"
@@ -49,6 +50,7 @@ extern "C" {
 #include "ui/files/file_browser_view.hpp"
 #include "ui/main_frame.hpp"
 #include "ui/platforms/platforms_view.hpp"
+#include "ui/homebrew/homebrew_view.hpp"
 #include "ui/downloads/downloads_view.hpp"
 #include "ui/downloads/task_files_activity.hpp"
 #include "ui/installed/installed_view.hpp"
@@ -190,6 +192,10 @@ public:
         // que hay que recolocar suele estar justamente fuera de ella.
         tabs->addNavTab(tr("gamehubnx/browser/tab"), NavIconType::Files,
                         [] { return new FileBrowserView("sdmc:/"); });
+        // Homebrew: los .nro de los releases de GitHub de los repos conocidos.
+        // Sin catalogo propio: la lista sale de GitHub en cada apertura.
+        tabs->addNavTab(tr("gamehubnx/nav/homebrew"), NavIconType::Files,
+                        [] { return new gamehubnx::ui::HomebrewView(); });
         tabs->addNavTab(tr("gamehubnx/nav/settings"), NavIconType::Settings,
                         [settings, manager, catalog, metadata,
                          installed, updater, mods, ftpServer] {
@@ -478,7 +484,9 @@ int main(int argc, char** argv) {
                     metadataError.c_str());
 
         startupStage("GameUpdateService load");
-        GameUpdateService gameUpdates(&metadata,
+        // La tienda es la unica fuente de versiones nuevas (shop_update_source.hpp).
+        ShopUpdateSource shopUpdates(&catalog);
+        GameUpdateService gameUpdates(&shopUpdates,
                                       GHNX_PATH("game-updates.json"));
         std::string gameUpdatesError;
         if (!gameUpdates.load(gameUpdatesError))

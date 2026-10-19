@@ -294,7 +294,7 @@ void testUnknownStateStringsAreDroppedOnLoad() {
     FakeSource source;
     {
         std::ofstream output(StatePath, std::ios::binary | std::ios::trunc);
-        output << "{\"version\":1,\"installed_generation\":1,"
+        output << "{\"version\":2,\"installed_generation\":1,"
                   "\"metadata_refresh_ms\":1,\"last_checked_at\":1,"
                   "\"results\":[{\"title_id\":\"0100000000000001\","
                   "\"state\":\"nonsense\"}]}\n";

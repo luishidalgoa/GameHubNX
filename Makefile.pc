@@ -46,6 +46,7 @@ UTP_CXXFLAGS = -O2 -std=c++17 -DPOSIX -DNDEBUG -Ivendor/libutp \
 CORE_SOURCES = \
     src/core/sha1.c       \
     src/core/sha256.c     \
+    src/core/md5.c        \
     src/core/mse.c        \
     src/core/bencode.c    \
     src/core/metainfo.c   \
@@ -317,6 +318,29 @@ $(BUILD_DIR)/tests/test_update_file_select: tests/test_update_file_select.cpp \
 		src/app/game_update_install.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+
+$(BUILD_DIR)/tests/test_shop_update_source: tests/test_shop_update_source.cpp \
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o src/app/game_update_install.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
+
+$(BUILD_DIR)/tests/test_homebrew_source: tests/test_homebrew_source.cpp \
+		src/app/homebrew_source.cpp src/app/zip_archive.cpp $(BUILD_DIR)/src/core/md5.o
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) -lz
+
+$(BUILD_DIR)/tests/test_md5: tests/test_md5.cpp $(BUILD_DIR)/src/core/md5.o
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
+
+$(BUILD_DIR)/tests/test_zip_archive: tests/test_zip_archive.cpp src/app/zip_archive.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) -lz
+
+$(BUILD_DIR)/tests/test_homebrew_cache: tests/test_homebrew_cache.cpp \
+		src/app/homebrew_cache.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
 
 $(BUILD_DIR)/tests/test_storage_manager: tests/test_storage_manager.cpp \
 		src/app/storage_manager.cpp src/app/install_space.cpp
