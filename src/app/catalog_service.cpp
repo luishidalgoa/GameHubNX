@@ -169,8 +169,9 @@ bool httpGet(const std::string& url, std::string& body, std::string& error,
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 45L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeHttp);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    // The Switch's own certificate store does not know the roots GameHub's
+    // certificate chains to; the bundled ones are added here as in the shop.
+    curlApplyTrustedSsl(curl);
     curlPinHttpsOnly(curl);
     curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
     CURLcode result = curl_easy_perform(curl);
@@ -186,10 +187,12 @@ bool httpGet(const std::string& url, std::string& body, std::string& error,
         buffer.overflow) {
         if (buffer.overflow)
             error = "Catalog download exceeded the size limit.";
-        else if (result != CURLE_OK)
+        else if (result != CURLE_OK) {
             error = std::string("Catalog network error: ") +
                     curl_easy_strerror(result);
-        else
+            if (isSslCertificateErrorMessage(error))
+                error += " Check the console clock and date.";
+        } else
             error = "Catalog server returned HTTP " + std::to_string(status) +
                     ".";
         return false;
