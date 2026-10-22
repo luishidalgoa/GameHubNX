@@ -463,10 +463,23 @@ inline std::string placeholderLetter(const std::string& title) {
 // suma un bloqueo de entrada que se quita en ese mismo callback. Un bucle
 // sincrono vuelve a popear la misma pantalla y deja los mandos bloqueados.
 inline void popActivitiesToRoot(std::function<void()> then = nullptr) {
-    if (brls::Application::getActivitiesStack().size() <= 1) {
+    const auto stack = brls::Application::getActivitiesStack();
+    if (stack.size() <= 1) {
         if (then)
             then();
         return;
+    }
+    // El foco sigue en una vista de la pantalla que se va a borrar. Si el mando
+    // se mueve antes de que la pila termine, navigate() llama a getDefaultFocus()
+    // sobre una vista ya destruida y la app revienta (Data Abort en
+    // brls::Box::getDefaultFocus, reporte del 20/10). Se lleva el foco a la raiz
+    // antes de cada pop.
+    if (brls::Activity* root = stack.front()) {
+        brls::View* rootFocus = root->getDefaultFocus();
+        if (!rootFocus)
+            rootFocus = root->getContentView();
+        if (rootFocus)
+            brls::Application::giveFocus(rootFocus);
     }
     brls::Application::popActivity(brls::TransitionAnimation::FADE,
                                    [then] { popActivitiesToRoot(then); });
