@@ -150,6 +150,7 @@ private:
         info.selectable = row < selectable_.size() && selectable_[row] != 0;
         info.hasMods = row < hasMods_.size() && hasMods_[row] != 0;
         info.favorite = row < favorite_.size() && favorite_[row] != 0;
+        info.online = entries_[row].online;
         return info;
     }
 
@@ -321,6 +322,10 @@ public:
             favoritesOnly_ = !favoritesOnly_;
             rebuildEntries();
         });
+        filterOnline_ = makeChip(tr("gamehubnx/catalog/filter_online"), [this] {
+            onlineOnly_ = !onlineOnly_;
+            rebuildEntries();
+        });
         filterFits_ = makeChip(tr("gamehubnx/catalog/filter_fits"), [this] {
             fitsOnly_ = !fitsOnly_;
             rebuildEntries();
@@ -334,6 +339,7 @@ public:
                                   [this] { openPlayerFilterMenu(); });
         filterFavorites_->setMarginLeft(16);
         header_->addView(filterFavorites_);
+        header_->addView(filterOnline_);
         header_->addView(filterFits_);
         header_->addView(filterMissing_);
         header_->addView(filterPlayers_);
@@ -944,10 +950,13 @@ private:
         if (fitsOnly_)
             storage = queryStorageSpace(manager_->rootPath());
         const bool favoritesOnly = favoritesOnly_ && favorites_;
+        const bool onlineOnly = onlineOnly_;
         for (const CatalogEntry& entry : catalog_->entries()) {
             if (entry.isHiddenByDefault())
                 continue;
             if (favoritesOnly && !favorites_->contains(entry.infoHash))
+                continue;
+            if (onlineOnly && !entry.online)
                 continue;
             if (fitsOnly_ && !catalogEntryFitsFreeSpace(entry.size, storage))
                 continue;
@@ -1426,6 +1435,7 @@ private:
         styleChip(filterAll_, !gamesOnly);
         styleChip(filterGames_, gamesOnly);
         styleChip(filterFavorites_, favoritesOnly_);
+        styleChip(filterOnline_, onlineOnly_);
         styleChip(filterFits_, fitsOnly_);
         styleChip(filterMissing_, missingOnly_);
         // The chip carries the active choice, so the header states the filter
@@ -2148,6 +2158,7 @@ private:
     brls::Button* filterAll_ = nullptr;
     brls::Button* filterGames_ = nullptr;
     brls::Button* filterFavorites_ = nullptr;
+    brls::Button* filterOnline_ = nullptr;
     brls::Button* filterMissing_ = nullptr;
     brls::Button* filterFits_ = nullptr;
     brls::Button* filterPlayers_ = nullptr;
@@ -2188,6 +2199,7 @@ private:
     // Session-only view filters: deliberately not persisted, so a relaunch
     // always comes back to the full catalog.
     bool favoritesOnly_ = false;
+    bool onlineOnly_ = false;
     bool fitsOnly_ = false;
     bool missingOnly_ = false;
     PlayerFilter playerFilter_ = PlayerFilter::Any;

@@ -400,6 +400,15 @@ private:
         release->setText(tr("gamehubnx/detail/release_line", entry_.title));
         right->addView(release);
 
+        if (entry_.online) {
+            auto* online = new brls::Label();
+            online->setFontSize(theme::kFontCaption);
+            online->setMarginTop(4);
+            online->setTextColor(theme::success());
+            online->setText(tr("gamehubnx/detail/online_line"));
+            right->addView(online);
+        }
+
         auto* scroll = new brls::ScrollingFrame();
         scroll->setGrow(1);
         scroll->setContentView(right);

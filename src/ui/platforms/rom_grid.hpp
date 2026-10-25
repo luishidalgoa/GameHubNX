@@ -106,6 +106,26 @@ public:
         favoriteBox_->addView(favorite_);
         favoriteBox_->setVisibility(brls::Visibility::GONE);
         cover_->addView(favoriteBox_);
+
+        // Online badge, bottom-left of the cover (the favorite star is bottom-right).
+        onlineBox_ = new brls::Box();
+        onlineBox_->setPositionType(brls::PositionType::ABSOLUTE);
+        onlineBox_->setPositionBottom(theme::kSpacingUnit);
+        onlineBox_->setPositionLeft(theme::kSpacingUnit);
+        onlineBox_->setPaddingLeft(6);
+        onlineBox_->setPaddingRight(6);
+        onlineBox_->setHeight(22);
+        onlineBox_->setCornerRadius(theme::kRadiusSmall);
+        onlineBox_->setBackgroundColor(theme::success());
+        onlineBox_->setAlignItems(brls::AlignItems::CENTER);
+        onlineBox_->setJustifyContent(brls::JustifyContent::CENTER);
+        auto* onlineLabel = new brls::Label();
+        onlineLabel->setFontSize(theme::kFontCaption);
+        onlineLabel->setTextColor(theme::onAccent());
+        onlineLabel->setText("online");
+        onlineBox_->addView(onlineLabel);
+        onlineBox_->setVisibility(brls::Visibility::GONE);
+        cover_->addView(onlineBox_);
         addView(cover_);
 
         name_ = new brls::Label();
@@ -156,6 +176,8 @@ public:
                                             : brls::Visibility::GONE);
         favoriteBox_->setVisibility(info.favorite ? brls::Visibility::VISIBLE
                                                   : brls::Visibility::GONE);
+        onlineBox_->setVisibility(info.online ? brls::Visibility::VISIBLE
+                                              : brls::Visibility::GONE);
         if (info.iconUrl.empty()) {
             image_->setVisibility(brls::Visibility::GONE);
         } else {
@@ -188,6 +210,7 @@ private:
     brls::Box* modBox_ = nullptr;
     brls::Label* mod_ = nullptr;
     brls::Box* favoriteBox_ = nullptr;
+    brls::Box* onlineBox_ = nullptr;
     brls::Label* favorite_ = nullptr;
     brls::Label* name_ = nullptr;
     brls::Label* sub_ = nullptr;
