@@ -157,6 +157,8 @@ struct GridCardInfo {
     bool hasMods = false;
     // On the wishlist (ZR on the grid, or the game page button).
     bool favorite = false;
+    // Online play exists for this game (green badge, bottom-right of the cover).
+    bool online = false;
 };
 
 class GameCard : public brls::Box {
@@ -254,6 +256,26 @@ public:
         favoriteBox_->setVisibility(brls::Visibility::GONE);
         cover_->addView(favoriteBox_);
 
+        // Online badge, bottom-right of the cover: the favorite star is bottom-left.
+        onlineBox_ = new brls::Box();
+        onlineBox_->setPositionType(brls::PositionType::ABSOLUTE);
+        onlineBox_->setPositionBottom(theme::kSpacingUnit);
+        onlineBox_->setPositionRight(theme::kSpacingUnit);
+        onlineBox_->setPaddingLeft(6);
+        onlineBox_->setPaddingRight(6);
+        onlineBox_->setHeight(22);
+        onlineBox_->setCornerRadius(theme::kRadiusSmall);
+        onlineBox_->setBackgroundColor(theme::success());
+        onlineBox_->setAlignItems(brls::AlignItems::CENTER);
+        onlineBox_->setJustifyContent(brls::JustifyContent::CENTER);
+        auto* onlineLabel = new brls::Label();
+        onlineLabel->setFontSize(theme::kFontCaption);
+        onlineLabel->setTextColor(theme::onAccent());
+        onlineLabel->setText("online");
+        onlineBox_->addView(onlineLabel);
+        onlineBox_->setVisibility(brls::Visibility::GONE);
+        cover_->addView(onlineBox_);
+
         addView(cover_);
 
         name_ = new brls::Label();
@@ -300,6 +322,8 @@ public:
                                             : brls::Visibility::GONE);
         favoriteBox_->setVisibility(info.favorite ? brls::Visibility::VISIBLE
                                                   : brls::Visibility::GONE);
+        onlineBox_->setVisibility(info.online ? brls::Visibility::VISIBLE
+                                              : brls::Visibility::GONE);
         mark_->setText(!info.selectable ? "-" : info.selected ? "x" : " ");
         mark_->setTextColor(info.selectable ? theme::accent()
                                             : theme::textDisabled());
@@ -437,6 +461,7 @@ private:
     brls::Label* mod_;
     brls::Box* favoriteBox_;
     brls::Label* favorite_;
+    brls::Box* onlineBox_;
     brls::Label* name_;
     brls::Label* sub_;
     std::string currentIconUrl_;

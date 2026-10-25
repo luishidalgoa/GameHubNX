@@ -775,6 +775,7 @@
         "platform_warning": "tico does not emulate this console",
         "platform_badge": "No emulator",
         "no_favorites": "Nothing starred here yet",
+        "no_online": "No game with online play here",
         "download": "Download",
         "versions": "{} versions",
         "which_version": "Which version?",

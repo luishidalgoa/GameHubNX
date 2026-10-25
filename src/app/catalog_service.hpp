@@ -76,6 +76,8 @@ struct CatalogEntry {
     uint32_t peerCount = 0;
     CatalogHealth health = CatalogHealth::Unknown;
     bool metadataOk = false;
+    // gh_online: el juego tiene juego en línea en algún proyecto de su plataforma.
+    bool online = false;
 
     /* Cierto cuando la entrada viene de la tienda GameHub: es una descarga
        HTTPS directa contra el servidor del usuario y no toca el motor de

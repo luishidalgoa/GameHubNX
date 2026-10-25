@@ -160,6 +160,22 @@ public:
         if (!favorites_)
             favoritesChip_->setVisibility(brls::Visibility::GONE);
         headerRow->addView(favoritesChip_);
+
+        // Solo los juegos con juego en línea.
+        onlineChip_ = new brls::Button();
+        onlineChip_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        onlineChip_->setHeight(40);
+        onlineChip_->setFontSize(theme::kFontCaption);
+        onlineChip_->setShrink(0.0f);
+        onlineChip_->setPaddingLeft(14);
+        onlineChip_->setPaddingRight(14);
+        onlineChip_->setText("online");
+        onlineChip_->registerClickAction([this](brls::View*) {
+            onlineOnly_ = !onlineOnly_;
+            rebuild();
+            return true;
+        });
+        headerRow->addView(onlineChip_);
         content->addView(headerRow);
 
         recycler_ = new brls::RecyclerFrame();
@@ -461,11 +477,15 @@ private:
         for (const CatalogEntry& rom : allRoms_) {
             if (favoritesOnly_ && favorites_ && !favorites_->contains(rom.infoHash))
                 continue;
+            if (onlineOnly_ && !rom.online)
+                continue;
             shown.push_back(rom);
         }
         const size_t count = shown.size();
         dataSource_->setRoms(std::move(shown));
-        if (favoritesOnly_ && count == 0)
+        if (onlineOnly_ && count == 0)
+            status_->setText(tr("gamehubnx/platforms/no_online"));
+        else if (favoritesOnly_ && count == 0)
             status_->setText(tr("gamehubnx/platforms/no_favorites"));
         else
             status_->setText(summary_);
@@ -476,6 +496,10 @@ private:
             favoritesChip_->setStyle(favoritesOnly_
                                          ? &brls::BUTTONSTYLE_PRIMARY
                                          : &brls::BUTTONSTYLE_DEFAULT);
+        if (onlineChip_)
+            onlineChip_->setStyle(onlineOnly_
+                                      ? &brls::BUTTONSTYLE_PRIMARY
+                                      : &brls::BUTTONSTYLE_DEFAULT);
         recyclerHost_->setVisibility(count == 0 ? brls::Visibility::GONE
                                                 : brls::Visibility::VISIBLE);
         recycler_->reloadData();
@@ -522,6 +546,8 @@ private:
     std::string summary_;
     bool summaryWarns_ = false;
     bool favoritesOnly_ = false;
+    bool onlineOnly_ = false;
+    brls::Button* onlineChip_ = nullptr;
     brls::Button* favoritesChip_ = nullptr;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;
@@ -550,6 +576,7 @@ inline GridCardInfo RomDataSource::makeInfo(size_t index) const {
     // esto salen estiradas.
     info.iconPreserveAspect = true;
     info.favorite = favorites_ && favorites_->contains(rom.infoHash);
+    info.online = rom.online;
 
     // La linea de debajo dice lo que hay que saber ANTES de abrir: el tamano, o
     // el aviso cuando el emulador no va a poder con ello. El aviso gana, porque

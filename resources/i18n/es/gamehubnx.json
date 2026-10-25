@@ -775,6 +775,7 @@
         "platform_warning": "tico no emula esta consola",
         "platform_badge": "Sin emulador",
         "no_favorites": "Aquí no has marcado nada todavía",
+        "no_online": "Ningún juego con juego en línea aquí",
         "download": "Descargar",
         "versions": "{} versiones",
         "which_version": "¿Qué versión?",
