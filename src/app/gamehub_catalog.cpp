@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <string>
 
 // sha1.h is plain C and carries no extern "C" guard of its own, so the
@@ -18,7 +19,12 @@ namespace gamehubnx {
 namespace gamehub {
 
 const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
-const char* const kClientId    = "GameHubNX/1.0.0";
+// La version sale del build (CMake la pasa como GAMEHUBNX_VERSION). Un build sin
+// version declarada se identifica como "dev": GameHub no puede compararla con un minimo.
+#ifndef GAMEHUBNX_VERSION
+#define GAMEHUBNX_VERSION "dev"
+#endif
+const char* const kClientId    = "GameHubNX/" GAMEHUBNX_VERSION;
 
 std::string baseTitleIdOf(const std::string& titleId) {
     if (titleId.size() != 16)
@@ -545,6 +551,82 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
     }
 
     return true;
+}
+
+
+const char* const kDeviceHeader = "X-GameHub-Device";
+
+namespace {
+std::string g_installDeviceId;
+}
+
+bool isDeviceId(const std::string& id) {
+    if (id.size() != 36)
+        return false;
+    for (std::size_t i = 0; i < id.size(); i++) {
+        const char c = id[i];
+        if (i == 8 || i == 13 || i == 18 || i == 23) {
+            if (c != '-')
+                return false;
+            continue;
+        }
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+            return false;
+    }
+    // La version 4 va en el primer digito del tercer grupo.
+    return id[14] == '4';
+}
+
+std::string formatDeviceId(const uint8_t bytes[16]) {
+    uint8_t b[16];
+    std::memcpy(b, bytes, sizeof(b));
+    b[6] = static_cast<uint8_t>((b[6] & 0x0f) | 0x40);  // version 4
+    b[8] = static_cast<uint8_t>((b[8] & 0x3f) | 0x80);  // variante RFC 4122
+    static const char hex[] = "0123456789abcdef";
+    std::string out;
+    out.reserve(36);
+    for (int i = 0; i < 16; i++) {
+        if (i == 4 || i == 6 || i == 8 || i == 10)
+            out.push_back('-');
+        out.push_back(hex[b[i] >> 4]);
+        out.push_back(hex[b[i] & 15]);
+    }
+    return out;
+}
+
+std::string loadOrCreateDeviceId(const std::string& path,
+                                 void (*entropy)(uint8_t*, size_t)) {
+    {
+        std::ifstream in(path);
+        std::string saved;
+        if (in && std::getline(in, saved)) {
+            while (!saved.empty() && (saved.back() == '\r' || saved.back() == ' '))
+                saved.pop_back();
+            if (isDeviceId(saved))
+                return saved;
+        }
+    }
+    uint8_t bytes[16];
+    entropy(bytes, sizeof(bytes));
+    const std::string id = formatDeviceId(bytes);
+    std::ofstream out(path, std::ios::trunc);
+    if (out)
+        out << id << "\n";
+    return id;
+}
+
+const std::string& installDeviceId() {
+    return g_installDeviceId;
+}
+
+void setInstallDeviceId(std::string id) {
+    g_installDeviceId = std::move(id);
+}
+
+std::string deviceHeaderLine() {
+    if (g_installDeviceId.empty())
+        return {};
+    return std::string(kDeviceHeader) + ": " + g_installDeviceId;
 }
 
 } // namespace gamehub

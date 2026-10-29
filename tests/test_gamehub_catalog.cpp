@@ -6,6 +6,7 @@
 #include "app/rom_paths.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <map>
@@ -655,6 +656,61 @@ void test_formatos_que_el_emulador_abre() {
 
 } // namespace
 
+
+// ── Identificador de instalacion ─────────────────────────────────────────────
+
+static void fixedEntropy(uint8_t* buf, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        buf[i] = static_cast<uint8_t>(0x10 + i * 7);
+}
+
+void test_formato_del_identificador() {
+    const uint8_t zeros[16] = {0};
+    const std::string id = gamehub::formatDeviceId(zeros);
+    assert(id.size() == 36);
+    assert(id[8] == '-' && id[13] == '-' && id[18] == '-' && id[23] == '-');
+    assert(id[14] == '4');                       // version 4
+    assert(id[19] == '8');                       // variante RFC 4122
+    assert(gamehub::isDeviceId(id));
+    assert(!gamehub::isDeviceId("no-es-un-id"));
+    assert(!gamehub::isDeviceId("0123456789ABCDEF0123456789ABCDEF0123")); // mayusculas y sin guiones
+    assert(!gamehub::isDeviceId(id.substr(0, 35)));
+}
+
+void test_identificador_se_crea_una_vez_y_se_reutiliza() {
+    const std::string path = "device_id_test_a.txt";
+    std::remove(path.c_str());
+    const std::string first = gamehub::loadOrCreateDeviceId(path, fixedEntropy);
+    assert(gamehub::isDeviceId(first));
+    // Otra lectura, con otra fuente de entropia, devuelve el mismo: ya esta guardado.
+    const std::string second = gamehub::loadOrCreateDeviceId(path, [](uint8_t* buf, size_t n) {
+        for (size_t i = 0; i < n; i++) buf[i] = 0xaa;
+    });
+    assert(second == first);
+    std::remove(path.c_str());
+}
+
+void test_identificador_corrupto_se_regenera() {
+    const std::string path = "device_id_test_b.txt";
+    {
+        std::FILE* f = std::fopen(path.c_str(), "w");
+        assert(f);
+        std::fputs("basura\n", f);
+        std::fclose(f);
+    }
+    const std::string id = gamehub::loadOrCreateDeviceId(path, fixedEntropy);
+    assert(gamehub::isDeviceId(id));
+    std::remove(path.c_str());
+}
+
+void test_cabecera_solo_con_identificador() {
+    gamehub::setInstallDeviceId("");
+    assert(gamehub::deviceHeaderLine().empty());
+    gamehub::setInstallDeviceId("0123abcd-0123-4abc-8123-0123456789ab");
+    assert(gamehub::deviceHeaderLine() == "X-GameHub-Device: 0123abcd-0123-4abc-8123-0123456789ab");
+    gamehub::setInstallDeviceId("");
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -684,6 +740,10 @@ int main() {
     test_ficha_de_un_juego();
     test_clasificar_title_id();
     test_nombre_de_rom_desde_el_titulo();
+    test_formato_del_identificador();
+    test_identificador_se_crea_una_vez_y_se_reutiliza();
+    test_identificador_corrupto_se_regenera();
+    test_cabecera_solo_con_identificador();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

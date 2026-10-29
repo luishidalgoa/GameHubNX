@@ -362,8 +362,15 @@ RangeFetcher curlRangeFetcher() {
         curlPinScheme(curl, url);
         // Las descargas de GameHub se identifican como GameHubNX: el servidor no les
         // aplica el limite de velocidad que pone a los navegadores.
-        if (gamehub::isTrustedUrl(url))
+        curl_slist* gamehubHeaders = nullptr;
+        if (gamehub::isTrustedUrl(url)) {
             curl_easy_setopt(curl, CURLOPT_USERAGENT, gamehub::kClientId);
+            const std::string device = gamehub::deviceHeaderLine();
+            if (!device.empty()) {
+                gamehubHeaders = curl_slist_append(nullptr, device.c_str());
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, gamehubHeaders);
+            }
+        }
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
         curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
@@ -377,6 +384,7 @@ RangeFetcher curlRangeFetcher() {
         long httpStatus = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
         curl_easy_cleanup(curl);
+        curl_slist_free_all(gamehubHeaders);
         if (state.rangeIgnored || (httpStatus == 200 && state.ranged)) {
             error = kDebridRangeNotSupported;
             return false;

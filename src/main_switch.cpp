@@ -1,6 +1,7 @@
 #include "app/app_paths.h"
 #include "app/app_settings.hpp"
 #include "app/catalog_service.hpp"
+#include "app/gamehub_catalog.hpp"
 #include "app/download_manager.hpp"
 #include "app/ftp_server.hpp"
 #include "app/game_metadata_service.hpp"
@@ -309,6 +310,10 @@ int main(int argc, char** argv) {
         diagnostic_error("settings", "startup", "error=%s",
                          settingsError.c_str());
     telemetry_set_enabled(settings.get().extendedTelemetry ? 1 : 0);
+    // Identificador de esta instalacion: GameHub lo recibe en cada peticion y asi
+    // puede distinguir las consolas. Se crea una vez y se queda en la SD.
+    gamehubnx::gamehub::setInstallDeviceId(
+        gamehubnx::gamehub::loadOrCreateDeviceId(GHNX_PATH("device_id"), rand_bytes));
     // Before curl_global_init and before any service builds a handle: curl
     // reads the proxy from the environment when it sets up a transfer.
     gamehubnx::applyProxySetting(settings.get().proxyUrl);

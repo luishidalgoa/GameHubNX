@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -183,6 +185,30 @@ std::string fileNameFromUrl(const std::string& url);
 // and port as the configured endpoint. The catalogue is trusted precisely
 // because it is the user's own server, so anything off-host is not it.
 bool isTrustedUrl(const std::string& url);
+
+
+/// Cabecera con el identificador de la instalacion. Solo se manda a GameHub:
+/// debrid, torrents y portadas de terceros no reciben nunca este identificador.
+extern const char* const kDeviceHeader;
+
+/// Forma de un identificador de instalacion: UUID v4 en minusculas, 36 caracteres.
+bool isDeviceId(const std::string& id);
+
+/// Identificador UUID v4 a partir de 16 bytes aleatorios.
+std::string formatDeviceId(const uint8_t bytes[16]);
+
+/// Lee el identificador guardado en `path`. Si falta o no es valido, crea uno con
+/// `entropy` y lo guarda. Si no se puede guardar, lo devuelve igualmente: sirve
+/// para esta sesion.
+std::string loadOrCreateDeviceId(const std::string& path,
+                                 void (*entropy)(uint8_t*, size_t));
+
+/// Identificador de esta instalacion. Vacio hasta que la app lo fija al arrancar.
+const std::string& installDeviceId();
+void setInstallDeviceId(std::string id);
+
+/// Linea de cabecera para una peticion a GameHub, o vacia si no hay identificador.
+std::string deviceHeaderLine();
 
 } // namespace gamehub
 

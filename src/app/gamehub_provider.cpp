@@ -18,6 +18,10 @@ namespace {
 curl_slist* applyClientIdentity(CURL* curl) {
     curl_slist* headers = curl_slist_append(
         nullptr, (std::string("X-GameHub-Client: ") + gamehub::kClientId).c_str());
+    // Identificador de la instalacion: solo para GameHub, nunca para terceros.
+    const std::string device = gamehub::deviceHeaderLine();
+    if (!device.empty())
+        headers = curl_slist_append(headers, device.c_str());
     curl_easy_setopt(curl, CURLOPT_USERAGENT, gamehub::kClientId);
     return headers;
 }
