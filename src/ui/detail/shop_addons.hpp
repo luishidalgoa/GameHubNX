@@ -27,6 +27,7 @@
 #include "app/download_manager.hpp"
 #include "app/gamehub_catalog.hpp"
 #include "app/installed_title_service.hpp"
+#include "ui/catalog/catalog_helpers.hpp"
 #include "ui/catalog/batch_install.hpp"
 #include "ui/common/action_icon.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -379,9 +380,13 @@ private:
 
     std::vector<CatalogEntry> selectedEntries() const {
         std::vector<CatalogEntry> out;
-        for (const ShopItem& item : dataSource_->items())
-            if (item.selected && !item.installed)
-                out.push_back(item.entry);
+        for (const ShopItem& item : dataSource_->items()) {
+            // Ya en Descargas: volver a encolarlo daria un error y un lote con
+            // etapas de torrent. El catalogo multiseleccion ya lo filtra igual.
+            if (!item.selected || item.installed) continue;
+            if (manager_->hasTask(catalogLower(item.entry.infoHash))) continue;
+            out.push_back(item.entry);
+        }
         return out;
     }
 

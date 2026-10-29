@@ -711,6 +711,14 @@ void test_cabecera_solo_con_identificador() {
     gamehub::setInstallDeviceId("");
 }
 
+void test_total_desde_content_range() {
+    assert(gamehub::totalFromContentRange("bytes 0-0/2162980047") == 2162980047ULL);
+    assert(gamehub::totalFromContentRange(" bytes 0-0/10\r\n") == 0);   // espacio y fin de linea: no es un numero limpio
+    assert(gamehub::totalFromContentRange("bytes 0-0/*") == 0);
+    assert(gamehub::totalFromContentRange("bytes 0-0") == 0);
+    assert(gamehub::totalFromContentRange("") == 0);
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -744,6 +752,7 @@ int main() {
     test_identificador_se_crea_una_vez_y_se_reutiliza();
     test_identificador_corrupto_se_regenera();
     test_cabecera_solo_con_identificador();
+    test_total_desde_content_range();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

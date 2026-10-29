@@ -535,7 +535,8 @@ $(BUILD_DIR)/tests/test_file_browser: tests/test_file_browser.cpp
 
 $(BUILD_DIR)/tests/test_gamehub_provider: tests/test_gamehub_provider.cpp \
 		$(BUILD_DIR)/src/app/gamehub_provider.o \
-		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
+		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
+		$(BUILD_DIR)/src/core/util.o
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) -pthread
 

@@ -210,6 +210,10 @@ void setInstallDeviceId(std::string id);
 /// Linea de cabecera para una peticion a GameHub, o vacia si no hay identificador.
 std::string deviceHeaderLine();
 
+/// Tamano total del fichero a partir de un Content-Range («bytes 0-0/2162980047»).
+/// Cero si no es una respuesta de rango valida o si el total es desconocido («*»).
+uint64_t totalFromContentRange(const std::string& value);
+
 } // namespace gamehub
 
 } // namespace gamehubnx

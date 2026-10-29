@@ -623,6 +623,22 @@ void setInstallDeviceId(std::string id) {
     g_installDeviceId = std::move(id);
 }
 
+uint64_t totalFromContentRange(const std::string& value) {
+    const std::size_t slash = value.rfind('/');
+    if (slash == std::string::npos)
+        return 0;
+    const std::string total = value.substr(slash + 1);
+    if (total.empty())
+        return 0;
+    uint64_t n = 0;
+    for (const char c : total) {
+        if (c < '0' || c > '9')
+            return 0;
+        n = n * 10 + static_cast<uint64_t>(c - '0');
+    }
+    return n;
+}
+
 std::string deviceHeaderLine() {
     if (g_installDeviceId.empty())
         return {};

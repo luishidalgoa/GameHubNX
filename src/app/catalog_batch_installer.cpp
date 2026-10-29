@@ -255,7 +255,13 @@ BatchPreparation CatalogBatchInstaller::prepareViaDebrid(
 
     for (size_t i = 0; i < entries.size(); ++i) {
         if (cancelled.load()) { result.cancelled_ = true; removeAll(); return result; }
-        if (progress) progress({i + 1, entries.size(), entries[i].title, {}});
+        if (progress) {
+            // Una entrada directa no busca peers: solo comprueba el enlace y el tamano.
+            BatchPrepareProgress step{i + 1, entries.size(), entries[i].title, {}};
+            if (entries[i].isDirectDownload())
+                step.magnet.stage = MagnetProgress::Stage::Validating;
+            progress(step);
+        }
         std::string id;
         std::string err;
         if (!provider.createFromMagnet(entries[i].transferHandle(), id, err)) {
