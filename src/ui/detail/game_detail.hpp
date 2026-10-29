@@ -1016,6 +1016,9 @@ private:
         std::string taskId;
         std::string importError;
         if (!manager_->importDebrid(import, taskId, importError)) {
+            // Ya esta en Descargas: se dice en el idioma de la app, no el texto en ingles del gestor.
+            if (importError.find("already in the download manager") != std::string::npos)
+                importError = tr("gamehubnx/detail/already_in_downloads");
             operationMessage_ = importError;
             brls::Application::notify(importError);
         } else {
