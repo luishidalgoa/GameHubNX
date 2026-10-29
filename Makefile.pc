@@ -176,13 +176,9 @@ $(BUILD_DIR)/src/install/%.o: src/install/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/tests/test_manager.o: tests/test_manager.cpp
+$(BUILD_DIR)/tests/test_direct_queue: tests/test_direct_queue.cpp $(MANAGER_TEST_OBJS)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-$(BUILD_DIR)/tests/test_manager: $(BUILD_DIR)/tests/test_manager.o $(MANAGER_TEST_OBJS)
-	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
 
 $(BUILD_DIR)/tests/test_queue_controls.o: tests/test_queue_controls.cpp
 	@mkdir -p $(dir $@)
@@ -266,9 +262,6 @@ test: $(TEST_BINS)
 	python3 tests/test_bug_report_decode.py
 	python3 tests/test_telemetry_analyzer.py
 	python3 scripts/check_i18n.py
-	# last: bootstraps DHT against live routers, so it fails on a bad
-	# network. Running it here keeps that from hiding the other tests.
-	./$(BUILD_DIR)/tests/test_manager
 
 
 $(BUILD_DIR)/tests/test_app_settings: tests/test_app_settings.cpp src/app/app_settings.cpp \
@@ -369,6 +362,7 @@ $(BUILD_DIR)/tests/test_favorites: tests/test_favorites.cpp \
 
 $(BUILD_DIR)/tests/test_batch_install: tests/test_batch_install.cpp \
 		src/app/catalog_batch_installer.cpp src/app/install_space.cpp \
+		$(BUILD_DIR)/tests/support/torbox_client.o $(BUILD_DIR)/tests/support/torbox_provider.o \
 		$(BUILD_DIR)/src/app/gamehub_provider.o $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/app/download_manager.o $(BUILD_DIR)/src/app/task_files.o \
 		$(BUILD_DIR)/src/app/web_seed_source.o \
 		$(BUILD_DIR)/src/app/stream_ram_budget.o $(BUILD_DIR)/src/app/stream_budget_arbiter.o \
@@ -453,7 +447,12 @@ $(BUILD_DIR)/tests/test_ssl_cacert: tests/test_ssl_cacert.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $< $(LDFLAGS)
 
+$(BUILD_DIR)/tests/support/%.o: tests/support/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -Itests -c -o $@ $<
+
 $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
+		$(BUILD_DIR)/tests/support/torbox_client.o $(BUILD_DIR)/tests/support/torbox_provider.o \
 		$(BUILD_DIR)/src/app/debrid_transfer.o \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o \
 		$(BUILD_DIR)/src/app/install_pacer.o \

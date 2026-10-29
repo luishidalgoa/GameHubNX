@@ -122,6 +122,7 @@
     "unchecked": "未检查"
   },
   "detail": {
+    "torrents_unsupported": "不再支持种子下载：本应用只从 GameHub 下载。",
     "install_size": "安装大小",
     "install_hint": "安装会将此游戏添加到你的主机。",
     "installed_hint": "已安装在本机。你仍可安装更新或 DLC。",
@@ -777,6 +778,7 @@
         "platform_warning": "tico 不模拟这台主机",
         "platform_badge": "无模拟器",
         "no_favorites": "这里还没有收藏",
+        "no_online": "这里没有支持联机的游戏",
         "download": "下载",
         "versions": "{} 个版本",
         "which_version": "哪个版本？",

@@ -24,6 +24,21 @@ void removeAll(const std::string& path) {
     system(("rm -rf " + path).c_str());
 }
 
+// The app only downloads from GameHub now, so a queued task is a GameHub file
+// imported directly (the torrent import is refused by the manager).
+bool importDirect(gamehubnx::DownloadManager& manager, int index,
+                  gamehubnx::TransferMode mode, std::string& id,
+                  std::string& error) {
+    gamehubnx::DebridImport import;
+    import.infoHash = std::string(40, static_cast<char>('a' + index));
+    import.name = "File " + std::to_string(index);
+    import.totalBytes = 4;
+    import.debridId = "https://gamehub.example/api/shop/download/" +
+                      std::to_string(index) + "/file.nsp";
+    import.mode = mode;
+    return manager.importDebrid(import, id, error);
+}
+
 std::string makeTorrent(const std::string& directory, const std::string& name,
                         const std::string& payload) {
     uint8_t digest[20];
@@ -121,12 +136,9 @@ void testMoveTask() {
         gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second, third;
-        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
-                                     first, error));
-        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
-                                     second, error));
-        assert(manager.importTorrent(source3, gamehubnx::TransferMode::DownloadOnly,
-                                     third, error));
+        assert(importDirect(manager, 0, gamehubnx::TransferMode::DownloadOnly, first, error));
+        assert(importDirect(manager, 1, gamehubnx::TransferMode::DownloadOnly, second, error));
+        assert(importDirect(manager, 2, gamehubnx::TransferMode::DownloadOnly, third, error));
         auto tasks = manager.snapshot();
         assert(tasks.size() == 3);
 
@@ -177,10 +189,8 @@ void testPauseResumeAll() {
         gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second;
-        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
-                                     first, error));
-        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
-                                     second, error));
+        assert(importDirect(manager, 0, gamehubnx::TransferMode::DownloadOnly, first, error));
+        assert(importDirect(manager, 1, gamehubnx::TransferMode::DownloadOnly, second, error));
         manager.pauseAll();
         auto tasks = manager.snapshot();
         assert(tasks.size() == 2);
@@ -220,10 +230,8 @@ void testClearCompleted() {
         gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
         std::string first, second;
-        assert(manager.importTorrent(source, gamehubnx::TransferMode::DownloadOnly,
-                                     first, error));
-        assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
-                                     second, error));
+        assert(importDirect(manager, 0, gamehubnx::TransferMode::DownloadOnly, first, error));
+        assert(importDirect(manager, 1, gamehubnx::TransferMode::DownloadOnly, second, error));
         keepPath = manager.snapshot()[0].dataPath;
         std::ofstream marker(keepPath + "/kept.bin",
                              std::ios::binary | std::ios::trunc);

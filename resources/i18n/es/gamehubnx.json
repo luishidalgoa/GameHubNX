@@ -122,6 +122,7 @@
     "unchecked": "Sin comprobar"
   },
   "detail": {
+    "torrents_unsupported": "Los torrents ya no se admiten: la app solo descarga de GameHub.",
     "install_size": "Tamaño de instalación",
     "install_hint": "Instalar añade este juego a tu consola.",
     "installed_hint": "Instalado en esta consola. Aún puedes instalar actualizaciones o DLC.",

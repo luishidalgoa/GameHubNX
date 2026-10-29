@@ -71,10 +71,8 @@ private:
 
     void setValue(brls::Label* label, const std::string& text,
                   NVGcolor color) {
-        // Las filas de DHT, pares y los tres proveedores de debrid ya no se
-        // registran en este fork, asi que su puntero es nulo y refresh() las
-        // sigue actualizando. Se comprueba aqui, en el unico sitio por el que
-        // pasan todas, en vez de en las quince llamadas.
+        // Las filas de DHT y de pares ya no se registran: su puntero es nulo.
+        // Se comprueba aqui, en el unico sitio por el que pasan todas.
         if (!label)
             return;
         setTextIfChanged(label, text);
@@ -124,23 +122,6 @@ private:
                  peers > 0 ? theme::success() : theme::textSecondary());
 
         const AppSettingsData values = settings_->get();
-        setValue(torbox_,
-                 values.torboxApiKey.empty() ? tr("gamehubnx/diag/not_linked")
-                                             : tr("gamehubnx/diag/linked"),
-                 values.torboxApiKey.empty() ? theme::textSecondary()
-                                             : theme::success());
-        setValue(torrserver_,
-                 values.torrserverUrl.empty()
-                     ? tr("gamehubnx/diag/not_configured")
-                     : values.torrserverUrl,
-                 values.torrserverUrl.empty() ? theme::textSecondary()
-                                              : theme::textPrimary());
-        setValue(realdebrid_,
-                 values.realdebridApiKey.empty()
-                     ? tr("gamehubnx/diag/not_linked")
-                     : tr("gamehubnx/diag/linked"),
-                 values.realdebridApiKey.empty() ? theme::textSecondary()
-                                                 : theme::success());
         setValue(proxy_,
                  values.proxyUrl.empty() ? tr("gamehubnx/diag/disabled")
                                          : tr("gamehubnx/diag/enabled"),
@@ -155,10 +136,8 @@ private:
         content->setPadding(24, 34, 24, 34);
 
         internet_ = addRow(content, tr("gamehubnx/diag/internet"), true);
-        // DHT, pares, TorBox, TorrServer y Real-Debrid no se registran: son el
-        // diagnostico de una descarga por torrent y de tres servicios de
-        // terceros que este fork no usa. Aqui lo unico que importa es si hay
-        // internet y si la tienda responde.
+        // DHT y pares no se registran: son el diagnostico de una descarga por
+        // torrent. Aqui lo unico que importa es si hay internet y si la tienda responde.
         //
         // Los punteros quedan a nullptr y refresh() los comprueba antes de
         // tocarlos, asi que el codigo de upstream que los actualiza sigue
@@ -185,9 +164,6 @@ private:
     brls::Label* internet_ = nullptr;
     brls::Label* dht_ = nullptr;
     brls::Label* peers_ = nullptr;
-    brls::Label* torbox_ = nullptr;
-    brls::Label* torrserver_ = nullptr;
-    brls::Label* realdebrid_ = nullptr;
     brls::Label* proxy_ = nullptr;
     brls::Label* catalog_ = nullptr;
 };

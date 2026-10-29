@@ -13,7 +13,6 @@
 using gamehubnx::AppSettings;
 using gamehubnx::AppSettingsData;
 using gamehubnx::CatalogFilter;
-using gamehubnx::DebridProviderKind;
 using gamehubnx::StreamSelection;
 using gamehubnx::InstallLocation;
 using gamehubnx::dailyRefreshDue;
@@ -56,11 +55,6 @@ void testMissingFileUsesSafeDefaults() {
     // Russian UI on first launch with no user action.
     assert(values.language == "auto");
     assert(!values.catalogDisclaimerAcknowledged);
-    // Torrenting stays off until the user opts in on the first-run screen.
-    assert(!values.torrentingEnabled);
-    assert(values.torboxApiKey.empty());
-    assert(values.torrserverUrl.empty());
-    assert(values.debridProvider == DebridProviderKind::TorBox);
     assert(!values.firstRunCompleted);
     // Una instalacion nueva se lleva una clave de FTP al azar, para que
     // encender el servidor no lo deje abierto de par en par.
@@ -94,12 +88,8 @@ void testUpdatePersistsEveryPublicSetting() {
     changed.ftpPin = "12345678";
     changed.maxActiveDownloads = 3;
     changed.catalogDisclaimerAcknowledged = true;
-    changed.torrentingEnabled = true;
-    changed.torboxApiKey = "0a1b2c3d-4e5f-6789-abcd-ef0123456789";
-    changed.torrserverUrl = "http://192.168.1.10:8090";
     changed.catalogSourceUrl =
         "https://cdn.example.com/repo/switch_games.json";
-    changed.debridProvider = DebridProviderKind::TorrServer;
     changed.firstRunCompleted = true;
     assert(settings.update(changed, error));
 
@@ -318,45 +308,20 @@ void testIsLocalToday() {
     assert(!isLocalToday(static_cast<int64_t>(time(nullptr)) - 48 * 60 * 60));
 }
 
+// Files from the versions with Real-Debrid, TorBox, TorrServer and the torrent
+// switch still carry those keys. They are ignored, and the file still loads.
 void testLegacyDebridKeysTolerated() {
     cleanup();
     {
         std::ofstream output(SettingsPath);
-        output << "{\"version\":1,\"torrenting_enabled\":true,"
-               << "\"torbox_api_key\":\"abc\"}";
+        output << "{\"version\":3,\"torrenting_enabled\":true,"
+               << "\"torbox_api_key\":\"abc\",\"debrid_provider\":\"torrserver\","
+               << "\"web_server_enabled\":true}";
     }
     AppSettings settings(SettingsPath, LegacyPath);
     std::string error;
     assert(settings.load(error));
-    assert(settings.get().torrentingEnabled);
-    assert(settings.get().torboxApiKey == "abc");
-}
-
-// v2 -> v3: the struct default flipped torrenting off when debrid landed. A
-// file written before that has no say in the matter, so it must migrate to on
-// rather than leave an existing install unable to download anything.
-void testPreV3FileKeepsTorrentingOn() {
-    cleanup();
-    {
-        std::ofstream output(SettingsPath);
-        output << "{\"version\":2,\"web_server_enabled\":true}";
-    }
-    AppSettings settings(SettingsPath, LegacyPath);
-    std::string error;
-    assert(settings.load(error));
-    assert(settings.get().torrentingEnabled);
-}
-
-void testVersionThreeHonoursTorrentingOff() {
-    cleanup();
-    {
-        std::ofstream output(SettingsPath);
-        output << "{\"version\":3,\"torrenting_enabled\":false}";
-    }
-    AppSettings settings(SettingsPath, LegacyPath);
-    std::string error;
-    assert(settings.load(error));
-    assert(!settings.get().torrentingEnabled);
+    assert(settings.get().firstRunCompleted == false);
 }
 
 void testProxyUrlValidation() {
@@ -457,8 +422,6 @@ int main() {
     testVersionOneResetsActiveDownloads();
     testFutureVersionIsRejected();
     testLegacyDebridKeysTolerated();
-    testPreV3FileKeepsTorrentingOn();
-    testVersionThreeHonoursTorrentingOff();
     testProxyUrlValidation();
     testInvalidProxyUrlIsCleared();
     testInvalidCatalogSourceUrlIsCleared();

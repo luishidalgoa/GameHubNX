@@ -377,9 +377,8 @@ void applyProxySetting(const std::string& proxyUrl) {
     setenv("ALL_PROXY", proxyUrl.c_str(), 1);
     setenv("all_proxy", proxyUrl.c_str(), 1);
     // ALL_PROXY is curl's catch-all and would also route plain-HTTP LAN
-    // TorrServer calls. Keep loopback off the proxy; a TorrServer on a
-    // private LAN address still needs the proxy left empty (or a proxy that
-    // can reach that LAN).
+    // calls. Keep loopback off the proxy; a server on a private LAN address
+    // still needs the proxy left empty (or a proxy that can reach that LAN).
     static const char* kNoProxy = "localhost,127.0.0.1,::1";
     setenv("NO_PROXY", kNoProxy, 1);
     setenv("no_proxy", kNoProxy, 1);

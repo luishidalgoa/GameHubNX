@@ -122,6 +122,7 @@
     "unchecked": "Não verificado"
   },
   "detail": {
+    "torrents_unsupported": "Torrents não são mais suportados: o aplicativo só baixa do GameHub.",
     "install_size": "Tamanho de instalação",
     "install_hint": "Instalar adiciona este jogo ao seu console.",
     "installed_hint": "Instalado neste console. Você ainda pode instalar atualizações ou DLC.",

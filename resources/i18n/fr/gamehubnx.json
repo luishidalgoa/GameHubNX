@@ -122,6 +122,7 @@
     "unchecked": "Non vérifié"
   },
   "detail": {
+    "torrents_unsupported": "Les torrents ne sont plus pris en charge : l'application ne télécharge que depuis GameHub.",
     "install_size": "Taille d'installation",
     "install_hint": "Installer ajoute ce jeu à votre console.",
     "installed_hint": "Installé sur cette console. Vous pouvez encore installer des mises à jour ou du DLC.",

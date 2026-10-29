@@ -12,7 +12,6 @@
 #include "app/app_settings.hpp"
 #include "app/download_manager.hpp"
 #include "ui/common/ui_helpers.hpp"
-#include "ui/debrid_ui.hpp"
 #include "ui/i18n.hpp"
 
 namespace gamehubnx::ui {
@@ -117,22 +116,8 @@ public:
             std::string id;
             std::string error;
             bool imported = false;
-            if (debridModeActive(settings_)) {
-                if (!ensureDebridLinked(settings_, manager_))
-                    return;
-                DebridImport import;
-                import.infoHash = preview.infoHash;
-                import.name = preview.name;
-                import.totalBytes = preview.totalBytes;
-                import.provider = settings_->get().debridProvider;
-                import.torrentPath = path;
-                import.mode = mode;
-                import.packageCount = mode == TransferMode::StreamInstall
-                    ? preview.packageCount : 0;
-                imported = manager_->importDebrid(import, id, error);
-            } else {
-                imported = manager_->importTorrent(path, mode, id, error);
-            }
+            // Los .torrent ya no se importan: el gestor lo rechaza con su mensaje.
+            imported = manager_->importTorrent(path, mode, id, error);
             if (imported) {
                 brls::Application::notify(tr("gamehubnx/picker/added"));
                 brls::Application::popActivity();

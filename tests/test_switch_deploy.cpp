@@ -41,7 +41,7 @@ void writeCompletedQueue(const std::string& root, const std::string& taskId,
     std::string queue = "d5:tasksl";
     queue += "d9:completed" + std::string("i") + std::to_string(total) + "e";
     queue += "4:data" + bstr(dataPath);
-    queue += "9:debrid-id" + bstr("ready");
+    queue += "9:debrid-id" + bstr("https://gamehub.example/api/shop/download/1/game.nsp");
     queue += "5:error" + bstr("");
     queue += "2:id" + bstr(taskId);
     queue += "8:metainfo" + bstr("");

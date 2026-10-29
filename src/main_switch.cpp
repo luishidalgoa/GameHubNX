@@ -46,7 +46,6 @@ extern "C" {
 #include "ui/common/burn_in_saver.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/ftp_address.hpp"
-#include "ui/first_run_view.hpp"
 #include "ui/i18n.hpp"
 #include "ui/files/file_browser_view.hpp"
 #include "ui/main_frame.hpp"
@@ -459,10 +458,6 @@ int main(int argc, char** argv) {
         manager.setInstallTarget(
             installTargetFor(settings.get().installLocation));
         manager.setMaxActiveDownloads(settings.get().maxActiveDownloads);
-        manager.setTorboxApiKey(settings.get().torboxApiKey);
-        manager.setTorrserverUrl(settings.get().torrserverUrl);
-        manager.setRealdebridApiKey(settings.get().realdebridApiKey);
-        manager.setTorrentingEnabled(settings.get().torrentingEnabled);
         metadata.setImageNetwork(
             manager.hasActiveTransfer()
                 ? GameMetadataService::ImageNetwork::Throttled
@@ -576,19 +571,16 @@ int main(int argc, char** argv) {
         // Invariantes del fork, forzadas en CADA arranque y no solo cuando los
         // flags estan a false. La version anterior se saltaba este bloque si
         // firstRunCompleted ya venia a true -- que es justo el caso de quien
-        // instala esto sobre una instalacion previa: conservaba torrenting
-        // activado y los ajustes heredados.
+        // instala esto sobre una instalacion previa: conservaba los ajustes heredados.
         {
             gamehubnx::AppSettingsData next = settings.get();
             const bool cambia = !next.firstRunCompleted ||
                                 !next.catalogDisclaimerAcknowledged ||
-                                next.torrentingEnabled ||
                                 !next.catalogSourceUrl.empty();
             if (cambia) {
                 startupStage("aplicando invariantes de GameHubNX");
                 next.firstRunCompleted = true;
                 next.catalogDisclaimerAcknowledged = true;
-                next.torrentingEnabled = false;
                 // Una fuente heredada de otra instalacion haria que la tienda
                 // apuntase a otro catalogo; se limpia para que mande el defecto.
                 next.catalogSourceUrl.clear();

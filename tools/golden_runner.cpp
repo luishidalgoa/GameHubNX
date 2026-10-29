@@ -11,14 +11,14 @@
 //                          torrent-selection-scroll|downloads|downloads-back|frame|
 //                          hints-budget|installed|installed-populated|updates|
 //                          update-chooser|
-//                          update-chooser-toggle|settings|settings-debrid|help|
-//                          storage|network-health|first-run|first-run-focus|first-run-disclaimer|debrid-link|
+//                          update-chooser-toggle|settings|help|
+//                          storage|network-health|
 //                          about|bug-report|
 //                          bug-report-detail|bug-report-focus|sidebar-touch
 //                 [--frames N] [--sandbox <dir>]
 //
 // downloads-back, downloads-removing, torrent-selection-scroll, hints-budget,
-// bug-report-focus, sidebar-touch, update-chooser-toggle and first-run-disclaimer
+// bug-report-focus, sidebar-touch, update-chooser-toggle
 // are behaviour checks: they assert and exit non-zero
 // instead of producing a baseline.
 //
@@ -68,7 +68,6 @@
 #include "ui/detail/torrent_selection.hpp"
 #include "ui/downloads/downloads_view.hpp"
 #include "ui/downloads/task_files_activity.hpp"
-#include "ui/first_run_view.hpp"
 #include "ui/i18n.hpp"
 #include "ui/installed/installed_view.hpp"
 #include "ui/main_frame.hpp"
@@ -501,17 +500,14 @@ int main(int argc, char** argv) {
     int torrentSelectionRows = 0;
     bool torrentSelectionScroll = false;
     bool portSelectionOk = true;
-    bool settingsDebrid = false;
     bool hintsBudget = false;
     CatalogView* hintsCatalog = nullptr;
     bool catalogHeaderClearance = false;
     CatalogView* collapsedCatalog = nullptr;
     BugReportActivity* bugReportFocus = nullptr;
-    FirstRunView* firstRunFocus = nullptr;
     brls::Activity* detailRailNav = nullptr;
     UpdateFileChooserActivity* updateChooser = nullptr;
     std::vector<uint8_t> updateChooserMask;
-    bool disclaimerOkFired = false;
     const std::string setupDiagnosticFixture =
         "cut-off secret body api_key=DO_NOT_SHOW\n"
         "[  13010] [diagnostic] schema=1 level=error stage=net "
@@ -973,24 +969,8 @@ int main(int argc, char** argv) {
     } else if (screen == "storage") {
         seedStorageFixture(manager.rootPath());
         activity = new StorageManagerActivity(&manager, &metadata);
-    } else if (screen == "settings-debrid") {
-        // The debrid section is well below the fold on the settings screen,
-        // so it needs a shot of its own. A key is planted first: "linked" is
-        // the state worth pinning, since it is the one the detail text
-        // composes from the provider name.
-        gamehubnx::AppSettingsData values = settings.get();
-        values.torboxApiKey = "golden-fixture-key";
-        values.debridProvider = gamehubnx::DebridProviderKind::TorBox;
-        if (!settings.update(values, error))
-            return fail("settings-debrid could not plant a linked key");
-        activity = new GoldenActivity(new SettingsView(
-            &settings, &manager, &catalog, &metadata, &installed, nullptr,
-            &mods));
-        settingsDebrid = true;
     } else if (screen == "network-health") {
         gamehubnx::AppSettingsData values = settings.get();
-        values.torboxApiKey = "golden-fixture-key";
-        values.torrserverUrl = "192.168.1.5:8090";
         values.proxyUrl = "";
         values.lastCatalogRefreshWallSec =
             static_cast<uint64_t>(time(nullptr)) - 3 * 3600;
@@ -1024,27 +1004,6 @@ int main(int argc, char** argv) {
     } else if (screen == "help") {
         activity = new GoldenActivity(
             new HelpView(&manager, &catalog, &metadata, &installed));
-    } else if (screen == "first-run" || screen == "first-run-focus") {
-        auto* view = new FirstRunView(&settings, &manager,
-                                      [](gamehubnx::DebridProviderKind, bool) {});
-        activity = new GoldenActivity(view);
-        if (screen == "first-run-focus")
-            firstRunFocus = view;
-    } else if (screen == "first-run-disclaimer") {
-        // Host for the disclaimer dialog; the dialog is opened right after
-        // the activity is pushed below.
-        activity = new GoldenActivity(new brls::Box());
-    } else if (screen == "debrid-link") {
-        gamehubnx::AppSettingsData values = settings.get();
-        values.debridProvider = gamehubnx::DebridProviderKind::TorBox;
-        values.torboxApiKey = "golden-fixture-key";
-        if (!settings.update(values, error))
-            return fail("debrid-link could not plant a linked key");
-        activity = new GoldenActivity(new DebridLinkView(
-            &settings, &manager, gamehubnx::DebridProviderKind::TorBox,
-            DebridLinkFixture{{"192.168.50.42", setupDiagnosticFixture},
-                              /*pairingAvailable=*/true,
-                              /*validationSucceeded=*/true}));
     } else if (screen == "addons" || screen == "addons-focus") {
         auto item = [](const char* title, uint64_t bytes, ShopItemKind kind,
                        bool installed, bool selected) {
@@ -1114,9 +1073,6 @@ int main(int argc, char** argv) {
     }
 
     brls::Application::pushActivity(activity);
-    if (screen == "first-run-disclaimer")
-        gamehubnx::ui::showCatalogDisclaimer(
-            &settings, [&disclaimerOkFired] { disclaimerOkFired = true; });
     for (int i = 0; i < frames; ++i) {
         if (i == 10 && focusAfterLayout)
             brls::Application::giveFocus(focusAfterLayout);
@@ -1142,24 +1098,6 @@ int main(int argc, char** argv) {
         // of how many rows sit above the section, unlike counting presses.
         // The headroom puts the section heading and its two other rows in
         // frame rather than the link cell alone.
-        if (i == 30 && settingsDebrid) {
-            brls::View* link =
-                activity->getContentView()->getView("settings-debrid-link");
-            if (!link)
-                return fail("settings-debrid: link cell not found");
-            brls::ScrollingFrame* scroller = nullptr;
-            for (brls::View* node = reinterpret_cast<brls::View*>(
-                     link->getParent());
-                 node && !scroller;
-                 node = reinterpret_cast<brls::View*>(node->getParent()))
-                scroller = dynamic_cast<brls::ScrollingFrame*>(node);
-            if (!scroller)
-                return fail("settings-debrid: link cell is not in a scroller");
-            constexpr float kHeadroom = 240.0f;
-            float offset = link->getLocalY() - kHeadroom;
-            scroller->setContentOffsetY(offset < 0 ? 0 : offset, false);
-            brls::Application::giveFocus(link);
-        }
         if (i == 20 && downloadsBackFrame) {
             downloadsBackSidebarFocus = brls::Application::getCurrentFocus();
             auto values = settings.get();
@@ -1200,77 +1138,6 @@ int main(int argc, char** argv) {
         _exit(0);
     }
 
-    if (firstRunFocus) {
-        auto* option = dynamic_cast<FirstRunOption*>(
-            brls::Application::getCurrentFocus());
-        if (!option)
-            return fail("first-run-focus did not start on an option");
-        // B is locked until a method is picked: a real B press must be
-        // consumed by the view's hidden action, never dismiss the chooser.
-        if (!firstRunFocus->backLocked())
-            return fail("first-run-focus does not lock B before a choice");
-        // The frame's Back action must be replaced with a hidden no-op, or
-        // the hint bar would advertise a Back button the lock makes useless.
-        bool frameBackHidden = false;
-        for (brls::View* node = option->getParent(); node;
-             node = node->getParent()) {
-            if (auto* frame = dynamic_cast<brls::AppletFrame*>(node)) {
-                for (const auto& action : frame->getActions())
-                    if (action->getType() == brls::ACTION_GAMEPAD &&
-                        action->getButton() == brls::BUTTON_B)
-                        frameBackHidden = action->isHidden();
-                break;
-            }
-        }
-        if (!frameBackHidden)
-            return fail("first-run-focus still shows a Back hint");
-        brls::Activity* top =
-            brls::Application::getActivitiesStack().back();
-        const std::string beforeB = firstRunFocus->summaryState();
-        brls::Application::onControllerButtonPressed(brls::BUTTON_B, false);
-        for (int frame = 0; frame < 5; ++frame)
-            brls::Application::mainLoop();
-        const auto& stack = brls::Application::getActivitiesStack();
-        if (stack.empty() || stack.back() != top ||
-            firstRunFocus->summaryState() != beforeB ||
-            brls::Application::getCurrentFocus() != option)
-            return fail("first-run-focus B dismissed the chooser");
-        // Every mode's diagram must fit the panel. TorrServer is the widest
-        // (three fixed-width chips, two arrows), Direct the narrowest — the
-        // old end-of-loop check only ever looked at Direct, which is exactly
-        // the mode that hides the server chip and always fits.
-        auto checkFits = [&]() {
-            if (firstRunFocus->summaryFits())
-                return 0;
-            std::fprintf(stderr, "golden_runner: %s\n",
-                         firstRunFocus->summaryOverflow().c_str());
-            return fail("first-run-focus summary clips on a mode");
-        };
-        std::vector<std::string> states{firstRunFocus->summaryState()};
-        if (int rc = checkFits(); rc)
-            return rc;
-        for (int i = 0; i < 2; ++i) {
-            brls::View* next = option->getNextFocus(brls::FocusDirection::DOWN,
-                                                    option);
-            option = dynamic_cast<FirstRunOption*>(next);
-            if (!option)
-                return fail("first-run-focus could not reach every option");
-            brls::Application::giveFocus(option);
-            for (int frame = 0; frame < 5; ++frame)
-                brls::Application::mainLoop();
-            states.push_back(firstRunFocus->summaryState());
-            if (int rc = checkFits(); rc)
-                return rc;
-        }
-        if (states[0] == states[1] || states[1] == states[2] ||
-            states[0] == states[2] ||
-            brls::Application::getCurrentFocus() != option)
-            return fail("first-run-focus did not update the summary in place");
-        std::printf("golden_runner: first-run summary followed all options\n");
-        manager.shutdown();
-        std::fflush(nullptr);
-        _exit(0);
-    }
 
     if (updateChooser && screen == "update-chooser-toggle") {
         // The multi-select update chooser: rows open at the recommendation
@@ -1391,68 +1258,6 @@ int main(int argc, char** argv) {
         _exit(0);
     }
 
-    if (screen == "first-run-disclaimer") {
-        // The catalog disclaimer is non-cancelable: B must not dismiss it
-        // (and must not acknowledge it or continue the chain), and only OK
-        // persists the flag and fires the continuation that opens the
-        // provider link screen on a fresh first run.
-        if (settings.get().catalogDisclaimerAcknowledged)
-            return fail("first-run-disclaimer started with the flag set");
-        auto stack = brls::Application::getActivitiesStack();
-        if (stack.size() < 2)
-            return fail("first-run-disclaimer never opened over the host");
-        brls::Activity* dialogActivity = stack.back();
-        brls::Application::onControllerButtonPressed(brls::BUTTON_B, false);
-        for (int frame = 0; frame < 5; ++frame)
-            brls::Application::mainLoop();
-        if (brls::Application::getActivitiesStack().back() != dialogActivity)
-            return fail("first-run-disclaimer B dismissed the dialog");
-        if (settings.get().catalogDisclaimerAcknowledged)
-            return fail("first-run-disclaimer B acknowledged the dialog");
-        if (disclaimerOkFired)
-            return fail("first-run-disclaimer B continued the chain");
-
-        // Press OK: the flag persists and the continuation fires.
-        brls::Button* ok = nullptr;
-        std::function<void(brls::View*)> findOk = [&](brls::View* node) {
-            if (ok)
-                return;
-            if (auto* button = dynamic_cast<brls::Button*>(node))
-                if (button->getText() == tr("gamehubnx/common/ok"))
-                    ok = button;
-            if (auto* box = dynamic_cast<brls::Box*>(node))
-                for (brls::View* child : box->getChildren())
-                    findOk(child);
-        };
-        findOk(dialogActivity->getContentView());
-        if (!ok)
-            return fail("first-run-disclaimer has no OK button");
-        brls::Action* okAction = nullptr;
-        for (const auto& action : ok->getActions())
-            if (action->getType() == brls::ACTION_GAMEPAD &&
-                action->getButton() == brls::BUTTON_A)
-                okAction = action.get();
-        if (!okAction)
-            return fail("first-run-disclaimer OK has no A action");
-        okAction->getActionListener()(ok);
-        // buttonClick runs the callback only after the dismiss animation
-        // completes, so pump until the dialog is gone or we give up.
-        for (int frame = 0; frame < 180; ++frame) {
-            brls::Application::mainLoop();
-            if (brls::Application::getActivitiesStack().back() == activity)
-                break;
-        }
-        if (brls::Application::getActivitiesStack().back() != activity)
-            return fail("first-run-disclaimer OK never dismissed the dialog");
-        if (!settings.get().catalogDisclaimerAcknowledged)
-            return fail("first-run-disclaimer OK did not persist the flag");
-        if (!disclaimerOkFired)
-            return fail("first-run-disclaimer OK did not continue the chain");
-        std::printf("golden_runner: disclaimer blocks B and continues on OK\n");
-        manager.shutdown();
-        std::fflush(nullptr);
-        _exit(0);
-    }
 
     if (downloadsBackFrame &&
         brls::Application::getCurrentFocus() != downloadsBackSidebarFocus)

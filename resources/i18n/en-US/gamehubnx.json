@@ -122,6 +122,7 @@
     "unchecked": "Unchecked"
   },
   "detail": {
+    "torrents_unsupported": "Torrents are not supported. This app downloads from GameHub only.",
     "install_size": "Install size",
     "install_hint": "Install adds this game to your console.",
     "installed_hint": "Installed on this console. You can still install updates or DLC.",

@@ -849,9 +849,6 @@ private:
                         [](const CatalogEntry& entry) {
                             return entry.isDirectDownload();
                         });
-        if (!shopOnly && debridModeActive(settings_) &&
-            !ensureDebridLinked(settings_, manager_))
-            return;
 
         const StreamSelection selection = settings_
             ? settings_->get().streamSelection

@@ -40,8 +40,8 @@ inline void curlTuneDownloadSocket(CURL* curl) {
     curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, curlEnlargeReceiveBuffer);
 }
 
-// Same guarantee for a URL that may legitimately be plain HTTP — a TorrServer
-// on the LAN cannot hold a certificate for a private address. The scheme the
+// Same guarantee for a URL that may legitimately be plain HTTP — a server on
+// the LAN cannot hold a certificate for a private address. The scheme the
 // caller asked for is the only one allowed, so a redirect still cannot
 // downgrade an HTTPS request.
 inline void curlPinScheme(CURL* curl, const std::string& url) {

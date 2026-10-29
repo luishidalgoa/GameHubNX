@@ -83,11 +83,10 @@ struct AppSettingsData {
     uint32_t maxActiveDownloads = 1;
     bool firstRunCompleted = false;
     // Outbound proxy for HTTPS calls the app makes (catalog, artwork,
-    // updates, hosted debrid). Empty = direct. Peer traffic does NOT go
-    // through it: the torrent engine speaks raw TCP/uTP, not curl. Applied
-    // via ALL_PROXY, so plain-HTTP LAN TorrServer requests would also be
-    // proxied — leave this empty when using a LAN TorrServer, or point at a
-    // proxy that can reach that host. Validated at parse time so a
+    // updates, the GameHub server). Empty = direct. Applied via ALL_PROXY, so
+    // plain-HTTP requests to a LAN server would also be proxied — leave this
+    // empty when the server is on the LAN, or point at a proxy that can reach
+    // that host. Validated at parse time so a
     // hand-edited settings.json cannot smuggle an odd scheme.
     std::string proxyUrl;
 
