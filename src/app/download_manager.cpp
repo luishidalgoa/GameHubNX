@@ -1541,6 +1541,13 @@ void DownloadManager::load() {
         if (task.status == DownloadStatus::Completed ||
             task.status == DownloadStatus::Installed)
             task.completedBytes = task.totalBytes;
+        // La app solo descarga en directo: una tarea torrent guardada no se reanuda.
+        // Se descarta al cargar la cola y queda constancia en el registro.
+        if (task.source == TaskSource::Torrent) {
+            log_msg("[queue] discarded torrent task %s (%s): torrents are no longer supported\n",
+                    task.id.c_str(), task.name.c_str());
+            continue;
+        }
         bool metainfoRequired = task.source == TaskSource::Torrent ||
                                 !task.metainfoPath.empty();
         if (!isManagedChild(downloadRoot_, task.dataPath) ||
