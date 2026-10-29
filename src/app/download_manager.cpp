@@ -6,9 +6,6 @@
 #include "stream_budget_arbiter.hpp"
 #include "stream_ram_budget.hpp"
 #include "web_seed_source.hpp"
-#include "torbox_provider.hpp"
-#include "torrserver_provider.hpp"
-#include "realdebrid_provider.hpp"
 #include "debrid_transfer.hpp"
 #include "package_coordinator.hpp"
 #include "nx_file_types.hpp"
@@ -632,6 +629,9 @@ void DownloadManager::ExternalDeployLease::release() {
 bool DownloadManager::previewTorrent(const std::string& path,
                                      TorrentPreview& preview,
                                      std::string& error) {
+    error = "Torrents are no longer supported.";
+    return false;
+
     metainfo_t metainfo;
     if (!metainfo_load(path.c_str(), &metainfo)) {
         error = "The selected file is not a valid or safe .torrent file.";
@@ -670,6 +670,9 @@ bool DownloadManager::importTorrent(const std::string& path,
                                     std::string& taskId,
                                     std::string& error,
                                     const std::vector<uint8_t>& initialPeers) {
+    error = "Torrents are no longer supported.";
+    return false;
+
     TorrentPreview preview;
     if (!previewTorrent(path, preview, error))
         return false;
@@ -689,6 +692,9 @@ bool DownloadManager::importTorrentActions(
                                     std::string& taskId,
                                     std::string& error,
                                     const std::vector<uint8_t>& initialPeers) {
+    error = "Torrents are no longer supported.";
+    return false;
+
     TorrentPreview preview;
     if (!previewTorrent(path, preview, error))
         return false;
@@ -848,7 +854,6 @@ bool DownloadManager::importDebrid(const DebridImport& import,
     task.status = DownloadStatus::Queued;
     task.mode = import.mode;
     task.source = TaskSource::Debrid;
-    task.debridProvider = import.provider;
     task.debridId = import.debridId;
     task.packageCount = import.mode == TransferMode::StreamInstall
                         ? import.packageCount : 0;
@@ -894,73 +899,10 @@ bool DownloadManager::importDebrid(const DebridImport& import,
     return true;
 }
 
-void DownloadManager::setTorboxApiKey(const std::string& key) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    torboxApiKey_ = key;
-}
-
-void DownloadManager::setTorrserverUrl(const std::string& url) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    torrserverUrl_ = url;
-}
-
-void DownloadManager::setRealdebridApiKey(const std::string& key) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    realdebridApiKey_ = key;
-}
-
-std::string DownloadManager::apiKeyFor(DebridProviderKind provider) const {
-    if (provider == DebridProviderKind::TorrServer)
-        return torrserverUrl_;
-    if (provider == DebridProviderKind::RealDebrid)
-        return realdebridApiKey_;
-    return torboxApiKey_;
-}
-
-std::unique_ptr<DebridProvider> DownloadManager::makeProvider(
-    DebridProviderKind provider, const std::string& key) {
-    // Siempre GameHub. Antes esto devolvia TorBox, TorrServer o Real-Debrid
-    // segun un ajuste, de modo que pulsar Instalar en la tienda propia acababa
-    // pidiendo vincular una cuenta de un servicio de terceros que aqui no pinta
-    // nada -- y sin cuenta, la descarga no arrancaba.
-    //
-    // GameHubProvider no necesita clave ni cuenta: el fichero ya esta en un
-    // servidor del usuario y su "handle" es la propia URL. Los tres proveedores
-    // de debrid siguen compilados para no divergir de upstream mas de lo
-    // necesario, pero ya no se instancian.
-    (void)provider;
-    (void)key;
+std::unique_ptr<DebridProvider> DownloadManager::makeProvider() {
+    // Siempre GameHub: el fichero ya esta en un servidor del usuario y su
+    // "handle" es la propia URL. No hay cuenta, ni clave, ni servicio remoto.
     return std::make_unique<GameHubProvider>();
-}
-
-// Best-effort: a transfer we drop locally should not sit on the account
-// burning the user's quota. Detached because it is one HTTPS round-trip we
-// never want a caller — least of all one holding mutex_ — to wait on.
-void DownloadManager::removeFromDebridAsync(DebridProviderKind provider,
-                                            const std::string& apiKey,
-                                            const std::string& debridId) {
-    if (apiKey.empty() || debridId.empty())
-        return;
-    std::thread([provider, apiKey, debridId] {
-        std::string error;
-        if (!makeProvider(provider, apiKey)->remove(debridId, error))
-            log_msg("[debrid] account cleanup failed id=%s: %s\n",
-                    debridId.c_str(), error.c_str());
-    }).detach();
-}
-
-std::string DownloadManager::torboxApiKey() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return torboxApiKey_;
-}
-
-void DownloadManager::setTorrentingEnabled(bool enabled) {
-    torrentingEnabled_.store(enabled);
-    condition_.notify_all();
-}
-
-bool DownloadManager::torrentingEnabled() const {
-    return torrentingEnabled_.load();
 }
 
 bool DownloadManager::pause(const std::string& taskId) {
@@ -1192,51 +1134,30 @@ bool DownloadManager::remove(const std::string& taskId, bool deleteData,
         condition_.notify_all();
         return true;
     }
-    std::string debridId = task->debridId;
-    DebridProviderKind provider = task->debridProvider;
-    std::string apiKey = apiKeyFor(provider);
     if (!removeLocked(lock, taskId, deleteData, error))
         return false;
-    lock.unlock();
-    removeFromDebridAsync(provider, apiKey, debridId);
     return true;
 }
 
 bool DownloadManager::clearCompleted(bool deleteData, std::string& error) {
-    struct Cleanup {
-        DebridProviderKind provider;
-        std::string apiKey;
-        std::string debridId;
-    };
-    std::vector<Cleanup> cleanups;
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        std::vector<std::string> ids;
-        for (const DownloadTask& task : tasks_) {
-            if (externallyLeasedLocked(task.id))
-                continue;
-            if (task.status == DownloadStatus::Completed ||
-                task.status == DownloadStatus::Installed)
-                ids.push_back(task.id);
-        }
-        if (ids.empty())
-            return true;
-        for (const std::string& id : ids) {
-            DownloadTask* task = findLocked(id);
-            if (!task)
-                continue;
-            Cleanup cleanup{task->debridProvider, apiKeyFor(task->debridProvider),
-                            task->debridId};
-            if (!removeLocked(lock, id, deleteData, error, false))
-                return false;
-            cleanups.push_back(std::move(cleanup));
-        }
-        if (!saveLocked(error))
+    std::unique_lock<std::mutex> lock(mutex_);
+    std::vector<std::string> ids;
+    for (const DownloadTask& task : tasks_) {
+        if (externallyLeasedLocked(task.id))
+            continue;
+        if (task.status == DownloadStatus::Completed ||
+            task.status == DownloadStatus::Installed)
+            ids.push_back(task.id);
+    }
+    if (ids.empty())
+        return true;
+    for (const std::string& id : ids) {
+        if (!findLocked(id))
+            continue;
+        if (!removeLocked(lock, id, deleteData, error, false))
             return false;
     }
-    for (const Cleanup& cleanup : cleanups)
-        removeFromDebridAsync(cleanup.provider, cleanup.apiKey, cleanup.debridId);
-    return true;
+    return saveLocked(error);
 }
 
 std::vector<DownloadTask> DownloadManager::snapshot() const {
@@ -1357,12 +1278,6 @@ bool DownloadManager::saveLocked(std::string& error) const {
         state << "13:packages-done" << bint(task.packagesInstalled);
         state << "11:pieces-done" << bint(task.piecesDone);
         state << "12:pieces-total" << bint(task.piecesTotal);
-        state << "8:provider" << bstr(
-            task.debridProvider == DebridProviderKind::TorrServer
-                ? "torrserver"
-                : task.debridProvider == DebridProviderKind::RealDebrid
-                ? "realdebrid"
-                : "torbox");
         if (!task.resumeBitfield.empty())
             state << "9:resume-bf"
                   << bstr(std::string(task.resumeBitfield.begin(),
@@ -1489,14 +1404,8 @@ void DownloadManager::load() {
         }
         if (version.ival >= 4) {
             std::string source;
-            uint64_t torboxId = 0;
             if (dictionaryString(item, "source", source))
                 task.source = persistedSource(source);
-            // v4 only ever spoke TorBox, and kept the transfer id as an int.
-            if (dictionaryInteger(item, "torbox-id", torboxId)) {
-                task.debridProvider = DebridProviderKind::TorBox;
-                task.debridId = std::to_string(torboxId);
-            }
         }
         // v5 gained two independent sets of keys — the resume bitfield and the
         // debrid provider/id. Each is optional, so a state file written by
@@ -1505,15 +1414,7 @@ void DownloadManager::load() {
             std::string bitfield;
             if (dictionaryString(item, "resume-bf", bitfield))
                 task.resumeBitfield.assign(bitfield.begin(), bitfield.end());
-            std::string provider;
             std::string debridId;
-            if (dictionaryString(item, "provider", provider))
-                task.debridProvider =
-                    provider == "torrserver"
-                        ? DebridProviderKind::TorrServer
-                        : provider == "realdebrid"
-                        ? DebridProviderKind::RealDebrid
-                        : DebridProviderKind::TorBox;
             if (dictionaryString(item, "debrid-id", debridId))
                 task.debridId = debridId;
         }
@@ -1541,10 +1442,14 @@ void DownloadManager::load() {
         if (task.status == DownloadStatus::Completed ||
             task.status == DownloadStatus::Installed)
             task.completedBytes = task.totalBytes;
-        // La app solo descarga en directo: una tarea torrent guardada no se reanuda.
-        // Se descarta al cargar la cola y queda constancia en el registro.
-        if (task.source == TaskSource::Torrent) {
-            log_msg("[queue] discarded torrent task %s (%s): torrents are no longer supported\n",
+        // La app solo descarga en directo desde GameHub. Una tarea torrent, o una de
+        // un servicio de terceros (su id no es una URL), no se reanuda: se descarta
+        // al cargar la cola y queda constancia en el registro.
+        const bool debridOfThirdParty = task.source == TaskSource::Debrid &&
+                                        !task.debridId.empty() &&
+                                        task.debridId.rfind("http", 0) != 0;
+        if (task.source == TaskSource::Torrent || debridOfThirdParty) {
+            log_msg("[queue] discarded task %s (%s): only GameHub downloads are supported\n",
                     task.id.c_str(), task.name.c_str());
             continue;
         }
@@ -1798,7 +1703,6 @@ void DownloadManager::schedulerMain() {
         claim.dataPath = task->dataPath;
         claim.mode = task->mode;
         claim.source = task->source;
-        claim.debridProvider = task->debridProvider;
         claim.debridId = task->debridId;
         claim.packagesInstalled = task->packagesInstalled;
         claim.fileSelection = task->fileSelection;
@@ -1883,22 +1787,6 @@ void DownloadManager::setMaxActiveDownloads(uint32_t count) {
 
 void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     const std::string& activeId = claim.id;
-    std::string apiKey;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        apiKey = apiKeyFor(claim.debridProvider);
-    }
-    // Sin guardia de clave. Este fork siempre construye GameHubProvider (ver
-    // makeProvider), que no tiene cuenta, ni clave, ni cuota: el fichero esta
-    // en un servidor del propio usuario. La guardia que habia aqui abortaba la
-    // tarea con "TorBox key missing" antes siquiera de crear el proveedor, y
-    // como la seccion de debrid ya no existe en Ajustes no habia forma humana
-    // de satisfacerla: ninguna descarga de la tienda llegaba a arrancar.
-    //
-    // apiKey se sigue leyendo porque abajo decide si merece la pena pedirle a
-    // un servicio remoto que borre la transferencia; con GameHub va vacia y esa
-    // llamada se salta sola, que es justo lo correcto.
-
     DebridTaskSpec spec;
     spec.taskId = activeId;
     spec.debridId = claim.debridId;
@@ -1996,7 +1884,7 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
         }
     };
 
-    auto provider = makeProvider(claim.debridProvider, apiKey);
+    auto provider = makeProvider();
     DebridTransfer transfer(*provider);
     std::string createdId;
     std::string runError;
@@ -2070,8 +1958,6 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     // Decided under the lock, acted on outside it: the account cleanup below
     // is a full HTTPS round trip, and holding mutex_ across it freezes every
     // snapshot() the UI makes.
-    std::string removeId;
-    DebridProviderKind removeProvider = claim.debridProvider;
     {
         std::unique_lock<std::mutex> lock(mutex_);
         DownloadTask* task = findLocked(activeId);
@@ -2083,8 +1969,6 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
             task->debridId = createdId;
         if (task->status == DownloadStatus::Removing) {
             bool deleteData = task->error == "delete-data";
-            removeId = task->debridId;
-            removeProvider = task->debridProvider;
             std::string removeError;
             removeLocked(lock, activeId, deleteData, removeError);
         } else {
@@ -2100,14 +1984,6 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     }
     // This runner thread is about to end anyway, so the cleanup rides it out
     // instead of spawning a detached thread that would outlive the manager.
-    if (!removeId.empty() && !apiKey.empty()) {
-        std::string error;
-        if (!makeProvider(removeProvider, apiKey)->remove(removeId, error))
-            log_msg("[debrid] account cleanup failed id=%s: %s\n",
-                    removeId.c_str(), error.c_str());
-        else
-            log_msg("[debrid] account cleanup done id=%s\n", removeId.c_str());
-    }
     log_msg("[debrid] runner finished for %s\n", activeId.c_str());
 }
 
@@ -2115,12 +1991,11 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
     // Both branches below happen before the arbiter registration: a debrid
     // task runs no engine, so reserving engine RAM for it would starve the
     // torrent slots for nothing.
-    if (claim.source == TaskSource::Torrent && !torrentingEnabled_.load()) {
+    if (claim.source == TaskSource::Torrent) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (DownloadTask* task = findLocked(claim.id)) {
             task->status = DownloadStatus::Error;
-            task->error =
-                "Torrenting disabled — enable it in Settings to retry.";
+            task->error = "Torrents are no longer supported.";
             task->speedBytesPerSecond = 0;
             std::string ignored;
             saveLocked(ignored);
@@ -2277,17 +2152,6 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
             if (!task || task->status == DownloadStatus::Paused ||
                 task->status == DownloadStatus::Removing)
                 break;
-            // The user can flip torrenting off mid-transfer; stop talking to
-            // peers on the next tick rather than at the end of the download.
-            if (!torrentingEnabled_.load()) {
-                task->status = DownloadStatus::Error;
-                task->error =
-                    "Torrenting disabled — enable it in Settings to retry.";
-                task->speedBytesPerSecond = 0;
-                std::string ignored;
-                saveLocked(ignored);
-                break;
-            }
         }
 
         std::string installError = coordinator

@@ -104,7 +104,6 @@ public:
     BatchEnqueueResult enqueueViaDebrid(
         BatchPreparation& prepared,
         DownloadManager& manager,
-        DebridProviderKind providerKind,
         DebridProvider& provider,
         bool hasInstallTarget = false,
         install::InstallStorageTarget installTarget =

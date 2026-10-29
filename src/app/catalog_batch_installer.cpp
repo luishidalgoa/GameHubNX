@@ -366,7 +366,6 @@ BatchPreparation CatalogBatchInstaller::prepareViaDebrid(
 BatchEnqueueResult CatalogBatchInstaller::enqueueViaDebrid(
     BatchPreparation& prepared,
     DownloadManager& manager,
-    DebridProviderKind providerKind,
     DebridProvider& provider,
     bool hasInstallTarget,
     install::InstallStorageTarget installTarget) const {
@@ -384,8 +383,7 @@ BatchEnqueueResult CatalogBatchInstaller::enqueueViaDebrid(
                                                  : item.preview.name;
         import.totalBytes = item.preview.totalBytes;
         import.debridId = item.debridId;
-        import.provider = providerKind;
-        import.mode = item.mode;
+            import.mode = item.mode;
         import.fileSelection = item.selection;
         import.hasInstallTarget = hasInstallTarget;
         import.installTarget = installTarget;

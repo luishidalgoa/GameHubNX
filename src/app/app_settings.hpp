@@ -81,19 +81,6 @@ struct AppSettingsData {
     // does behind the user's back. Hand-edited values are clamped to the
     // supported range at parse time.
     uint32_t maxActiveDownloads = 1;
-    // Debrid: transfers are fetched over HTTP(S) from a server instead of from
-    // peers — TorBox hosted, or a TorrServer the user runs on their own LAN.
-    // A fresh install starts debrid-first, so torrenting is off until the user
-    // opts in; settings files older than v3 predate the switch and are
-    // migrated to true so an upgrade does not silently stop them. The key and
-    // the address are stored in the clear, like ftpPin — the SD card
-    // offers nothing better to hide them behind.
-    bool torrentingEnabled = false;
-    std::string torboxApiKey;
-    // Base URL of the TorrServer instance, e.g. "http://192.168.1.10:8090".
-    std::string torrserverUrl;
-    std::string realdebridApiKey;
-    DebridProviderKind debridProvider = DebridProviderKind::TorBox;
     bool firstRunCompleted = false;
     // Outbound proxy for HTTPS calls the app makes (catalog, artwork,
     // updates, hosted debrid). Empty = direct. Peer traffic does NOT go
