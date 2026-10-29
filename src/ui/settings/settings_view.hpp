@@ -22,7 +22,6 @@
 #include "app/ftp_server.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/common/ftp_address.hpp"
-#include "ui/debrid_ui.hpp"
 #include "ui/i18n.hpp"
 #include "ui/settings/advanced_settings.hpp"
 #include "ui/settings/network_health.hpp"
@@ -222,17 +221,6 @@ public:
         askRomDestination_->setDetailText(
             tr("gamehubnx/platforms/ask_destination_hint"));
         content->addView(askRomDestination_);
-
-        // Seccion de debrid retirada. Contenia el interruptor de torrent, el
-        // selector de proveedor (TorBox / TorrServer / Real-Debrid) y la
-        // vinculacion de la cuenta. Nada de eso aplica: aqui se descarga de la
-        // tienda propia por HTTPS y no hay cuenta de terceros que enlazar.
-        //
-        // Los widgets siguen declarados pero ya no se crean, de modo que su
-        // puntero es nulo: los sitios que los tocaban llevan ahora una
-        // comprobacion. Asi el codigo de upstream que los referencia sigue
-        // compilando sin parchearlo entero.
-        refreshDebridLinkDetail();
 
         addSection(content, tr("gamehubnx/settings/section_ftp"));
         webToggle_ = new brls::BooleanCell();
@@ -598,41 +586,6 @@ private:
         });
     }
 
-    // Turning torrenting ON is the risky direction, so it goes through a
-    // confirmation; turning it off needs none. The toggle is snapped back to
-    // false first so the cell never shows "on" while the dialog is up.
-    void setTorrenting(bool enabled) {
-        // Sin la celda registrada esto ya no lo invoca nadie, pero no conviene
-        // que la seguridad dependa de que siga siendo asi.
-        if (!torrenting_)
-            return;
-        const bool previous = settings_->get().torrentingEnabled;
-        if (enabled && !previous) {
-            torrenting_->setOn(false, false);
-            auto* dialog = new brls::Dialog(
-                tr("gamehubnx/settings/torrenting_warning"));
-            dialog->addButton(tr("gamehubnx/settings/torrenting_enable"),
-                [this] {
-                    AppSettingsData values = settings_->get();
-                    values.torrentingEnabled = true;
-                    if (persist(values, "torrenting")) {
-                        manager_->setTorrentingEnabled(true);
-                        torrenting_->setOn(true, false);
-                    }
-                });
-            dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
-            dialog->open();
-            return;
-        }
-        AppSettingsData values = settings_->get();
-        values.torrentingEnabled = enabled;
-        if (!persist(values, "torrenting")) {
-            torrenting_->setOn(previous, false);
-            return;
-        }
-        manager_->setTorrentingEnabled(enabled);
-    }
-
     void refreshCatalogSourceDetail() {
         const std::string& url = settings_->get().catalogSourceUrl;
         catalogSource_->setDetailText(
@@ -656,19 +609,6 @@ private:
             tr("gamehubnx/settings/catalog_source"),
             tr("gamehubnx/settings/catalog_source_detail"), 512,
             settings_->get().catalogSourceUrl, brls::KEYBOARD_DISABLE_NONE);
-    }
-
-    void refreshDebridLinkDetail() {
-        if (!debridLink_)
-            return;
-        const AppSettingsData& values = settings_->get();
-        const char* provider = debridProviderName(values.debridProvider);
-        // Spelled out rather than picking the key with a ternary: the i18n
-        // checker only sees keys that appear as a literal first argument.
-        debridLink_->setDetailText(
-            activeDebridKey(values).empty()
-                ? tr("gamehubnx/settings/debrid_not_linked", provider)
-                : tr("gamehubnx/settings/debrid_linked", provider));
     }
 
     // Re-sync the main-list cells. Called after a factory reset performed on the
@@ -697,21 +637,6 @@ private:
         checkForUpdates_->setOn(values.checkForUpdatesOnLaunch, false);
         webToggle_->setOn(values.ftpEnabled, false);
         updateWebCells();
-        // Estos dos ya no se crean (seccion de debrid retirada), asi que el
-        // puntero es nulo y hay que comprobarlo: esta funcion SI se ejecuta al
-        // recargar los ajustes.
-        if (torrenting_)
-            torrenting_->setOn(values.torrentingEnabled, false);
-        if (debridProvider_)
-            debridProvider_->setSelection(
-                values.debridProvider == DebridProviderKind::TorrServer ? 1
-                : values.debridProvider == DebridProviderKind::RealDebrid ? 2 : 0,
-                true);
-        manager_->setTorrentingEnabled(values.torrentingEnabled);
-        manager_->setTorboxApiKey(values.torboxApiKey);
-        manager_->setTorrserverUrl(values.torrserverUrl);
-        manager_->setRealdebridApiKey(values.realdebridApiKey);
-        refreshDebridLinkDetail();
     }
 
     AppSettings* settings_;
@@ -737,9 +662,6 @@ private:
     brls::BooleanCell* webToggle_ = nullptr;
     brls::DetailCell* webAddress_ = nullptr;
     brls::DetailCell* webPin_ = nullptr;
-    brls::BooleanCell* torrenting_ = nullptr;
-    brls::SelectorCell* debridProvider_ = nullptr;
-    brls::DetailCell* debridLink_ = nullptr;
     bool refreshInFlight_ = false;
     bool updateInFlight_ = false;
 };

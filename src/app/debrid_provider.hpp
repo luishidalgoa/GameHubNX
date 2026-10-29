@@ -23,8 +23,6 @@ struct DebridInfo {
     std::vector<std::string> links;
 };
 
-enum class DebridProviderKind { TorBox, TorrServer, RealDebrid };
-
 class DebridProvider {
 public:
     virtual ~DebridProvider() = default;

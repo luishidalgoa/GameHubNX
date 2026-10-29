@@ -1,12 +1,12 @@
 #include "torbox_client.hpp"
-#include "curl_https.hpp"
+#include "app/curl_https.hpp"
 
 #include <borealis/extern/nlohmann/json.hpp>
 
 #include <curl/curl.h>
 
 extern "C" {
-#include "../core/util.h"
+#include "core/util.h"
 }
 
 namespace gamehubnx {

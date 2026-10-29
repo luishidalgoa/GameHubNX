@@ -1,5 +1,5 @@
 #include "app/debrid_transfer.hpp"
-#include "app/torbox_provider.hpp"
+#include "support/torbox_provider.hpp"
 #include "install/install_journal.hpp"
 
 #include <algorithm>

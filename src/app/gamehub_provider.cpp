@@ -4,8 +4,13 @@
 #include "gamehub_catalog.hpp"
 
 #include <curl/curl.h>
+#include <strings.h>
 
 #include <string>
+
+extern "C" {
+#include "../core/util.h"
+}
 
 namespace gamehubnx {
 
@@ -24,6 +29,72 @@ curl_slist* applyClientIdentity(CURL* curl) {
         headers = curl_slist_append(headers, device.c_str());
     curl_easy_setopt(curl, CURLOPT_USERAGENT, gamehub::kClientId);
     return headers;
+}
+
+namespace {
+
+size_t discardBody(char*, size_t size, size_t nmemb, void*) {
+    // Aborta en cuanto llega el primer byte: solo interesan las cabeceras.
+    (void)size; (void)nmemb;
+    return 0;
+}
+
+size_t readContentRange(char* buffer, size_t size, size_t nitems, void* userp) {
+    const std::string line(buffer, size * nitems);
+    const std::string key = "content-range:";
+    if (line.size() > key.size() && strncasecmp(line.c_str(), key.c_str(), key.size()) == 0) {
+        *static_cast<uint64_t*>(userp) =
+            gamehub::totalFromContentRange(line.substr(key.size()));
+    }
+    return size * nitems;
+}
+
+}  // namespace
+
+// Tamano por una peticion de rango de un byte, para cuando el HEAD no trae
+// longitud. GameHub responde 206 con «Content-Range: bytes 0-0/TOTAL»; si
+// ignorara el rango y respondiera 200, vale la Content-Length.
+bool rangeContentLength(const std::string& url, uint64_t& bytes,
+                        std::string& error) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        error = "gamehub: curl init failed";
+        return false;
+    }
+    uint64_t total = 0;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_RANGE, "0-0");
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
+    struct curl_slist* headers = applyClientIdentity(curl);
+    if (headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discardBody);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, readContentRange);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &total);
+
+    curlPinHttpsOnly(curl);
+    curlPinScheme(curl, url);
+    curlApplyTrustedSsl(curl);
+
+    // CURLE_WRITE_ERROR es lo esperado: el cuerpo se corta a propósito.
+    (void)curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    if (status == 200) {
+        curl_off_t len = -1;
+        curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &len);
+        if (len > 0) total = static_cast<uint64_t>(len);
+    }
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (total == 0) {
+        error = "gamehub: no total length from range request";
+        return false;
+    }
+    bytes = total;
+    return true;
 }
 
 // A HEAD against the shop's download route. GameHub answers it with the real
@@ -84,7 +155,12 @@ bool headContentLength(const std::string& url, uint64_t& bytes,
 
 GameHubProvider::SizeProbe GameHubProvider::curlSizeProbe() {
     return [](const std::string& url, uint64_t& bytes, std::string& error) {
-        return headContentLength(url, bytes, error);
+        // El HEAD basta casi siempre; si no trae longitud se pregunta por rango.
+        if (headContentLength(url, bytes, error)) return true;
+        std::string rangeError;
+        if (rangeContentLength(url, bytes, rangeError)) return true;
+        error += "; " + rangeError;
+        return false;
     };
 }
 
@@ -136,7 +212,13 @@ bool GameHubProvider::fetchInfo(const std::string& id, DebridInfo& info,
     std::string probeError;
     // A failed probe is not a failed transfer: the size only drives the
     // progress bar, and the fetch itself learns the length anyway.
-    if (probe_ && probe_(id, bytes, probeError)) info.bytes = bytes;
+    if (probe_ && probe_(id, bytes, probeError)) {
+        info.bytes = bytes;
+    } else if (probe_) {
+        // Sin tamano la pantalla usa el del indice, que puede no coincidir.
+        log_msg("[gamehub] size probe failed for %s: %s\n", id.c_str(),
+                probeError.c_str());
+    }
 
     DebridFile file;
     file.id = id;

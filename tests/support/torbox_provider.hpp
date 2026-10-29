@@ -1,6 +1,6 @@
 #pragma once
 
-#include "debrid_provider.hpp"
+#include "app/debrid_provider.hpp"
 #include "torbox_client.hpp"
 
 namespace gamehubnx {

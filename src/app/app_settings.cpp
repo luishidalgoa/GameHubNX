@@ -163,12 +163,7 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
                   values.catalogDisclaimerAcknowledged, error) ||
         !readBool(root, "ftp_enabled", values.ftpEnabled,
                   error) ||
-        !readString(root, "ftp_pin", values.ftpPin, error) ||
-        !readBool(root, "torrenting_enabled", values.torrentingEnabled,
-                  error) ||
-        !readString(root, "torbox_api_key", values.torboxApiKey, error) ||
-        !readString(root, "realdebrid_api_key", values.realdebridApiKey,
-                     error)) {
+        !readString(root, "ftp_pin", values.ftpPin, error)) {
         return false;
     }
     uint64_t maxActive = values.maxActiveDownloads;
@@ -188,24 +183,6 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
     // clave es un estado legitimo.
     if (!isValidWebPin(values.ftpPin))
         values.ftpPin.clear();
-    // v3 keys: absent in an older file, so only read them when present and
-    // otherwise leave the struct defaults in place.
-    if (root.contains("torrserver_url")) {
-        if (!readString(root, "torrserver_url", values.torrserverUrl, error))
-            return false;
-    }
-    if (root.contains("debrid_provider")) {
-        std::string provider = "torbox";
-        if (!readString(root, "debrid_provider", provider, error))
-            return false;
-        // Neither "realdebrid" nor any other unknown value should land on a
-        // kind that cannot fetch anything — default to TorBox.
-        values.debridProvider = provider == "torrserver"
-            ? DebridProviderKind::TorrServer
-            : provider == "realdebrid"
-            ? DebridProviderKind::RealDebrid
-            : DebridProviderKind::TorBox;
-    }
     if (root.contains("first_run_completed")) {
         if (!readBool(root, "first_run_completed",
                       values.firstRunCompleted, error))
@@ -220,12 +197,6 @@ bool parseSettings(const std::string& text, AppSettingsData& values,
         return false;
     if (!isValidCatalogSourceUrl(values.catalogSourceUrl))
         values.catalogSourceUrl.clear();
-    // v2 -> v3: debrid arrived and the struct default flipped torrenting off,
-    // but a pre-v3 file was written by a build where torrenting was the only
-    // way to download anything. Migrate it back on rather than silently
-    // stopping an install that already works.
-    if (fileVersion < 3)
-        values.torrentingEnabled = true;
 
     if (!isSupportedLanguage(values.language)) {
         error = "Setting 'language' has an unknown value.";
@@ -284,16 +255,6 @@ std::string serializeSettings(const AppSettingsData& values) {
     root["ftp_enabled"] = values.ftpEnabled;
     root["ftp_pin"] = values.ftpPin;
     root["max_active_downloads"] = values.maxActiveDownloads;
-    root["torrenting_enabled"] = values.torrentingEnabled;
-    root["torbox_api_key"] = values.torboxApiKey;
-    root["torrserver_url"] = values.torrserverUrl;
-    root["realdebrid_api_key"] = values.realdebridApiKey;
-    root["debrid_provider"] =
-        values.debridProvider == DebridProviderKind::TorrServer
-            ? "torrserver"
-            : values.debridProvider == DebridProviderKind::RealDebrid
-            ? "realdebrid"
-            : "torbox";
     root["first_run_completed"] = values.firstRunCompleted;
     root["proxy_url"] = values.proxyUrl;
     root["catalog_source_url"] = values.catalogSourceUrl;
@@ -416,9 +377,8 @@ void applyProxySetting(const std::string& proxyUrl) {
     setenv("ALL_PROXY", proxyUrl.c_str(), 1);
     setenv("all_proxy", proxyUrl.c_str(), 1);
     // ALL_PROXY is curl's catch-all and would also route plain-HTTP LAN
-    // TorrServer calls. Keep loopback off the proxy; a TorrServer on a
-    // private LAN address still needs the proxy left empty (or a proxy that
-    // can reach that LAN).
+    // calls. Keep loopback off the proxy; a server on a private LAN address
+    // still needs the proxy left empty (or a proxy that can reach that LAN).
     static const char* kNoProxy = "localhost,127.0.0.1,::1";
     setenv("NO_PROXY", kNoProxy, 1);
     setenv("no_proxy", kNoProxy, 1);
@@ -444,10 +404,6 @@ bool AppSettingsData::operator==(const AppSettingsData& other) const {
            ftpEnabled == other.ftpEnabled &&
            ftpPin == other.ftpPin &&
            maxActiveDownloads == other.maxActiveDownloads &&
-           torrentingEnabled == other.torrentingEnabled &&
-           torboxApiKey == other.torboxApiKey &&
-           torrserverUrl == other.torrserverUrl &&
-           debridProvider == other.debridProvider &&
            firstRunCompleted == other.firstRunCompleted &&
            proxyUrl == other.proxyUrl;
 }

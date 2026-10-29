@@ -21,7 +21,6 @@
 #include "ui/common/install_target_dialog.hpp"
 #include "ui/common/storage_meter.hpp"
 #include "ui/common/ui_helpers.hpp"
-#include "ui/debrid_ui.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
@@ -180,15 +179,9 @@ public:
                             return entry.isDirectDownload();
                         });
         shopOnly_ = shopOnly;
-        debridMode_ = shopOnly || debridModeActive(settings_);
-        if (shopOnly) {
-            debridProvider_ = std::make_shared<GameHubProvider>();
-        } else if (debridMode_) {
-            const AppSettingsData values = settings_->get();
-            debridProvider_ = std::shared_ptr<DebridProvider>(
-                makeDebridProvider(values.debridProvider,
-                                   activeDebridKey(values)).release());
-        }
+        // La app solo descarga de GameHub: el lote siempre va por el proveedor de GameHub.
+        debridMode_ = true;
+        debridProvider_ = std::make_shared<GameHubProvider>();
 
         auto* content = new brls::Box(brls::Axis::COLUMN);
         content->setGrow(1);
@@ -532,8 +525,7 @@ private:
         gamehubnx::BatchEnqueueResult result =
             debridMode_ && debridProvider_
                 ? installer_->enqueueViaDebrid(
-                      *prepared_, *manager_, settings_->get().debridProvider,
-                      *debridProvider_, true, target_)
+                      *prepared_, *manager_, *debridProvider_, true, target_)
                 : installer_->enqueue(*prepared_, *manager_);
         // La ruta de torrent encola con el ajuste global, asi que ahi el
         // destino se corrige despues: la tarea recien encolada sigue en cola
