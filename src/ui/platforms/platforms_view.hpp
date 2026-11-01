@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -192,10 +193,11 @@ class PlatformsView : public brls::Box {
 public:
     PlatformsView(CatalogService* catalog, GameMetadataService* metadata,
                   DownloadManager* manager, AppSettings* settings,
-                  FavoritesService* favorites = nullptr)
+                  FavoritesService* favorites = nullptr,
+                  std::function<void()> openCatalog = nullptr)
         : brls::Box(brls::Axis::COLUMN), catalog_(catalog),
           metadata_(metadata), manager_(manager), settings_(settings),
-          favorites_(favorites) {
+          favorites_(favorites), openCatalog_(std::move(openCatalog)) {
         setGrow(1);
         setPadding(20, 32, 0, 32);
 
@@ -229,9 +231,11 @@ public:
             return;
         // Switch ya tiene su propia pestana, con instalacion, complementos y
         // eleccion de memoria. Mandarla a la lista de ROMs seria ofrecer
-        // descargar un .nsp a una carpeta donde no sirve de nada.
+        // descargar un .nsp a una carpeta donde no sirve de nada: se va al
+        // catalogo, que es donde se instala.
         if (items[index].native) {
-            brls::Application::notify(tr("gamehubnx/platforms/native_hint"));
+            if (openCatalog_)
+                openCatalog_();
             return;
         }
         brls::Application::pushActivity(
@@ -281,6 +285,7 @@ private:
     DownloadManager* manager_;
     AppSettings* settings_;
     FavoritesService* favorites_;
+    std::function<void()> openCatalog_;
     brls::Label* status_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;

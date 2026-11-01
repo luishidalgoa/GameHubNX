@@ -297,6 +297,11 @@ test: $(TEST_BINS)
 	./$(BUILD_DIR)/tests/test_manager
 
 
+# Header-only rules of the updates tab (DLC a console lacks, row kinds).
+$(BUILD_DIR)/tests/test_addon_status: tests/test_addon_status.cpp src/app/addon_status.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $<
+
 $(BUILD_DIR)/tests/test_app_settings: tests/test_app_settings.cpp src/app/app_settings.cpp \
 		$(BUILD_DIR)/src/core/util.o \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o

@@ -14,6 +14,7 @@
     "about": "About"
   },
   "common": {
+        "view_game": "View game",
         "loading": "Loading…",
     "ok": "OK",
     "cancel": "Cancel",
@@ -396,6 +397,10 @@
     "unable_to_open": "Unable to open this directory."
   },
   "installed": {
+    "chip_dlc": "DLC available",
+    "chip_update_dlc": "Update and DLC",
+    "action_what_to_install": "What to install",
+    "no_catalog_entry": "This game is not in the catalog",
     "refresh_action": "Refresh installed",
     "empty_title": "No installed applications",
     "empty_body": "Refresh this list after your first install or when you return from Home.",
@@ -805,7 +810,6 @@
         "title": "Platforms",
         "games": "{} games",
         "native": "Native",
-        "native_hint": "Installs on the console",
         "emulated_hint": "Downloads to the SD card for an emulator",
         "empty": "No games yet"
     },

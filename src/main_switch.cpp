@@ -162,26 +162,33 @@ public:
         });
         tabs->addNavTab(tr("gamehubnx/platforms/title"),
                         NavIconType::Platforms,
-                        [catalog, metadata, manager, settings, favorites] {
-            return new gamehubnx::ui::PlatformsView(catalog, metadata, manager,
-                                                    settings, favorites);
+                        [catalog, metadata, manager, settings, favorites, tabs] {
+            // Switch se instala desde el catalogo: el indice 0 es esa pestana.
+            return new gamehubnx::ui::PlatformsView(
+                catalog, metadata, manager, settings, favorites,
+                [tabs] { tabs->focusTab(0); });
         });
         tabs->addNavTab(tr("gamehubnx/nav/downloads"), NavIconType::Downloads,
-                        [manager, metadata, settings, deploy] {
-            return new MainView(manager, metadata, settings, deploy);
+                        [manager, metadata, settings, deploy, catalog,
+                         installed, mods, favorites] {
+            return new MainView(manager, metadata, settings, deploy, catalog,
+                                installed, mods, favorites);
         });
         tabs->addNavTab(tr("gamehubnx/nav/installed"), NavIconType::Installed,
                         [installed, manager, metadata, settings, catalog,
-                         gameUpdates] {
+                         gameUpdates, mods, favorites, deploy] {
             return new InstalledView(installed, manager, metadata, settings,
-                                     catalog, gameUpdates);
+                                     catalog, gameUpdates, true,
+                                     InstalledView::Mode::Library, mods,
+                                     favorites, deploy);
         });
         tabs->addNavTab(tr("gamehubnx/nav/updates"), NavIconType::Updates,
                         [installed, manager, metadata, settings, catalog,
-                         gameUpdates] {
+                         gameUpdates, mods, favorites, deploy] {
             return new InstalledView(installed, manager, metadata, settings,
                                      catalog, gameUpdates, true,
-                                     InstalledView::Mode::Updates);
+                                     InstalledView::Mode::Updates, mods,
+                                     favorites, deploy);
         });
         // El explorador, con pestana propia. Estuvo enterrado el octavo en
         // Ajustes y no se encontraba: dos veces se reporto que no estaba,

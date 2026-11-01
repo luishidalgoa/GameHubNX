@@ -14,6 +14,7 @@
     "about": "关于"
   },
   "common": {
+        "view_game": "查看详情",
         "loading": "正在加载…",
     "ok": "确定",
     "cancel": "取消",
@@ -396,6 +397,10 @@
     "unable_to_open": "无法打开此目录。"
   },
   "installed": {
+    "chip_dlc": "有 DLC 可用",
+    "chip_update_dlc": "更新和 DLC",
+    "action_what_to_install": "选择安装内容",
+    "no_catalog_entry": "此游戏不在目录中",
     "refresh_action": "刷新已安装",
     "empty_title": "没有已安装的应用",
     "empty_body": "首次安装后或从 Home 返回时刷新此列表。",
@@ -804,7 +809,6 @@
         "title": "平台",
         "games": "{} 个游戏",
         "native": "原生",
-        "native_hint": "安装到主机",
         "emulated_hint": "下载到 SD 卡供模拟器使用",
         "empty": "暂无游戏"
     },

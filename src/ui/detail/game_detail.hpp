@@ -1370,4 +1370,18 @@ private:
     bool busy_ = false;
 };
 
+/// Abre la ficha de una entrada del catalogo desde otra pantalla (descargas,
+/// instalados). La pila vuelve a la pantalla de origen con "atras".
+inline void pushGameDetail(const CatalogEntry& entry, DownloadManager* manager,
+                           GameMetadataService* metadata,
+                           InstalledTitleService* installed,
+                           AppSettings* settings, ModIndexService* mods,
+                           FavoritesService* favorites,
+                           SwitchDeployService* deploy) {
+    // Se copia la entrada: el catalogo puede recargarse mientras la ficha vive.
+    brls::Application::pushActivity(new GameDetailActivity(
+        CatalogEntry(entry), std::string{}, manager, metadata, installed,
+        settings, mods, nullptr, nullptr, nullptr, favorites, deploy));
+}
+
 }  // namespace gamehubnx::ui

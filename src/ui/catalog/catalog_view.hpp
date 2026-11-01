@@ -32,6 +32,7 @@
 #include "ui/common/message_cells.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/detail/game_detail.hpp"
+#include "ui/detail/shop_items.hpp"
 #include "ui/detail/shop_addons.hpp"
 #include "ui/theme.hpp"
 
@@ -529,36 +530,7 @@ public:
     std::vector<ShopItem> buildShopItems(
         const CatalogEntry& base,
         const std::vector<CatalogEntry>& addOns) const {
-        std::vector<ShopItem> items;
-        const std::string baseId = gamehub::baseTitleIdOf(base.titleId);
-        const bool baseInstalled =
-            installed_ && !base.titleId.empty() &&
-            installed_->contains(base.titleId);
-        if (!baseInstalled) {
-            ShopItem item;
-            item.entry = base;
-            item.kind = ShopItemKind::Game;
-            items.push_back(std::move(item));
-        }
-        const uint64_t installedVersion = installedVersionOf(baseId);
-        for (const CatalogEntry& entry : addOns) {
-            ShopItem item;
-            item.entry = entry;
-            if (gamehub::isDlcTitleId(entry.titleId)) {
-                item.kind = ShopItemKind::Dlc;
-                item.installed = installed_ && !entry.titleId.empty() &&
-                                 installed_->containsDlc(entry.titleId);
-            } else {
-                item.kind = ShopItemKind::Update;
-                // Solo se marca cuando se pueden comparar las DOS versiones.
-                // Decir "instalada" sin poder comprobarlo es peor que callarse.
-                const uint64_t candidate = shopVersionFromName(entry.title);
-                item.installed = installedVersion != 0 && candidate != 0 &&
-                                 installedVersion >= candidate;
-            }
-            items.push_back(std::move(item));
-        }
-        return items;
+        return ui::buildShopItems(installed_, base, addOns);
     }
 
     // Ficha de un complemento (DLC o actualizacion), abierta desde la lista.
@@ -634,46 +606,12 @@ public:
         // base con el (los trece bits bajos son el discriminante). Se calculan
         // aqui, donde esta el catalogo entero, y se le pasan ya filtrados: la
         // ficha no necesita conocer el catalogo para mostrarlos.
-        std::vector<CatalogEntry> addOns;
-        // Si el catalogo cargado no tiene NI UN complemento, es que los
-        // sub-indices no han llegado todavia. Distinguir "este juego no tiene
-        // DLC" de "aun no lo se" evita que la ficha afirme un cero que no ha
-        // comprobado.
-        bool catalogKnowsAddOns = false;
-        if (catalog_) {
-            const std::string base = gamehub::baseTitleIdOf(entry.titleId);
-            for (const CatalogEntry& other : catalog_->entries()) {
-                if (other.directUrl.empty())
-                    continue;                       // no es de la tienda
-                if (!other.fromSubIndex &&
-                    gamehub::isBaseTitleId(other.titleId))
-                    continue;                       // es un juego, no un extra
-                catalogKnowsAddOns = true;
-                // El emparejamiento, por orden de fiabilidad:
-                //
-                //  1. gh_id. Es la relacion que el servidor conoce desde que
-                //     escaneo los directorios y que ahora publica. No depende
-                //     del nombre del fichero, asi que funciona con volcados
-                //     nombrados de cualquier manera.
-                //  2. Title ID base. El respaldo de siempre, para catalogos que
-                //     no son GameHub y para servidores que aun no publiquen
-                //     gh_id.
-                //
-                // Sin ninguno de los dos no hay forma honesta de saber de que
-                // juego es el complemento, y se deja fuera.
-                if (entry.gameId != 0 && other.gameId != 0) {
-                    if (other.gameId != entry.gameId)
-                        continue;
-                } else if (base.empty() ||
-                           gamehub::baseTitleIdOf(other.titleId) != base) {
-                    continue;
-                }
-                // DLC y actualizacion, los dos: la pantalla de complementos
-                // ensena y descarga ambos. Quien cuenta solo DLC es la fila de
-                // datos de la ficha, y lo hace ella al pintarse.
-                addOns.push_back(other);
-            }
-        }
+        // Si el catalogo cargado no tiene NI UN complemento, los sub-indices no
+        // han llegado todavia: distinguir "no tiene DLC" de "aun no se".
+        const AddOnSelection selection =
+            catalog_ ? addOnsOf(catalog_->entries(), entry) : AddOnSelection{};
+        std::vector<CatalogEntry> addOns = selection.addOns;
+        const bool catalogKnowsAddOns = selection.catalogKnows;
         // Abrir la lista de complementos, y desde ella la ficha del que se
         // elija: un DLC de la tienda es una CatalogEntry como el juego, asi
         // que GameDetailActivity ya sabe describirlo e instalarlo. Se cablea

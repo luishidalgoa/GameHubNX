@@ -8,9 +8,14 @@
 #include <borealis.hpp>
 
 #include "app/app_settings.hpp"
+#include "app/catalog_service.hpp"
 #include "app/download_manager.hpp"
+#include "app/favorites_service.hpp"
 #include "app/game_metadata_service.hpp"
+#include "app/installed_title_service.hpp"
+#include "app/mod_index_service.hpp"
 #include "app/switch_deploy.hpp"
+#include "ui/detail/game_detail.hpp"
 #include "ui/common/message_cells.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/i18n.hpp"
@@ -62,9 +67,14 @@ private:
 class MainView : public brls::Box {
 public:
     MainView(DownloadManager* manager, GameMetadataService* metadata,
-             AppSettings* settings, SwitchDeployService* deploy = nullptr)
+             AppSettings* settings, SwitchDeployService* deploy = nullptr,
+             CatalogService* catalog = nullptr,
+             InstalledTitleService* installed = nullptr,
+             ModIndexService* mods = nullptr,
+             FavoritesService* favorites = nullptr)
         : brls::Box(brls::Axis::COLUMN), manager_(manager), metadata_(metadata),
-          settings_(settings), deploy_(deploy) {
+          settings_(settings), deploy_(deploy), catalog_(catalog),
+          installed_(installed), mods_(mods), favorites_(favorites) {
         summary_ = new brls::Label();
         summary_->setFontSize(15);
         summary_->setMarginTop(10);
@@ -135,8 +145,23 @@ public:
     }
 
     void openDetails(const std::string& taskId) {
-        brls::Application::pushActivity(
-            new DetailsActivity(taskId, manager_, deploy_));
+        brls::Application::pushActivity(new DetailsActivity(
+            taskId, manager_, deploy_,
+            [this](const std::string& id) {
+                return catalog_ && catalog_->findByInfoHash(id) != nullptr;
+            },
+            [this](const std::string& id) { openGame(id); }));
+    }
+
+    // La ficha del juego de la descarga. Solo existe si el catalogo conoce
+    // su hash (una descarga manual por magnet no tiene ficha).
+    void openGame(const std::string& taskId) {
+        const CatalogEntry* entry =
+            catalog_ ? catalog_->findByInfoHash(taskId) : nullptr;
+        if (!entry)
+            return;
+        pushGameDetail(*entry, manager_, metadata_, installed_, settings_,
+                       mods_, favorites_, deploy_);
     }
 
     void openFilePicker() {
@@ -167,6 +192,9 @@ public:
         };
 
         add(tr("gamehubnx/common/details"), [this, taskId] { openDetails(taskId); });
+        if (catalog_ && catalog_->findByInfoHash(taskId))
+            add(tr("gamehubnx/common/view_game"),
+                [this, taskId] { openGame(taskId); });
         const SwitchDeploySnapshot deployState = deploy_ ? deploy_->snapshot()
                                                          : SwitchDeploySnapshot{};
         const bool leased = deployState.active() && deployState.taskId == taskId;
@@ -575,6 +603,10 @@ private:
     GameMetadataService* metadata_;
     AppSettings* settings_;
     SwitchDeployService* deploy_;
+    CatalogService* catalog_ = nullptr;
+    InstalledTitleService* installed_ = nullptr;
+    ModIndexService* mods_ = nullptr;
+    FavoritesService* favorites_ = nullptr;
     EmptyStateView* emptyState_ = nullptr;
     brls::Label* summary_ = nullptr;
     brls::RecyclerFrame* recycler_;

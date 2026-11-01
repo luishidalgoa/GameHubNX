@@ -14,6 +14,7 @@
     "about": "Sobre"
   },
   "common": {
+        "view_game": "Ver ficha",
         "loading": "Carregando…",
     "ok": "OK",
     "cancel": "Cancelar",
@@ -396,6 +397,10 @@
     "unable_to_open": "Não foi possível abrir este diretório."
   },
   "installed": {
+    "chip_dlc": "DLC disponível",
+    "chip_update_dlc": "Atualização e DLC",
+    "action_what_to_install": "O que instalar",
+    "no_catalog_entry": "Este jogo não está no catálogo",
     "refresh_action": "Atualizar instalados",
     "empty_title": "Nenhum aplicativo instalado",
     "empty_body": "Atualize esta lista após sua primeira instalação ou ao voltar do Menu Home.",
@@ -805,7 +810,6 @@
         "title": "Plataformas",
         "games": "{} jogos",
         "native": "Nativa",
-        "native_hint": "Instala no console",
         "emulated_hint": "Baixa para o cartão SD para um emulador",
         "empty": "Sem jogos ainda"
     },

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include <borealis.hpp>
@@ -11,23 +12,35 @@
 #include "app/download_manager.hpp"
 #include "app/game_metadata_service.hpp"
 #include "app/game_update_install.hpp"
+#include "app/addon_status.hpp"
 #include "app/game_update_service.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/magnet_resolver.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/ui_helpers.hpp"
+#include "ui/detail/game_detail.hpp"
+#include "ui/detail/shop_addons.hpp"
+#include "ui/detail/shop_items.hpp"
 #include "ui/i18n.hpp"
 #include "ui/installed/update_file_chooser.hpp"
 #include "ui/theme.hpp"
 
 namespace gamehubnx::ui {
 
+// Lo que una fila de actualizaciones tiene pendiente, y sus complementos.
+struct RowAddOns {
+    RowAddOnKind kind = RowAddOnKind::None;
+    std::vector<CatalogEntry> addOns;
+};
+
 class InstalledCell : public brls::RecyclerCell {
 public:
     using CheckOne = std::function<void(const std::string&, const std::string&)>;
     using InstallOne = std::function<void(const std::string&)>;
     using UninstallOne = std::function<void(InstalledTitle)>;
+    // Tocar el juego abre su ficha (biblioteca). Sin el, tocar comprueba o instala.
+    using OpenOne = std::function<void(const InstalledTitle&)>;
 
     explicit InstalledCell(bool allowUninstall = true) {
         setFocusable(true);
@@ -72,6 +85,10 @@ public:
         registerClickAction([this](brls::View*) {
             if (titleId_.empty())
                 return true;
+            if (openOne_) {
+                openOne_(storedTitle_);
+                return true;
+            }
             if (currentState_ == GameUpdateState::UpdateAvailable &&
                 onInstallOne_)
                 onInstallOne_(titleId_);
@@ -103,6 +120,14 @@ public:
                       imageState_);
     }
 
+    // El hint de la A depende de la pantalla: "Ver ficha" en la biblioteca,
+    // "Que instalar" en actualizaciones.
+    void setOpenOne(OpenOne onOpenOne, std::string hintKey) {
+        openOne_ = std::move(onOpenOne);
+        openHint_ = std::move(hintKey);
+    }
+    void setAddOnKind(RowAddOnKind kind) { addOnKind_ = kind; }
+
     void setResult(const GameUpdateResult* result, CheckOne onCheckOne,
                    InstallOne onInstallOne, UninstallOne onUninstallOne) {
         onCheckOne_ = std::move(onCheckOne);
@@ -119,9 +144,18 @@ public:
         // click still routes through the tap handler), then repaints the bar.
         updateActionHint(
             brls::BUTTON_A,
-            state == GameUpdateState::UpdateAvailable
+            openOne_ ? tr(openHint_.c_str())
+            : state == GameUpdateState::UpdateAvailable
                 ? tr("gamehubnx/common/install")
                 : tr("gamehubnx/installed/action_check"));
+        if (addOnKind_ == RowAddOnKind::Dlc ||
+            addOnKind_ == RowAddOnKind::UpdateAndDlc) {
+            chip_->setText(tr(addOnKind_ == RowAddOnKind::Dlc
+                                  ? "gamehubnx/installed/chip_dlc"
+                                  : "gamehubnx/installed/chip_update_dlc"));
+            chip_->setTextColor(theme::warning());
+            return;
+        }
         switch (state) {
         case GameUpdateState::UpdateAvailable:
             chip_->setText(tr("gamehubnx/installed/update_chip_available"));
@@ -192,6 +226,9 @@ private:
     CheckOne onCheckOne_;
     InstallOne onInstallOne_;
     UninstallOne onUninstallOne_;
+    OpenOne openOne_;
+    std::string openHint_;
+    RowAddOnKind addOnKind_ = RowAddOnKind::None;
 };
 
 class InstalledDataSource : public brls::RecyclerDataSource {
@@ -213,6 +250,13 @@ public:
     void setUninstallOne(InstalledCell::UninstallOne onUninstallOne) {
         onUninstallOne_ = std::move(onUninstallOne);
     }
+    void setOpenOne(InstalledCell::OpenOne onOpenOne, std::string hintKey) {
+        onOpenOne_ = std::move(onOpenOne);
+        openHint_ = std::move(hintKey);
+    }
+    void setAddOns(const std::unordered_map<std::string, RowAddOns>* addOns) {
+        addOns_ = addOns;
+    }
 
     const std::vector<InstalledTitle>& titles() const { return titles_; }
 
@@ -232,6 +276,14 @@ public:
             if (it != results_->end())
                 result = &it->second;
         }
+        cell->setOpenOne(onOpenOne_, openHint_);
+        RowAddOnKind kind = RowAddOnKind::None;
+        if (addOns_) {
+            auto found = addOns_->find(title.titleId);
+            if (found != addOns_->end())
+                kind = found->second.kind;
+        }
+        cell->setAddOnKind(kind);
         cell->setResult(result, onCheckOne_, onInstallOne_, onUninstallOne_);
         return cell;
     }
@@ -243,6 +295,9 @@ private:
     InstalledCell::CheckOne onCheckOne_;
     InstalledCell::InstallOne onInstallOne_;
     InstalledCell::UninstallOne onUninstallOne_;
+    InstalledCell::OpenOne onOpenOne_;
+    std::string openHint_;
+    const std::unordered_map<std::string, RowAddOns>* addOns_ = nullptr;
 };
 
 class InstalledView : public brls::Box {
@@ -255,11 +310,14 @@ public:
     InstalledView(InstalledTitleService* installed, DownloadManager* manager,
                   GameMetadataService* metadata, AppSettings* settings,
                   CatalogService* catalog, GameUpdateService* updates,
-                  bool checkOnEntry = true, Mode mode = Mode::Library)
+                  bool checkOnEntry = true, Mode mode = Mode::Library,
+                  ModIndexService* mods = nullptr,
+                  FavoritesService* favorites = nullptr,
+                  SwitchDeployService* deploy = nullptr)
         : brls::Box(brls::Axis::COLUMN), installed_(installed),
           manager_(manager), metadata_(metadata), settings_(settings),
           catalog_(catalog), updates_(updates), checkOnEntry_(checkOnEntry),
-          mode_(mode),
+          mode_(mode), mods_(mods), favorites_(favorites), deploy_(deploy),
           alive_(std::make_shared<std::atomic<bool>>(true)) {
         status_ = new brls::Label();
         status_->setFontSize(15);
@@ -291,6 +349,17 @@ public:
             [this](const std::string& titleId) { installUpdate(titleId); });
         dataSource_->setUninstallOne(
             [this](InstalledTitle title) { confirmUninstall(std::move(title)); });
+        // En la biblioteca tocar el juego abre su ficha; en actualizaciones
+        // sigue comprobando o instalando.
+        if (mode_ == Mode::Library)
+            dataSource_->setOpenOne(
+                [this](const InstalledTitle& title) { openDetail(title); },
+                "gamehubnx/common/view_game");
+        else
+            dataSource_->setOpenOne(
+                [this](const InstalledTitle& title) { openWhatToInstall(title); },
+                "gamehubnx/installed/action_what_to_install");
+        dataSource_->setAddOns(&rowAddOns_);
         reload();
         recheckTimer_.setCallback([this] { pollUpdateRecheck(); });
         // Entering the tab re-checks every installed title so verdicts are
@@ -406,8 +475,14 @@ private:
         if (refreshing_ || updateInFlight_ || uninstallInFlight_)
             return;
         pendingUpdateAll_.clear();
-        for (const InstalledTitle& title : dataSource_->titles())
-            pendingUpdateAll_.push_back(title.titleId);
+        // Solo las filas con una actualizacion: un DLC suelto no tiene bundle.
+        for (const InstalledTitle& title : dataSource_->titles()) {
+            auto it = rowAddOns_.find(title.titleId);
+            if (it != rowAddOns_.end() &&
+                (it->second.kind == RowAddOnKind::Update ||
+                 it->second.kind == RowAddOnKind::UpdateAndDlc))
+                pendingUpdateAll_.push_back(title.titleId);
+        }
         if (pendingUpdateAll_.empty()) {
             brls::Application::notify(tr("gamehubnx/updates/update_all_empty"));
             return;
@@ -643,16 +718,37 @@ private:
     // tiene mas nuevos que la consola. Todo sale del veredicto del check
     // (GameUpdateService con la tienda como unica fuente), asi que lo que se
     // lista es siempre lo que se puede descargar.
-    std::vector<InstalledTitle> onlyWithUpdate(
-        std::vector<InstalledTitle> titles) const {
+    // Las filas de actualizaciones: las que tienen una actualizacion o DLC que la
+    // consola no tiene. Un juego sin nada pendiente no aparece.
+    std::vector<InstalledTitle> withPendingAddOns(
+        std::vector<InstalledTitle> titles) {
+        rowAddOns_.clear();
         const GameUpdateResults& results = updates_->results();
         std::vector<InstalledTitle> filtered;
         filtered.reserve(titles.size());
         for (InstalledTitle& title : titles) {
             auto it = results.find(title.titleId);
-            if (it != results.end() &&
-                it->second.state == GameUpdateState::UpdateAvailable)
-                filtered.push_back(std::move(title));
+            const bool hasUpdate =
+                it != results.end() &&
+                it->second.state == GameUpdateState::UpdateAvailable;
+            RowAddOns row;
+            bool hasMissingDlc = false;
+            if (const CatalogEntry* base = findCatalogEntry(title)) {
+                AddOnSelection selection = addOnsOf(catalog_->entries(), *base);
+                std::vector<std::string> catalogDlc;
+                for (const CatalogEntry& addOn : selection.addOns)
+                    if (gamehub::isDlcTitleId(addOn.titleId))
+                        catalogDlc.push_back(addOn.titleId);
+                hasMissingDlc = !missingDlcTitleIds(catalogDlc,
+                                                    installed_->dlcTitleIds())
+                                     .empty();
+                row.addOns = std::move(selection.addOns);
+            }
+            row.kind = classifyRowAddOns(hasUpdate, hasMissingDlc);
+            if (row.kind == RowAddOnKind::None)
+                continue;
+            rowAddOns_[title.titleId] = std::move(row);
+            filtered.push_back(std::move(title));
         }
         return filtered;
     }
@@ -675,7 +771,7 @@ private:
     void reload() {
         std::vector<InstalledTitle> titles = installed_->titles();
         if (mode_ == Mode::Updates)
-            titles = onlyWithUpdate(std::move(titles));
+            titles = withPendingAddOns(std::move(titles));
         size_t count = titles.size();
         dataSource_->setTitles(std::move(titles));
         recycler_->reloadData();
@@ -729,6 +825,46 @@ private:
         });
     }
 
+    // La entrada del catalogo que es el mismo juego base que el instalado. Los
+    // DLC y actualizaciones (sub-indices) no cuentan: la ficha es la del juego.
+    const CatalogEntry* findCatalogEntry(const InstalledTitle& title) const {
+        if (!catalog_ || title.titleId.empty())
+            return nullptr;
+        const std::string base = gamehub::baseTitleIdOf(title.titleId);
+        for (const CatalogEntry& entry : catalog_->entries()) {
+            if (entry.fromSubIndex || !gamehub::isBaseTitleId(entry.titleId))
+                continue;
+            if (gamehub::baseTitleIdOf(entry.titleId) == base)
+                return &entry;
+        }
+        return nullptr;
+    }
+
+    // "Que instalar" de la fila: el juego (si falta) y sus complementos pendientes.
+    // Desde ahi, el modal de instalacion de siempre.
+    void openWhatToInstall(const InstalledTitle& title) {
+        const CatalogEntry* base = findCatalogEntry(title);
+        auto it = rowAddOns_.find(title.titleId);
+        if (!base || it == rowAddOns_.end()) {
+            brls::Application::notify(tr("gamehubnx/installed/no_catalog_entry"));
+            return;
+        }
+        brls::Application::pushActivity(new ShopAddOnsActivity(
+            title.name,
+            buildShopItems(installed_, *base, it->second.addOns), manager_,
+            settings_));
+    }
+
+    void openDetail(const InstalledTitle& title) {
+        const CatalogEntry* entry = findCatalogEntry(title);
+        if (!entry) {
+            brls::Application::notify(tr("gamehubnx/installed/no_catalog_entry"));
+            return;
+        }
+        pushGameDetail(*entry, manager_, metadata_, installed_, settings_, mods_,
+                       favorites_, deploy_);
+    }
+
     InstalledTitleService* installed_;
     DownloadManager* manager_;
     GameMetadataService* metadata_ = nullptr;
@@ -737,6 +873,9 @@ private:
     GameUpdateService* updates_ = nullptr;
     bool checkOnEntry_ = true;
     Mode mode_ = Mode::Library;
+    ModIndexService* mods_ = nullptr;
+    FavoritesService* favorites_ = nullptr;
+    SwitchDeployService* deploy_ = nullptr;
     brls::Label* status_ = nullptr;
     EmptyStateView* emptyState_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;
@@ -748,6 +887,7 @@ private:
     std::atomic<uint32_t> updateTempSerial_{0};
     brls::RepeatingTimer recheckTimer_;
     std::string pendingRecheckTaskId_;
+    std::unordered_map<std::string, RowAddOns> rowAddOns_;
     std::vector<std::string> pendingUpdateAll_;
     bool updateAllAutoImport_ = false;
     bool refreshing_ = false;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -23,9 +24,15 @@ namespace gamehubnx::ui {
 // grouped. All colors/fonts on O1 tokens.
 class DetailsActivity : public brls::Activity {
 public:
+    // hasGameEntry dice si el catalogo conoce la descarga (hay ficha); openGame
+    // abre esa ficha. Los pone quien tiene la ficha, para no incluirla aqui.
     DetailsActivity(std::string taskId, DownloadManager* manager,
-                    SwitchDeployService* deploy = nullptr)
+                    SwitchDeployService* deploy = nullptr,
+                    std::function<bool(const std::string&)> hasGameEntry = nullptr,
+                    std::function<void(const std::string&)> openGame = nullptr)
         : taskId_(std::move(taskId)), manager_(manager), deploy_(deploy),
+          hasGameEntry_(std::move(hasGameEntry)),
+          openGame_(std::move(openGame)),
           alive_(std::make_shared<std::atomic<bool>>(true)) {
         auto* root = new brls::Box(brls::Axis::ROW);
         root->setPadding(24, 32, 24, 32);
@@ -115,6 +122,17 @@ public:
         gap->setHeight(12);
         sidebar->addView(gap);
 
+        // Ver ficha solo si el catalogo conoce la descarga: sin entrada no hay
+        // ficha que mostrar y el boton se oculta.
+        viewGameButton_ = addActionButton(sidebar, tr("gamehubnx/common/view_game"),
+                                          &brls::BUTTONSTYLE_DEFAULT);
+        if (!hasGameEntry_ || !hasGameEntry_(taskId_))
+            viewGameButton_->setVisibility(brls::Visibility::GONE);
+        viewGameButton_->registerClickAction([this](brls::View*) {
+            if (openGame_)
+                openGame_(taskId_);
+            return true;
+        });
         filesButton_ = addActionButton(sidebar, tr("gamehubnx/files/open"),
                                        &brls::BUTTONSTYLE_DEFAULT);
         copyButton_ = addActionButton(sidebar, tr("gamehubnx/deploy/copy"),
@@ -707,6 +725,8 @@ private:
     std::string taskId_;
     DownloadManager* manager_;
     SwitchDeployService* deploy_;
+    std::function<bool(const std::string&)> hasGameEntry_;
+    std::function<void(const std::string&)> openGame_;
     std::shared_ptr<std::atomic<bool>> alive_;
     std::string frameTitle_;
     brls::AppletFrame* frame_;
@@ -731,6 +751,7 @@ private:
     brls::Label* deployPhase_;
     brls::Label* deployStatus_;
     ProgressBar* deployProgress_;
+    brls::Button* viewGameButton_ = nullptr;
     brls::Button* filesButton_;
     brls::Button* copyButton_;
     brls::Label* error_;
