@@ -145,6 +145,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ inputs.version }}" \
+            --draft \
             dist/gamehubnx.nro \
             dist/gamehubnx.nro.sha256 \
             dist/gamehubnx.elf \
