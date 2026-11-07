@@ -15,7 +15,8 @@ namespace gamehubnx {
 // cualquier otro valor, un DLC, que cuelga del base 0x1000 por encima del suyo.
 
 // El Title ID de 16 hex entre corchetes, en mayúsculas, o "" si el nombre no lo tiene.
-inline std::string titleIdInName(const std::string& name) {
+// (No llamarla titleIdInName: download_kind.hpp ya tiene una con ese nombre y otro tipo de retorno.)
+inline std::string packageTitleId(const std::string& name) {
     for (size_t i = 0; i + 18 <= name.size(); ++i) {
         if (name[i] != '[' || name[i + 17] != ']')
             continue;
@@ -63,7 +64,7 @@ inline std::string baseTitleIdFor(const std::string& titleId) {
 // `baseIsPresent` dice si el base ya está en la consola o va a estar (en cola).
 inline std::string missingBaseFor(const std::string& name,
                                   const std::function<bool(const std::string&)>& baseIsPresent) {
-    const std::string id = titleIdInName(name);
+    const std::string id = packageTitleId(name);
     if (id.empty())
         return {};
     const std::string base = baseTitleIdFor(id);

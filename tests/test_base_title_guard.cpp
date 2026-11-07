@@ -1,5 +1,7 @@
 // Comprueba que un DLC o una actualización no se instala sin su juego base.
 #include "../src/app/base_title_guard.hpp"
+// Ambas cabeceras en la misma unidad: si comparten nombre, no compila.
+#include "../src/app/download_kind.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -7,13 +9,15 @@
 
 using gamehubnx::baseTitleIdFor;
 using gamehubnx::missingBaseFor;
-using gamehubnx::titleIdInName;
+using gamehubnx::packageTitleId;
 
 int main() {
     // El Title ID sale del nombre, en mayúsculas.
-    assert(titleIdInName("Minecraft v1.21.92 [0100d71004694800][v8257536].nsp") == "0100D71004694800");
-    assert(titleIdInName("Sin id.nsp").empty());
-    assert(titleIdInName("[0100D7100469480].nsp").empty());   // 15 hex: no vale
+    assert(packageTitleId("Minecraft v1.21.92 [0100d71004694800][v8257536].nsp") == "0100D71004694800");
+    assert(packageTitleId("Sin id.nsp").empty());
+    // La otra función, con su propio tipo de retorno, sigue siendo la suya.
+    assert(gamehubnx::titleIdInName("Juego [0100BA4026E94800].nsp") == 0x0100BA4026E94800ull);
+    assert(packageTitleId("[0100D7100469480].nsp").empty());   // 15 hex: no vale
 
     // Juego base, actualización y DLC: el base de cada uno.
     assert(baseTitleIdFor("0100D71004694000") == "0100D71004694000");
