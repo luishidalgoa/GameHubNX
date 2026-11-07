@@ -1,6 +1,7 @@
 #include "gamehub_provider.hpp"
 #include "download_manager.hpp"
 #include "base_title_guard.hpp"
+#include "input_cache.hpp"
 #include "rom_paths.hpp"
 #include "task_files.hpp"
 #include "request_gate.hpp"
@@ -592,6 +593,8 @@ DownloadManager::DownloadManager(std::string rootPath, bool startWorker)
             if (!task.dataPath.empty())
                 inUse.insert(task.dataPath);
         sweepEmptyDownloadDirs(downloadRoot_, inUse);
+        // Cachés de paquetes NSZ (input_cache.hpp): las de tareas que ya no existen y las abandonadas.
+        input_cache::sweepOrphanCaches(downloadRoot_, inUse, time(nullptr));
     }
     if (startWorker) {
         workerStarted_ = true;
@@ -1668,6 +1671,8 @@ bool DownloadManager::removeLocked(std::unique_lock<std::mutex>& lock,
         if (!it->metainfoPath.empty())
             unlink(it->metainfoPath.c_str());
         install::removeInstallJournal(installJournalPath(rootPath_, it->id));
+        // Sin borrar datos, la carpeta queda, pero su caché de NSZ ya no tiene quien la use.
+        input_cache::removeCachesIn(it->dataPath);
         removeTaskFileManifest(rootPath_, it->id);
         tasks_.erase(it);
         return persist ? saveLocked(error) : true;

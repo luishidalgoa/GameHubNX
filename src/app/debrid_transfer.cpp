@@ -4,6 +4,7 @@
 #include "download_manager.hpp"
 #include "debrid_provider.hpp"
 #include "install_pacer.hpp"
+#include "input_cache.hpp"
 #include "nx_file_types.hpp"
 #include "stream_ram_budget.hpp"
 #include "../install/install_backend.hpp"
@@ -1079,6 +1080,53 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     // Lo ya bajado cuenta: si no, la barra retrocederia al reanudar.
     ctx.packageDownloadedBytes = startOffset;
 
+    // Caché del comprimido (input_cache.hpp). Un NSZ sólido no da puntos de retorno, así que
+    // pausar tiraba lo bajado. Aquí los bytes comprimidos se guardan en orden: al reanudar se
+    // descomprimen desde esa copia y la red solo baja lo que falta.
+    //
+    // Con un punto del journal (startOffset > 0) la caché sirve solo si llega exactamente a ese
+    // punto; si no, se tira y el paquete sigue sin caché.
+    const bool resumedFromJournal = startOffset > 0;
+    const std::string cachePath = compressed
+        ? input_cache::pathFor(ctx.spec.dataPath, file.path) : std::string();
+    uint64_t feedFromCache = 0;
+    uint64_t netStart = startOffset;
+    std::unique_ptr<input_cache::Writer> cacheWriter;
+    if (compressed) {
+        uint64_t have = input_cache::cachedLength(cachePath);
+        if (have > file.bytes) {
+            unlink(cachePath.c_str());
+            have = 0;
+        }
+        bool usable = true;
+        if (!resumedFromJournal) {
+            feedFromCache = have;
+            netStart = have;
+        } else if (have != startOffset) {
+            usable = false;
+        }
+        if (usable && !input_cache::hasRoomFor(ctx.spec.dataPath, file.bytes - netStart)) {
+            log_msg("[debrid] sin espacio para guardar '%s'; sin reanudar desde la caché\n",
+                    displayName.c_str());
+            usable = false;
+            if (!resumedFromJournal) {
+                feedFromCache = 0;
+                netStart = 0;
+            }
+        }
+        if (!usable) {
+            unlink(cachePath.c_str());
+        } else {
+            const uint64_t keep = resumedFromJournal ? startOffset : feedFromCache;
+            cacheWriter = std::make_unique<input_cache::Writer>(cachePath, keep);
+            if (feedFromCache > 0)
+                log_msg("[debrid] reanudando '%s' desde la caché: %llu de %llu bytes\n",
+                        displayName.c_str(),
+                        static_cast<unsigned long long>(feedFromCache),
+                        static_cast<unsigned long long>(file.bytes));
+        }
+    }
+
     // Un punto de retorno cada 8 MiB.
     //
     // El intervalo importa mas de lo que parece, y es por una carrera que no
@@ -1140,14 +1188,33 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     DebridStreamQueue queue(maximumBuffered, pacer, *ctx.shouldStop);
     std::string fetchError;
     bool fetchOk = false;
+    bool cacheBroken = false;
     std::thread producer([&] {
-        auto sink = [&queue, &ctx](const uint8_t* data, size_t n) -> bool {
+        auto sink = [&queue, &ctx, &cacheWriter](const uint8_t* data, size_t n) -> bool {
             ctx.packageDownloadedBytes.fetch_add(n);
+            // Lo que llega de la red se guarda en orden; la caché que falla se tira sola.
+            if (cacheWriter)
+                cacheWriter->write(data, n);
             return queue.push(data, n);
         };
-        fetchOk = fetchOrdered(ctx.fetcher, url, startOffset, file.bytes,
-                               maximumBuffered / 2, sink, *ctx.shouldStop,
-                               fetchError);
+        // Primero lo guardado, sin volver a bajarlo; luego la red desde donde acaba.
+        bool replayed = true;
+        if (feedFromCache > 0) {
+            replayed = input_cache::replay(cachePath, feedFromCache, sink, *ctx.shouldStop);
+            if (!replayed) {
+                cacheBroken = !*ctx.shouldStop;
+                fetchError = "The saved download could not be read again.";
+            }
+        }
+        if (!replayed) {
+            fetchOk = false;
+        } else if (netStart >= file.bytes) {
+            fetchOk = true;
+        } else {
+            fetchOk = fetchOrdered(ctx.fetcher, url, netStart, file.bytes,
+                                   maximumBuffered / 2, sink, *ctx.shouldStop,
+                                   fetchError);
+        }
         queue.finish();
     });
 
@@ -1190,6 +1257,8 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
         flushBatch();
     queue.stop();
     producer.join();
+    if (cacheBroken && cacheWriter)
+        cacheWriter->discard();
     if (!fetchOk || !streamOk) {
         // Lo que decide no es "salimos del bucle" --de ahi se sale tambien al
         // pausar-- sino si el flujo en si esta sano.
@@ -1236,6 +1305,9 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
                                             : stream->error();
         backend->rollbackPackage();
         install::removeInstallJournal(journalPath);
+        // El comprimido no cuadra con su propio contenido: no hay nada que reanudar desde él.
+        if (cacheWriter)
+            cacheWriter->discard();
         return Step::Failed;
     }
     bool alreadyInstalled = false;
@@ -1248,6 +1320,11 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     // El paquete ya esta puesto: su punto de retorno sobra, y dejarlo seria
     // ofrecerselo al SIGUIENTE paquete, que no es el mismo.
     install::removeInstallJournal(journalPath);
+    // Y su caché también: ya no hace falta, y no debe quedar residuo.
+    if (cacheWriter)
+        cacheWriter->discard();
+    if (compressed)
+        unlink(cachePath.c_str());
     ctx.packagesInstalled += 1;
     DebridProgress done;
     done.status = DownloadStatus::Installing;
