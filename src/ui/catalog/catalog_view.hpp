@@ -918,16 +918,16 @@ private:
                 continue;
             }
 
-            // DLC y actualizaciones no ocupan sitio en la rejilla: llegan de los
-            // sub-indices y son PIEZAS de un juego, no juegos. Al buscar si
-            // aparecen, para poder llegar a uno concreto.
+            // DLC y actualizaciones no son juegos: llegan de los sub-indices y son
+            // PIEZAS de un juego. Tampoco se muestran al buscar: la busqueda devuelve
+            // juegos base, y el DLC o la actualizacion se instala desde su juego.
             //
             // La procedencia manda sobre el Title ID. Antes esto era solo
             // isBaseTitleId(), que ante un nombre sin id contesta "no se
             // clasificarlo, muestralo" -- razonable para el indice raiz y
             // desastroso para un sub-indice, donde colaba en la rejilla ocho
             // actualizaciones como si fueran juegos, al lado del suyo.
-            if (!searching && !entry.directUrl.empty() &&
+            if (!entry.directUrl.empty() &&
                 (entry.fromSubIndex ||
                  !gamehub::isBaseTitleId(entry.titleId))) {
                 continue;
