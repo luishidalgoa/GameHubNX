@@ -2105,11 +2105,25 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
     // snapshot() the UI makes.
     std::string removeId;
     DebridProviderKind removeProvider = claim.debridProvider;
+    // Carpeta local de una instalación ya terminada: no hace falta más, y no debe quedar.
+    std::string finishedDataPath;
     {
         std::unique_lock<std::mutex> lock(mutex_);
         DownloadTask* task = findLocked(activeId);
         if (!task)
             return;
+        // Terminada (instalada o descargada): la transferencia remota ya no sirve y no debe
+        // seguir ocupando la cuenta, ni la carpeta local. Con error se conserva para reintentar.
+        if (result == DebridRunResult::Finished &&
+            (task->status == DownloadStatus::Installed ||
+             task->status == DownloadStatus::Completed)) {
+            if (!task->debridId.empty()) {
+                removeId = task->debridId;
+                removeProvider = task->debridProvider;
+            }
+            if (task->mode == TransferMode::StreamInstall)
+                finishedDataPath = task->dataPath;
+        }
         // The transfer may have created the remote id we never had; record
         // it before anything else so the removal can still clean the account.
         if (!createdId.empty() && task->debridId.empty())
@@ -2128,11 +2142,15 @@ void DownloadManager::runDebridTask(const ClaimedTask& claim) {
             task->speedBytesPerSecond = 0;
             std::string ignored;
             saveLocked(ignored);
-            return;
+            // Una tarea terminada sigue hasta la limpieza de abajo; cualquier otra, aquí mismo.
+            if (removeId.empty() && finishedDataPath.empty())
+                return;
         }
     }
     // This runner thread is about to end anyway, so the cleanup rides it out
     // instead of spawning a detached thread that would outlive the manager.
+    if (!finishedDataPath.empty())
+        removeTree(finishedDataPath);
     if (!removeId.empty() && !apiKey.empty()) {
         std::string error;
         if (!makeProvider(removeProvider, apiKey)->remove(removeId, error))
