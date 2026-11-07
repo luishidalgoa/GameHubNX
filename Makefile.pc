@@ -532,7 +532,7 @@ $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 
 $(BUILD_DIR)/tests/test_base_title_guard: tests/test_base_title_guard.cpp src/app/base_title_guard.hpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $<
 
 $(BUILD_DIR)/tests/test_ftp_session: tests/test_ftp_session.cpp
 	@mkdir -p $(dir $@)
