@@ -71,6 +71,19 @@ bool sendLine(socket_t fd, const std::string& line,
 // Listado en el formato de ls que esperan los clientes de FTP. El tamano y el
 // tipo salen de stat; la fecha no se publica --la tarjeta no guarda una util-- y
 // se pone una fija, que es mejor que inventar uno distinto en cada listado.
+// El registro de la app lo tiene abierto este mismo proceso, y en la consola stat() sobre su ruta
+// falla mientras tanto. Sin esto, el listado lo omitía y SIZE respondía 550, así que el caso
+// especial de RETR no llegaba a ejecutarse. Su tamaño sale del descriptor que ya está abierto.
+bool statFtpPath(const std::string& full, struct stat& st) {
+    if (full == kLogPath) {
+        if (FILE* log = log_file()) {
+            if (fstat(fileno(log), &st) == 0)
+                return true;
+        }
+    }
+    return stat(full.c_str(), &st) == 0;
+}
+
 std::string buildListing(const std::string& path) {
     std::string out;
     DIR* dir = opendir(path.c_str());
@@ -83,7 +96,7 @@ std::string buildListing(const std::string& path) {
         struct stat st {};
         const std::string full =
             path.back() == '/' ? path + name : path + "/" + name;
-        if (stat(full.c_str(), &st) != 0)
+        if (!statFtpPath(full, st))
             continue;
         char line[512];
         std::snprintf(line, sizeof(line),
@@ -219,7 +232,7 @@ void FtpServer::serve() {
 
                 if (reply.action == FtpSession::Action::ReportSize) {
                     struct stat st {};
-                    if (stat(session.path().c_str(), &st) != 0 ||
+                    if (!statFtpPath(session.path(), st) ||
                         !S_ISREG(st.st_mode)) {
                         sendLine(control, "550 No se puede medir", stopping_);
                     } else {
