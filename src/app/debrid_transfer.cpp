@@ -1091,7 +1091,11 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
         ? input_cache::pathFor(ctx.spec.dataPath, file.path) : std::string();
     uint64_t feedFromCache = 0;
     uint64_t netStart = startOffset;
+    // El escritor se abre DESPUÉS de reproducir lo guardado: la consola no deja abrir dos veces
+    // el mismo fichero en el mismo proceso, y reproducir con el escritor abierto fallaba.
     std::unique_ptr<input_cache::Writer> cacheWriter;
+    bool cacheEnabled = false;
+    uint64_t cacheKeep = 0;
     if (compressed) {
         uint64_t have = input_cache::cachedLength(cachePath);
         if (have > file.bytes) {
@@ -1117,8 +1121,8 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
         if (!usable) {
             unlink(cachePath.c_str());
         } else {
-            const uint64_t keep = resumedFromJournal ? startOffset : feedFromCache;
-            cacheWriter = std::make_unique<input_cache::Writer>(cachePath, keep);
+            cacheEnabled = true;
+            cacheKeep = resumedFromJournal ? startOffset : feedFromCache;
             if (feedFromCache > 0)
                 log_msg("[debrid] reanudando '%s' desde la caché: %llu de %llu bytes\n",
                         displayName.c_str(),
@@ -1204,8 +1208,13 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
             if (!replayed) {
                 cacheBroken = !*ctx.shouldStop;
                 fetchError = "The saved download could not be read again.";
+                if (cacheBroken)
+                    unlink(cachePath.c_str());
             }
         }
+        // Ya reproducido: ahora sí, el escritor que seguirá guardando lo que baje la red.
+        if (replayed && cacheEnabled)
+            cacheWriter = std::make_unique<input_cache::Writer>(cachePath, cacheKeep);
         if (!replayed) {
             fetchOk = false;
         } else if (netStart >= file.bytes) {
