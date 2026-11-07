@@ -406,6 +406,7 @@ DownloadStatus persistedStatus(const std::string& value) {
 
 std::string persistedStatus(DownloadStatus status) {
     switch (status) {
+        // Leer la caché es transitorio: si la app se cierra ahí, al volver se encola de nuevo.
         case DownloadStatus::Paused: return "paused";
         case DownloadStatus::Completed: return "completed";
         case DownloadStatus::Installed: return "installed";
@@ -570,6 +571,7 @@ const char* statusName(DownloadStatus status) {
         case DownloadStatus::Installed: return "Installed";
         case DownloadStatus::Error: return "Error";
         case DownloadStatus::Removing: return "Removing";
+        case DownloadStatus::Replaying: return "Replaying";
     }
     return "Unknown";
 }
@@ -997,6 +999,7 @@ bool DownloadManager::pause(const std::string& taskId) {
         task->status != DownloadStatus::Checking &&
         task->status != DownloadStatus::Fetching &&
         task->status != DownloadStatus::Downloading &&
+        task->status != DownloadStatus::Replaying &&
         task->status != DownloadStatus::Installing &&
         task->status != DownloadStatus::Committing &&
         task->status != DownloadStatus::Verifying)
@@ -1058,6 +1061,7 @@ void DownloadManager::pauseAll() {
             task.status != DownloadStatus::Checking &&
             task.status != DownloadStatus::Fetching &&
             task.status != DownloadStatus::Downloading &&
+            task.status != DownloadStatus::Replaying &&
             task.status != DownloadStatus::Installing &&
             task.status != DownloadStatus::Verifying)
             continue;
@@ -1207,6 +1211,7 @@ bool DownloadManager::remove(const std::string& taskId, bool deleteData,
     if (task->status == DownloadStatus::Checking ||
         task->status == DownloadStatus::Fetching ||
         task->status == DownloadStatus::Downloading ||
+        task->status == DownloadStatus::Replaying ||
         task->status == DownloadStatus::Installing ||
         task->status == DownloadStatus::Committing ||
         task->status == DownloadStatus::Verifying) {
@@ -1335,6 +1340,7 @@ bool DownloadManager::hasActiveTransfer() const {
             case DownloadStatus::Checking:
             case DownloadStatus::Fetching:
             case DownloadStatus::Downloading:
+            case DownloadStatus::Replaying:
             case DownloadStatus::Verifying:
             case DownloadStatus::Installing:
             case DownloadStatus::Committing:
@@ -1696,6 +1702,7 @@ QueueSummary summarizeQueue(const std::vector<DownloadTask>& tasks,
         case DownloadStatus::Checking:
         case DownloadStatus::Fetching:
         case DownloadStatus::Downloading:
+        case DownloadStatus::Replaying:
             ++summary.downloading;
             break;
         case DownloadStatus::Installing:
@@ -1724,6 +1731,7 @@ QueueSummary summarizeQueue(const std::vector<DownloadTask>& tasks,
             task.status == DownloadStatus::Checking ||
             task.status == DownloadStatus::Fetching ||
             task.status == DownloadStatus::Downloading ||
+            task.status == DownloadStatus::Replaying ||
             task.status == DownloadStatus::Installing ||
             task.status == DownloadStatus::Committing ||
             task.status == DownloadStatus::Verifying;
@@ -2384,6 +2392,7 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
             task->piecesVerified = stat.num_pieces_verified;
             if (task->status != DownloadStatus::Removing &&
                 task->status != DownloadStatus::Paused &&
+                task->status != DownloadStatus::Replaying &&
                 task->status != DownloadStatus::Installing &&
                 task->status != DownloadStatus::Committing) {
                 if (stat.verifying)

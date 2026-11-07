@@ -496,6 +496,12 @@ struct RunContext {
     // package instead of only jumping when a package finishes.
     std::atomic<uint64_t> packageDownloadedBytes {0};
 
+    // Fase del paquete que está entrando en el flujo: 1 = leyendo lo guardado en la
+    // caché, 2 = bajando de la red, 0 = ninguna. Decide el estado que se muestra.
+    std::atomic<int> streamPhase {0};
+    // Velocidad de la red en el último segundo, mientras se baja (fase 2).
+    std::atomic<uint64_t> networkSpeed {0};
+
     void emit(const DebridProgress& p) const {
         if (*progress)
             (*progress)(p);
@@ -979,7 +985,13 @@ install::PackageCallbacks makeCallbacks(RunContext& ctx,
         if (ok) {
             if (shouldEmitProgress(*lastEmit)) {
                 DebridProgress p;
-                p.status = DownloadStatus::Installing;
+                // Mientras se reproduce lo guardado, o se baja de la red, el estado es ese y no
+                // «instalando»: la instalación va detrás de los bytes que se reciben.
+                const int phase = ctx.streamPhase.load();
+                p.status = phase == 1 ? DownloadStatus::Replaying
+                         : phase == 2 ? DownloadStatus::Downloading
+                                      : DownloadStatus::Installing;
+                p.speedBytesPerSecond = phase == 2 ? ctx.networkSpeed.load() : 0;
                 p.totalBytes = ctx.totalBytes;
                 p.completedBytes = ctx.completedSoFar +
                                    ctx.packageDownloadedBytes.load();
@@ -1194,8 +1206,21 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
     bool fetchOk = false;
     bool cacheBroken = false;
     std::thread producer([&] {
-        auto sink = [&queue, &ctx, &cacheWriter](const uint8_t* data, size_t n) -> bool {
+        ctx.streamPhase = feedFromCache > 0 ? 1 : 2;
+        // Velocidad de la red: bytes que llegan de verdad en cada segundo (no lo que se reproduce).
+        Clock::time_point rateStart = Clock::now();
+        uint64_t rateBytes = 0;
+        auto sink = [&queue, &ctx, &cacheWriter, &rateStart, &rateBytes](const uint8_t* data, size_t n) -> bool {
             ctx.packageDownloadedBytes.fetch_add(n);
+            if (ctx.streamPhase.load() == 2) {
+                rateBytes += n;
+                const double elapsed = std::chrono::duration<double>(Clock::now() - rateStart).count();
+                if (elapsed >= 1.0) {
+                    ctx.networkSpeed = static_cast<uint64_t>(rateBytes / elapsed);
+                    rateStart = Clock::now();
+                    rateBytes = 0;
+                }
+            }
             // Lo que llega de la red se guarda en orden; la caché que falla se tira sola.
             if (cacheWriter)
                 cacheWriter->write(data, n);
@@ -1215,6 +1240,8 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
         // Ya reproducido: ahora sí, el escritor que seguirá guardando lo que baje la red.
         if (replayed && cacheEnabled)
             cacheWriter = std::make_unique<input_cache::Writer>(cachePath, cacheKeep);
+        ctx.streamPhase = 2;
+        ctx.networkSpeed = 0;
         if (!replayed) {
             fetchOk = false;
         } else if (netStart >= file.bytes) {
@@ -1225,6 +1252,7 @@ Step attemptStreamInstall(RunContext& ctx, const DebridFile& file,
                                    fetchError);
         }
         queue.finish();
+        ctx.streamPhase = 0;
     });
 
     bool streamOk = true;

@@ -584,6 +584,9 @@ private:
                 return tr("gamehubnx/detail/status_downloading",
                           percentOf(progressOf(task)));
             }
+            case DownloadStatus::Replaying:
+                return tr("gamehubnx/detail/status_replaying",
+                          percentOf(progressOf(task)));
             case DownloadStatus::Installing:
             case DownloadStatus::Committing: {
                 return tr("gamehubnx/detail/status_installing",

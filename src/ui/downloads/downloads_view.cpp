@@ -20,6 +20,7 @@ void DownloadDataSource::setTasks(std::vector<DownloadTask> tasks,
         case DownloadStatus::Checking:
         case DownloadStatus::Fetching:
         case DownloadStatus::Downloading:
+        case DownloadStatus::Replaying:
         case DownloadStatus::Installing:
         case DownloadStatus::Committing:
         case DownloadStatus::Verifying:

@@ -361,6 +361,8 @@ inline NVGcolor statusColor(DownloadStatus status) {
             return theme::success();
         case DownloadStatus::Paused:
         case DownloadStatus::Removing:
+        // Leer la caché no usa la red: gris, como una tarea que no baja nada.
+        case DownloadStatus::Replaying:
             return theme::textSecondary();
         case DownloadStatus::Queued:
         case DownloadStatus::Checking:
@@ -402,6 +404,8 @@ inline std::string downloadStatusLabel(DownloadStatus status) {
             return tr("gamehubnx/downloads/status_error");
         case DownloadStatus::Removing:
             return tr("gamehubnx/downloads/status_removing");
+        case DownloadStatus::Replaying:
+            return tr("gamehubnx/downloads/status_replaying");
     }
     return tr("gamehubnx/common/unknown");
 }
@@ -420,6 +424,7 @@ inline std::string taskStatusText(const DownloadTask& task) {
                                    static_cast<float>(task.fetchProgress)));
         case DownloadStatus::Checking:
         case DownloadStatus::Downloading:
+        case DownloadStatus::Replaying:
         case DownloadStatus::Verifying:
             return withPercent(downloadStatusLabel(task.status),
                                percentOf(progressOf(task)));

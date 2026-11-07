@@ -50,6 +50,8 @@ enum class DownloadStatus {
     Installed,
     Error,
     Removing,
+    // Descarga por flujo leyendo lo ya bajado de la caché: no usa la red todavía.
+    Replaying,
 };
 
 enum class TaskSource { Torrent, Debrid };
