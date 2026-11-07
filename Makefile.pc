@@ -530,6 +530,10 @@ $(BUILD_DIR)/tests/test_debrid_transfer: tests/test_debrid_transfer.cpp \
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS) $(INSTALL_LDFLAGS) -pthread
 
+$(BUILD_DIR)/tests/test_torrent_contents: tests/test_torrent_contents.cpp src/app/torrent_contents.hpp src/app/base_title_guard.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $<
+
 $(BUILD_DIR)/tests/test_input_cache: tests/test_input_cache.cpp src/app/input_cache.hpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $<

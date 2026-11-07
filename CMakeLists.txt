@@ -207,6 +207,7 @@ set(APP_SERVICE_SOURCES
     src/app/mod_index_service.cpp
     src/app/install_space.cpp
     src/app/magnet_resolver.cpp
+    src/app/torrent_contents_service.cpp
     src/app/http_server.cpp
     src/app/ftp_server.cpp
     src/app/bug_report.cpp

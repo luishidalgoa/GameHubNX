@@ -25,6 +25,7 @@
 #include "app/install_space.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/magnet_resolver.hpp"
+#include "app/torrent_contents_service.hpp"
 #include "app/mod_index_service.hpp"
 #include "app/switch_deploy.hpp"
 #include "app/nx_file_types.hpp"
@@ -136,6 +137,7 @@ public:
 
         frame_ = new brls::AppletFrame(content);
         frame_->setTitle(presentation_.title);
+        startContentsLoad();
     }
 
     ~GameDetailActivity() override {
@@ -204,6 +206,33 @@ private:
     // padding leaves 511px. Everything below is sized to fit inside it with
     // room to spare — overflow here lands on top of the storage meter and the
     // bottom bar, because Yoga runs with web defaults and nothing clips it.
+    /// Resuelve la metadata del torrent en segundo plano y muestra qué contiene. No descarga nada.
+    void startContentsLoad() {
+        if (entry_.isDirectDownload() || entry_.magnetUri.empty() || entry_.infoHash.empty())
+            return;
+        contentsLabel_->setText(tr("gamehubnx/detail/contents_loading"));
+        auto alive = alive_;
+        auto cancelled = cancelled_;
+        const std::string root = manager_->rootPath() + "/torrents";
+        const std::string hash = catalogLower(entry_.infoHash);
+        const std::string magnet = entry_.magnetUri;
+        brls::async([this, alive, cancelled, root, hash, magnet] {
+            ContentsSummary summary;
+            std::string err;
+            const bool ok = loadTorrentContents(root, hash, magnet, *cancelled,
+                                                nullptr, summary, err);
+            brls::sync([this, alive, ok, summary] {
+                if (!alive->load())
+                    return;
+                contentsLabel_->setText(ok
+                    ? tr("gamehubnx/detail/contents_line", summary.games,
+                         summary.updates, summary.dlcs,
+                         formatBytes(summary.totalBytes()))
+                    : tr("gamehubnx/detail/contents_failed"));
+            });
+        });
+    }
+
     void buildLeftColumn(brls::Box* content) {
         auto* left = new brls::Box(brls::Axis::COLUMN);
         left->setWidth(kLeftColumnWidth);
@@ -350,6 +379,13 @@ private:
         statusLabel_->setTextColor(theme::accent());
         statusLabel_->setText(tr("gamehubnx/detail/install_hint"));
         left->addView(statusLabel_);
+
+        // Contenido del torrent (base, actualizaciones y DLC) antes de elegir. Solo metadata.
+        contentsLabel_ = new brls::Label();
+        contentsLabel_->setFontSize(theme::kFontCaption);
+        contentsLabel_->setMarginTop(8);
+        contentsLabel_->setTextColor(theme::textSecondary());
+        left->addView(contentsLabel_);
 
         content->addView(left);
     }
@@ -1365,6 +1401,7 @@ private:
     brls::Button* favorite_ = nullptr;
     StorageMeter* sizeMeter_ = nullptr;
     brls::Label* statusLabel_ = nullptr;
+    brls::Label* contentsLabel_ = nullptr;
     uint64_t installBytes_ = 0;
     bool sizeExact_ = false;
     int storageTick_ = 0;
