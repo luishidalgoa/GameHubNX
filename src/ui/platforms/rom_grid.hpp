@@ -89,6 +89,26 @@ public:
         modBox_->setVisibility(brls::Visibility::GONE);
         cover_->addView(modBox_);
 
+        // Insignia Torrent, bajo la de MOD (misma pieza que en el catálogo).
+        torrentBox_ = new brls::Box();
+        torrentBox_->setPositionType(brls::PositionType::ABSOLUTE);
+        torrentBox_->setPositionTop(theme::kSpacingUnit + 30);
+        torrentBox_->setPositionRight(theme::kSpacingUnit);
+        torrentBox_->setHeight(24);
+        torrentBox_->setPaddingLeft(6);
+        torrentBox_->setPaddingRight(6);
+        torrentBox_->setCornerRadius(theme::kRadiusSmall);
+        torrentBox_->setBackgroundColor(theme::accent());
+        torrentBox_->setAlignItems(brls::AlignItems::CENTER);
+        torrentBox_->setJustifyContent(brls::JustifyContent::CENTER);
+        auto* torrentLabel = new brls::Label();
+        torrentLabel->setFontSize(theme::kFontCaption);
+        torrentLabel->setTextColor(theme::onAccent());
+        torrentLabel->setText("TORRENT");
+        torrentBox_->addView(torrentLabel);
+        torrentBox_->setVisibility(brls::Visibility::GONE);
+        cover_->addView(torrentBox_);
+
         favoriteBox_ = new brls::Box();
         favoriteBox_->setPositionType(brls::PositionType::ABSOLUTE);
         favoriteBox_->setPositionBottom(theme::kSpacingUnit);
@@ -174,6 +194,8 @@ public:
         sub_->setTextColor(info.subIsBadge ? theme::accent() : theme::textTertiary());
         modBox_->setVisibility(info.hasMods ? brls::Visibility::VISIBLE
                                             : brls::Visibility::GONE);
+        torrentBox_->setVisibility(info.torrent ? brls::Visibility::VISIBLE
+                                                : brls::Visibility::GONE);
         favoriteBox_->setVisibility(info.favorite ? brls::Visibility::VISIBLE
                                                   : brls::Visibility::GONE);
         onlineBox_->setVisibility(info.online ? brls::Visibility::VISIBLE
@@ -208,6 +230,7 @@ private:
     AsyncRgbaImage* image_ = nullptr;
     brls::Label* placeholder_ = nullptr;
     brls::Box* modBox_ = nullptr;
+    brls::Box* torrentBox_ = nullptr;
     brls::Label* mod_ = nullptr;
     brls::Box* favoriteBox_ = nullptr;
     brls::Box* onlineBox_ = nullptr;

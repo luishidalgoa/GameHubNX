@@ -139,6 +139,9 @@ private:
         const std::string badge =
             row < stateBadges_.size() ? stateBadges_[row] : std::string();
         info.subIsBadge = !badge.empty();
+        // Torrent sin enlace directo. Si hubiera las dos, manda la directa: no debería pasar.
+        info.torrent = !entries_[row].isDirectDownload() &&
+                       !entries_[row].magnetUri.empty();
         info.sub = info.subIsBadge
             ? badge
             : entries_[row].size ? formatBytes(entries_[row].size)

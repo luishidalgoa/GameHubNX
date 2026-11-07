@@ -155,6 +155,8 @@ struct GridCardInfo {
     bool selectable = false;
     // Title id matched a ModCD row: mods exist for this game.
     bool hasMods = false;
+    // Solo torrent: no hay enlace directo, así que la descarga va por BitTorrent.
+    bool torrent = false;
     // On the wishlist (ZR on the grid, or the game page button).
     bool favorite = false;
     // Online play exists for this game (green badge, bottom-right of the cover).
@@ -234,6 +236,27 @@ public:
         modBox_->addView(mod_);
         modBox_->setVisibility(brls::Visibility::GONE);
         cover_->addView(modBox_);
+
+        // Insignia Torrent (azul, la misma pieza de acento que el MOD), bajo la de MOD en la
+        // misma esquina. Solo en entradas que no tienen enlace directo.
+        torrentBox_ = new brls::Box();
+        torrentBox_->setPositionType(brls::PositionType::ABSOLUTE);
+        torrentBox_->setPositionTop(theme::kSpacingUnit + 30);
+        torrentBox_->setPositionRight(theme::kSpacingUnit);
+        torrentBox_->setHeight(24);
+        torrentBox_->setPaddingLeft(6);
+        torrentBox_->setPaddingRight(6);
+        torrentBox_->setCornerRadius(theme::kRadiusSmall);
+        torrentBox_->setBackgroundColor(theme::accent());
+        torrentBox_->setAlignItems(brls::AlignItems::CENTER);
+        torrentBox_->setJustifyContent(brls::JustifyContent::CENTER);
+        torrent_ = new brls::Label();
+        torrent_->setFontSize(theme::kFontCaption);
+        torrent_->setTextColor(theme::onAccent());
+        torrent_->setText("TORRENT");
+        torrentBox_->addView(torrent_);
+        torrentBox_->setVisibility(brls::Visibility::GONE);
+        cover_->addView(torrentBox_);
 
         // Wishlist star, bottom-left of the cover: the selection chip owns the
         // top-left corner and the ModCD chip the top-right, so this is the one
@@ -320,6 +343,8 @@ public:
                                                    : brls::Visibility::GONE);
         modBox_->setVisibility(info.hasMods ? brls::Visibility::VISIBLE
                                             : brls::Visibility::GONE);
+        torrentBox_->setVisibility(info.torrent ? brls::Visibility::VISIBLE
+                                                : brls::Visibility::GONE);
         favoriteBox_->setVisibility(info.favorite ? brls::Visibility::VISIBLE
                                                   : brls::Visibility::GONE);
         onlineBox_->setVisibility(info.online ? brls::Visibility::VISIBLE
@@ -459,6 +484,8 @@ private:
     brls::Label* mark_;
     brls::Box* modBox_;
     brls::Label* mod_;
+    brls::Box* torrentBox_;
+    brls::Label* torrent_;
     brls::Box* favoriteBox_;
     brls::Label* favorite_;
     brls::Box* onlineBox_;

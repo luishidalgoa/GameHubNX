@@ -577,6 +577,8 @@ inline GridCardInfo RomDataSource::makeInfo(size_t index) const {
     info.iconPreserveAspect = true;
     info.favorite = favorites_ && favorites_->contains(rom.infoHash);
     info.online = rom.online;
+    // Solo torrent: sin enlace directo y con magnet.
+    info.torrent = !rom.isDirectDownload() && !rom.magnetUri.empty();
 
     // La linea de debajo dice lo que hay que saber ANTES de abrir: el tamano, o
     // el aviso cuando el emulador no va a poder con ello. El aviso gana, porque
