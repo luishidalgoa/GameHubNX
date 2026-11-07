@@ -1,5 +1,6 @@
 #include "gamehub_provider.hpp"
 #include "download_manager.hpp"
+#include "base_title_guard.hpp"
 #include "rom_paths.hpp"
 #include "task_files.hpp"
 #include "request_gate.hpp"
@@ -820,6 +821,25 @@ bool DownloadManager::importDebrid(const DebridImport& import,
     if (findLocked(import.infoHash)) {
         error = "This torrent is already in the download manager.";
         return false;
+    }
+    // Un DLC o una actualización sin su juego base rompe el juego: no se instala. Cuenta como
+    // base el instalado y el que ya está en cola para instalarse (un lote puede traer ambos).
+    if (import.mode == TransferMode::StreamInstall && baseTitleCheck_) {
+        const std::string missing = gamehubnx::missingBaseFor(import.name, [this](const std::string& base) {
+            if (baseTitleCheck_(base))
+                return true;
+            const std::string tag = "[" + base + "]";
+            for (const DownloadTask& other : tasks_) {
+                if (other.mode == TransferMode::StreamInstall && other.status != DownloadStatus::Error &&
+                    other.name.find(tag) != std::string::npos)
+                    return true;
+            }
+            return false;
+        });
+        if (!missing.empty()) {
+            error = "Antes instala el juego base " + missing + ".";
+            return false;
+        }
     }
 
     std::string metainfoPath;

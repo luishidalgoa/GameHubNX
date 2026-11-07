@@ -461,6 +461,8 @@ int main(int argc, char** argv) {
         SwitchPerformanceController performance;
         dht_engine_set_cache_path(GHNX_PATH("dht.cache"));
         DownloadManager manager(GHNX_APP_ROOT);
+        // Un DLC o una actualización no se instala si falta su juego base (ver base_title_guard.hpp).
+        manager.setBaseTitleCheck([&installed](const std::string& base) { return installed.contains(base); });
         SwitchDeployService deploy(manager, GHNX_APP_ROOT,
                                    GHNX_SWITCH_ROOT);
         manager.setInstallTarget(

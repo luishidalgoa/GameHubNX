@@ -240,6 +240,12 @@ public:
                        std::string& error) {
         return importTorrent(path, TransferMode::DownloadOnly, taskId, error);
     }
+    /// Comprobación de juego base antes de instalar un DLC o una actualización: dice si el
+    /// Title ID base está instalado. Sin ella (PC, pruebas) se permite todo, como antes.
+    void setBaseTitleCheck(std::function<bool(const std::string&)> check) {
+        baseTitleCheck_ = std::move(check);
+    }
+
     bool importDebrid(const DebridImport& import,
                       std::string& taskId, std::string& error);
     void setTorboxApiKey(const std::string& key);
@@ -384,6 +390,7 @@ private:
     std::atomic<bool> torrentingEnabled_{false};
 
     mutable std::mutex mutex_;
+    std::function<bool(const std::string&)> baseTitleCheck_;
     std::condition_variable condition_;
     StreamBudgetArbiter arbiter_;
     std::vector<DownloadTask> tasks_;
