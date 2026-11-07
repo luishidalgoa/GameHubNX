@@ -360,7 +360,17 @@ bool saveTaskFileManifest(const std::string& appRoot,
         fsync(fileno(output));
 #endif
     ok = std::fclose(output) == 0 && ok;
-    if (!ok || std::rename(temporary.c_str(), path.c_str()) != 0) {
+    if (!ok) {
+        std::remove(temporary.c_str());
+        error = "Unable to save task file manifest.";
+        return false;
+    }
+    // En la tarjeta de la consola rename() no sobrescribe: el manifiesto se reescribe
+    // al cambiar la tarea, y sin borrar el anterior el guardado fallaba siempre. Sin
+    // manifiesto la tarea reinicia desde cero al reconectar (log del 1 de noviembre:
+    // "Unable to save task file manifest" 65 veces). Mismo arreglo que el journal.
+    std::remove(path.c_str());
+    if (std::rename(temporary.c_str(), path.c_str()) != 0) {
         std::remove(temporary.c_str());
         error = "Unable to save task file manifest.";
         return false;
