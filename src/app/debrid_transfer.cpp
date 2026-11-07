@@ -380,9 +380,36 @@ RangeFetcher curlRangeFetcher() {
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWrite);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &state);
+        const uint64_t requestStartedMs = now_ms();
         CURLcode rc = curl_easy_perform(curl);
+        const uint64_t requestEndedMs = now_ms();
         long httpStatus = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
+        if (telemetry_enabled()) {
+            // Red por petición: sale de libcurl, sin contar la escritura en la tarjeta. Los tiempos
+            // de conexión dan una estimación del RTT (connect ~ 1 RTT; ttfb incluye el servidor).
+            // t0/t1 son instantes de este proceso: sumar los intervalos solapados da el ritmo total.
+            double dnsSec = 0, connectSec = 0, tlsSec = 0, ttfbSec = 0;
+            curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &dnsSec);
+            curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME, &connectSec);
+            curl_easy_getinfo(curl, CURLINFO_APPCONNECT_TIME, &tlsSec);
+            curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME, &ttfbSec);
+            const uint64_t elapsedMs = requestEndedMs > requestStartedMs ? requestEndedMs - requestStartedMs : 1;
+            const uint64_t netBps = state.received * 1000ull / elapsedMs;
+            const uint64_t rangeLast = state.ranged ? endExclusive - 1 : 0;
+            telemetry_log("network", host.c_str(),
+                          "range=%llu-%llu http=%ld ok=%d got=%llu t0=%llu t1=%llu "
+                          "dns_ms=%.0f connect_ms=%.0f tls_ms=%.0f ttfb_ms=%.0f elapsed_ms=%llu net_bps=%llu",
+                          static_cast<unsigned long long>(offset),
+                          static_cast<unsigned long long>(rangeLast),
+                          httpStatus, (rc == CURLE_OK && !state.aborted) ? 1 : 0,
+                          static_cast<unsigned long long>(state.received),
+                          static_cast<unsigned long long>(requestStartedMs),
+                          static_cast<unsigned long long>(requestEndedMs),
+                          dnsSec * 1000.0, connectSec * 1000.0, tlsSec * 1000.0, ttfbSec * 1000.0,
+                          static_cast<unsigned long long>(elapsedMs),
+                          static_cast<unsigned long long>(netBps));
+        }
         curl_easy_cleanup(curl);
         curl_slist_free_all(gamehubHeaders);
         if (state.rangeIgnored || (httpStatus == 200 && state.ranged)) {
