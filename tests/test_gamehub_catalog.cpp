@@ -719,6 +719,34 @@ void test_total_desde_content_range() {
     assert(gamehub::totalFromContentRange("") == 0);
 }
 
+// gh_magnet llega por fichero. Se guarda en shopMagnet, nunca en magnetUri:
+// una entrada de la tienda sigue siendo descarga directa.
+void test_gh_magnet_por_fichero() {
+    const std::string json = std::string(R"({
+      "files": [
+        { "url": ")" + std::string(kHost) + R"(/api/shop/download/250/Juego%20A.nsp",
+          "size": 100, "gh_magnet": "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=A" },
+        { "url": ")" + std::string(kHost) + R"(/api/shop/download/251/Juego%20B.nsp",
+          "size": 100, "gh_magnet": "http://no-es-un-magnet.example/x" },
+        { "url": ")" + std::string(kHost) + R"(/api/shop/download/252/Juego%20C.nsp",
+          "size": 100 }
+      ]
+    })");
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(json, out, subs, err));
+    assert(out.size() == 3);
+    assert(out[0].shopMagnet == "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=A");
+    assert(out[1].shopMagnet.empty());     // esquema equivocado: descartado
+    assert(out[2].shopMagnet.empty());     // sin campo: vacio
+    for (const CatalogEntry& e : out) {
+        assert(e.magnetUri.empty());       // nunca se convierte en torrent
+        assert(e.isDirectDownload());      // la descarga sigue siendo la directa
+        assert(e.infoHash.size() == 40);   // la identidad no cambia
+    }
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -753,6 +781,7 @@ int main() {
     test_identificador_corrupto_se_regenera();
     test_cabecera_solo_con_identificador();
     test_total_desde_content_range();
+    test_gh_magnet_por_fichero();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

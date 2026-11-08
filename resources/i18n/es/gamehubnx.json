@@ -170,6 +170,7 @@
     "contents_loading": "Leyendo el contenido del torrent…",
     "contents_line": "{} juego, {} actualizaciones, {} DLC · {}",
     "contents_failed": "No se pudo leer el contenido: sin peers o sin metadata.",
+    "torrent_button": "Torrent",
     "status_installing": "Instalandel {}%",
     "status_verifying": "Verificandel {}%",
     "status_paused": "En pausa",

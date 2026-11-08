@@ -170,6 +170,7 @@
     "contents_loading": "Lendo o conteúdo do torrent…",
     "contents_line": "{} jogo, {} atualizações, {} DLC · {}",
     "contents_failed": "Não foi possível ler o conteúdo: sem peers ou sem metadados.",
+    "torrent_button": "Torrent",
     "status_installing": "Instalando {}%",
     "status_verifying": "Verificando {}%",
     "status_paused": "Pausado",

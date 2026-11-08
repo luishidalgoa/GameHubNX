@@ -170,6 +170,7 @@
     "contents_loading": "Lecture du contenu du torrent…",
     "contents_line": "{} jeu, {} mises à jour, {} DLC · {}",
     "contents_failed": "Impossible de lire le contenu : pas de pairs ou pas de métadonnées.",
+    "torrent_button": "Torrent",
     "status_installing": "Installation {}%",
     "status_verifying": "Vérification {}%",
     "status_paused": "En pause",

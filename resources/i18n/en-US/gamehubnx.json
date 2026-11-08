@@ -170,6 +170,7 @@
     "contents_loading": "Loading torrent contents…",
     "contents_line": "{} base, {} updates, {} DLC · {}",
     "contents_failed": "Could not read the contents: no peers or no metadata.",
+    "torrent_button": "Torrent",
     "status_installing": "Installing {}%",
     "status_verifying": "Verifying {}%",
     "status_paused": "Paused",

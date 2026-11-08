@@ -346,6 +346,24 @@ private:
         });
         actions->addView(secondary_);
 
+        // Torrent de la tienda: solo si el juego trae magnet y el torrent esta
+        // activado en Ajustes. La descarga directa sigue siendo la principal.
+        if (!entry_.shopMagnet.empty() && settings_ &&
+            settings_->get().torrentingEnabled) {
+            torrent_ = new brls::Button();
+            torrent_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+            torrent_->setFontSize(theme::kFontSmall);
+            torrent_->setGrow(1);
+            torrent_->setHeight(56);
+            torrent_->setMarginLeft(8);
+            torrent_->setText(tr("gamehubnx/detail/torrent_button"));
+            torrent_->registerClickAction([this](brls::View*) {
+                onTorrent();
+                return true;
+            });
+            actions->addView(torrent_);
+        }
+
         // Wishlist toggle: the same star the catalog grid puts on the card,
         // reachable without hunting for the ZR hotkey.
         if (favorites_) {
@@ -817,6 +835,17 @@ private:
             return;
         }
         // One-tap install: resolve, then queue silently (picker only on Select files).
+        startInstall(false);
+    }
+
+    // Torrent de la tienda (opcion b): la ficha pasa a usar el magnet de la
+    // tienda para esta visita. El infoHash no cambia, asi que la identidad de
+    // la entrada se mantiene; la descarga directa no se toca.
+    void onTorrent() {
+        if (busy_ || entry_.shopMagnet.empty())
+            return;
+        entry_.directUrl.clear();
+        entry_.magnetUri = entry_.shopMagnet;
         startInstall(false);
     }
 
@@ -1398,6 +1427,7 @@ private:
     brls::Button* addOns_button_ = nullptr;
     brls::Label* installContract_ = nullptr;
     brls::Button* secondary_ = nullptr;
+    brls::Button* torrent_ = nullptr;
     brls::Button* favorite_ = nullptr;
     StorageMeter* sizeMeter_ = nullptr;
     brls::Label* statusLabel_ = nullptr;

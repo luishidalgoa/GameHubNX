@@ -65,6 +65,11 @@ struct CatalogEntry {
     std::string trailerUrl;
     std::string groupKey;
     std::string directUrl;
+    /* Magnet del torrent del juego, de la clave gh_magnet de la tienda GameHub.
+       Va aparte de magnetUri a proposito: una entrada de la tienda se descarga
+       por directUrl y no debe parecer torrent (magnetUri vacio es lo que lo
+       garantiza en el resto del codigo). Informativo: nada lo usa todavia. */
+    std::string shopMagnet;
     uint64_t topicId = 0;
     uint64_t size = 0;
     int64_t publishedAt = 0;

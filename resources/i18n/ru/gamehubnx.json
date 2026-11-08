@@ -170,6 +170,7 @@
     "contents_loading": "Чтение содержимого торрента…",
     "contents_line": "{} игра, {} обновлений, {} DLC · {}",
     "contents_failed": "Не удалось прочитать содержимое: нет пиров или метаданных.",
+    "torrent_button": "Торрент",
     "status_installing": "Установка {}%",
     "status_verifying": "Проверка {}%",
     "status_paused": "Пауза",

@@ -169,6 +169,14 @@ std::string originOf(const std::string& url) {
     return origin;
 }
 
+// Un magnet de la tienda: el esquema y el hash de BitTorrent, y un tamano sano.
+// Lo que no encaje se descarta en silencio, como cualquier campo gh_ malo.
+bool isMagnetUri(const std::string& m) {
+    static const std::string kPrefix = "magnet:?xt=urn:btih:";
+    return m.size() > kPrefix.size() && m.size() <= 2048 &&
+           m.compare(0, kPrefix.size(), kPrefix) == 0;
+}
+
 // Reads a JSON value as a string whatever its underlying type. The index is
 // produced by a web app where a number may arrive quoted or bare.
 std::string asString(const nlohmann::json& v) {
@@ -445,6 +453,11 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         if (const auto it = f.find("gh_online");
             it != f.end() && it->is_boolean())
             e.online = it->get<bool>();
+        // Magnet del juego: informativo, la descarga sigue siendo la directa.
+        if (const auto it = f.find("gh_magnet"); it != f.end()) {
+            const std::string m = asString(*it);
+            if (isMagnetUri(m)) e.shopMagnet = m;
+        }
         // gh_kind ("dlc"/"update") no se guarda: la procedencia --de que indice
         // vino-- ya dice que es un complemento, y el Title ID distingue el tipo
         // cuando hace falta. Se documenta aqui para que nadie lo busque.

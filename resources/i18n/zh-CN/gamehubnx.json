@@ -170,6 +170,7 @@
     "contents_loading": "正在读取种子内容…",
     "contents_line": "{} 个游戏，{} 个更新，{} 个 DLC · {}",
     "contents_failed": "无法读取内容：没有对等节点或元数据。",
+    "torrent_button": "种子",
     "status_installing": "安装中 {}%",
     "status_verifying": "校验中 {}%",
     "status_paused": "已暂停",
