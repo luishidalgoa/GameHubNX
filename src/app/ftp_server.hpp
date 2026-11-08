@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -43,13 +45,29 @@ public:
     void setPassword(std::string password);
 
 private:
-    void serve();
+    // Estado de una tanda de arranque (entre start y stop). Cada sesion guarda su
+    // propia copia: si stop() no alcanza a esperarlas, siguen con su estado y no
+    // tocan el servidor, que puede haber desaparecido ya. Un arranque nuevo crea
+    // otro estado, asi que las sesiones viejas no vuelven a la vida.
+    struct RunState {
+        std::atomic<bool> stopping {false};
+        std::atomic<int> active {0};
+    };
+
+    void serve(std::shared_ptr<RunState> run);
+    // Atiende una conexion de control entera, en su propio hilo. Asi el cliente
+    // que abre una segunda conexion (FileZilla lo hace para las transferencias)
+    // recibe su saludo al momento en vez de esperar a que acabe la primera.
+    static void runSession(std::shared_ptr<RunState> run, int control,
+                           std::string root, std::string password);
 
     std::string root_;
     std::string password_;
+    // Protege password_: setPassword llega desde Ajustes mientras hay sesiones.
+    std::mutex passwordMutex_;
     std::atomic<bool> running_ {false};
-    std::atomic<bool> stopping_ {false};
     std::atomic<uint16_t> boundPort_ {0};
+    std::shared_ptr<RunState> run_;
     std::thread thread_;
     int listener_ = -1;
 };

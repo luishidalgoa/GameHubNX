@@ -547,6 +547,13 @@ private:
         }
         if (latest.empty())
             return false;
+        // Una sola busqueda de torrent a la vez: cada una abre su DHT y sus sockets,
+        // y varias pulsaciones seguidas agotaban los sockets de la consola.
+        if (torrentUpdateInFlight_) {
+            brls::Application::notify(tr("gamehubnx/detail/finding_peers"));
+            return true;
+        }
+        torrentUpdateInFlight_ = true;
         status_->setText(tr("gamehubnx/detail/finding_peers"));
         auto alive = alive_;
         const std::string tmpDir = manager_->rootPath();
@@ -583,6 +590,7 @@ private:
             brls::sync([this, alive, imported, taskId, importError] {
                 if (!alive->load())
                     return;
+                torrentUpdateInFlight_ = false;
                 if (!imported) {
                     status_->setText(importError);
                     brls::Application::notify(importError);
@@ -974,10 +982,18 @@ private:
             brls::Application::notify(tr("gamehubnx/installed/no_catalog_entry"));
             return;
         }
+        std::vector<ShopItem> items =
+            buildShopItems(installed_, *base, it->second.addOns);
+        if (items.empty()) {
+            // Una actualizacion que solo existe en torrent no tiene complementos de
+            // tienda que elegir: abrir la lista dejaba una seccion DLC vacia con una
+            // fila sin nombre y el boton Instalar apagado. Se instala directamente
+            // (installUpdate cae en el torrent si no hay entrada de tienda).
+            installUpdate(title.titleId);
+            return;
+        }
         brls::Application::pushActivity(new ShopAddOnsActivity(
-            title.name,
-            buildShopItems(installed_, *base, it->second.addOns), manager_,
-            settings_));
+            title.name, std::move(items), manager_, settings_));
     }
 
     void openDetail(const InstalledTitle& title) {
@@ -1003,6 +1019,7 @@ private:
     SwitchDeployService* deploy_ = nullptr;
     TorrentUpdateSource* torrentUpdates_ = nullptr;
     bool probing_ = false;
+    bool torrentUpdateInFlight_ = false;
     brls::Label* status_ = nullptr;
     EmptyStateView* emptyState_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;

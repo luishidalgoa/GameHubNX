@@ -503,6 +503,19 @@ public:
         refreshCatalogIfDue();
     }
 
+    // Cada vez que la pestana vuelve a mostrarse (al cambiar de pagina o al cerrar
+    // una ficha encima) la rejilla se repinta entera. Va diferido: si se hiciera
+    // antes del pop, las celdas aun estarian en la pila de foco y se quedaba la
+    // rejilla sin pintar.
+    void willAppear(bool resetState) override {
+        brls::Box::willAppear(resetState);
+        auto alive = alive_;
+        brls::sync([this, alive] {
+            if (alive->load())
+                rebuildEntries();
+        });
+    }
+
     ~CatalogView() override {
         alive_->store(false);
         cancelled_->store(true);
