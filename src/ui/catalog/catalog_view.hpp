@@ -469,30 +469,24 @@ public:
         rebuildEntries();
         updateFreshnessLabel();
 
-        // X and Y carry no hint. This view stacks more gamepad actions than the
-        // bottom bar can render: on hardware the bar also holds the frame's
-        // Plus action plus the clock, battery and wireless widgets, and the
-        // Russian labels then overrun the row and collide with the clock. Both
-        // hotkeys keep working, and both are duplicated by focusable header
-        // controls — the magnifier button for search, the four sort chips for
-        // sort — so nothing here becomes unreachable.
-        registerAction(tr("gamehubnx/common/search"), brls::BUTTON_X,
+        // Pie en orden de izquierda a derecha: buscar (X + lupa), actualizar (RB,
+        // solo icono), favorito (ZR). Ordenar (Y) solo aparece mientras carga: en
+        // reposo se oculta para que el pie no se desborde. El modo lotes (LB) sale
+        // del pie a proposito por lo mismo.
+        // La lupa es el glifo U+E8B6 de Material Icons, la fuente de respaldo que
+        // borealis carga en Switch y en PC: no hace falta dibujarla aqui.
+        registerAction("\uE8B6", brls::BUTTON_X,
                        [this](brls::View*) {
             openSearchKeyboard();
             return true;
-        }, /*hidden=*/true);
+        });
         registerSortAction(false);
-        registerAction(tr("gamehubnx/common/refresh"), brls::BUTTON_RB,
+        registerAction("", brls::BUTTON_RB,
                        [this](brls::View*) {
             if (batchMode_)
                 prepareSelectedEntries();
             else
                 refreshCatalog();
-            return true;
-        });
-        registerAction(tr("gamehubnx/catalog/action_batch"), brls::BUTTON_LB,
-                       [this](brls::View*) {
-            toggleBatchMode();
             return true;
         });
         if (favorites_) {
@@ -729,12 +723,7 @@ private:
         batchMode_ = !batchMode_;
         batchControls_->setVisibility(batchMode_ ? brls::Visibility::VISIBLE
                                                  : brls::Visibility::GONE);
-        updateActionHint(brls::BUTTON_LB,
-                         batchMode_ ? tr("gamehubnx/catalog/action_batch_close")
-                                    : tr("gamehubnx/catalog/action_batch"));
-        updateActionHint(brls::BUTTON_RB,
-                         batchMode_ ? tr("gamehubnx/catalog/prepare")
-                                    : tr("gamehubnx/common/refresh"));
+        // Sin accion en el pie: RB es solo icono y no se le cambia la etiqueta.
         rebuildEntries();
     }
 

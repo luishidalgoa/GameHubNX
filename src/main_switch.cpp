@@ -191,7 +191,7 @@ public:
                  UpdateService* updater, ModIndexService* mods,
                  FavoritesService* favorites, FtpServer* ftpServer,
                  SwitchDeployService* deploy, GameUpdateService* gameUpdates,
-                 TorrentUpdateSource* torrentUpdates)
+                 gamehubnx::TorrentUpdateSource* torrentUpdates)
         : manager_(manager), catalog_(catalog), metadata_(metadata),
           installed_(installed), settings_(settings), updater_(updater),
           mods_(mods), favorites_(favorites), ftpServer_(ftpServer),
@@ -299,7 +299,9 @@ public:
         // La direccion del FTP, desde cualquier pantalla. Sin QR: un codigo
         // servia para que un movil abriera una pagina; esto se teclea en un
         // cliente de FTP desde un ordenador, asi que lo util es el texto.
-        registerAction(tr("gamehubnx/ftp/address"), brls::BUTTON_BACK,
+        // Solo icono en el pie (sin etiqueta): va al final por la coleccion de
+        // acciones de borealis, que recorre la vista enfocada antes que el marco.
+        registerAction("", brls::BUTTON_BACK,
             [this](brls::View*) {
                 const gamehubnx::AppSettingsData& values = settings_->get();
                 const std::string url =
@@ -329,7 +331,7 @@ private:
     FtpServer* ftpServer_;
     SwitchDeployService* deploy_;
     GameUpdateService* gameUpdates_;
-    TorrentUpdateSource* torrentUpdates_;
+    gamehubnx::TorrentUpdateSource* torrentUpdates_;
     brls::AppletFrame* frame_;
 };
 

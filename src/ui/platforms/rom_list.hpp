@@ -152,16 +152,13 @@ public:
         favoritesChip_->setShrink(0.0f);
         favoritesChip_->setPaddingLeft(14);
         favoritesChip_->setPaddingRight(14);
-        favoritesChip_->setText("★");
+        // Filtrar (favoritos y online) en un menu con titulo y descripcion, como
+        // en el catalogo.
+        favoritesChip_->setText(tr("gamehubnx/catalog/filter_menu_title"));
         favoritesChip_->registerClickAction([this](brls::View*) {
-            favoritesOnly_ = !favoritesOnly_;
-            rebuild();
+            openFilterMenu();
             return true;
         });
-        // Sin servicio de favoritos no se ofrece un filtro que no puede
-        // responder nada.
-        if (!favorites_)
-            favoritesChip_->setVisibility(brls::Visibility::GONE);
         headerRow->addView(favoritesChip_);
 
         // Solo los juegos con juego en línea.
@@ -178,6 +175,8 @@ public:
             rebuild();
             return true;
         });
+        // El filtro online ya esta en el menu Filtrar.
+        onlineChip_->setVisibility(brls::Visibility::GONE);
         headerRow->addView(onlineChip_);
 
         // Un solo badge para el origen (ambos / directa / torrent), igual que en
@@ -191,8 +190,7 @@ public:
         sourceChip_->setPaddingRight(14);
         sourceChip_->setText(tr("gamehubnx/catalog/filter_source_both"));
         sourceChip_->registerClickAction([this](brls::View*) {
-            sourceFilter_ = nextSourceFilter(sourceFilter_);
-            rebuild();
+            openOriginMenu();
             return true;
         });
         headerRow->addView(sourceChip_);
@@ -577,9 +575,55 @@ private:
                                                : brls::Visibility::GONE);
     }
 
-    // "63 juegos", o "63 juegos - 41 no los abre Azahar" cuando hay algo que
-    // decir. El nombre del emulador lo publica el servidor; sin el, la frase
-    // generica.
+    // Menu Filtrar: favoritos y online, cada opcion con su descripcion.
+    void openFilterMenu() {
+        auto mark = [](bool on, const std::string& text) {
+            return std::string(on ? "[x] " : "[ ] ") + text;
+        };
+        std::vector<std::string> labels;
+        labels.push_back(mark(favoritesOnly_, tr("gamehubnx/catalog/filter_favorites_desc")));
+        labels.push_back(mark(onlineOnly_, tr("gamehubnx/catalog/filter_online") + ": " +
+                                           tr("gamehubnx/catalog/filter_online_desc")));
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/filter_menu_title"), labels,
+            [this](int index) {
+                if (index == 0) {
+                    if (favorites_)
+                        favoritesOnly_ = !favoritesOnly_;
+                } else if (index == 1) {
+                    onlineOnly_ = !onlineOnly_;
+                }
+                rebuild();
+            },
+            0);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    // Menu Origen: ambos, torrent o directa.
+    void openOriginMenu() {
+        const std::vector<SourceFilter> options = {SourceFilter::Both,
+                                                   SourceFilter::Torrent,
+                                                   SourceFilter::Direct};
+        const std::vector<std::string> labels = {
+            tr("gamehubnx/catalog/origin_both_desc"),
+            tr("gamehubnx/catalog/origin_torrent_desc"),
+            tr("gamehubnx/catalog/origin_direct_desc")};
+        int selected = 0;
+        for (size_t i = 0; i < options.size(); ++i)
+            if (options[i] == sourceFilter_)
+                selected = static_cast<int>(i);
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/origin_menu_title"), labels,
+            [this, options](int index) {
+                if (index < 0 || index >= static_cast<int>(options.size()))
+                    return;
+                sourceFilter_ = options[static_cast<size_t>(index)];
+                rebuild();
+            },
+            selected);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
     // Aplica el filtro y repinta. Con el filtro puesto y nada marcado se dice,
     // en vez de dejar una rejilla vacia sin explicacion.
     void rebuild() {
@@ -605,7 +649,7 @@ private:
                                   ? theme::warning()
                                   : theme::textTertiary());
         if (favoritesChip_)
-            favoritesChip_->setStyle(favoritesOnly_
+            favoritesChip_->setStyle(favoritesOnly_ || onlineOnly_
                                          ? &brls::BUTTONSTYLE_PRIMARY
                                          : &brls::BUTTONSTYLE_DEFAULT);
         if (onlineChip_)
@@ -652,6 +696,9 @@ private:
         rebuild();
     }
 
+    // "63 juegos", o "63 juegos - 41 no los abre Azahar" cuando hay algo que
+    // decir. El nombre del emulador lo publica el servidor; sin el, la frase
+    // generica.
     std::string summaryText(size_t total, size_t unplayable) const {
         if (unplayable == 0)
             return tr("gamehubnx/platforms/games", total);
