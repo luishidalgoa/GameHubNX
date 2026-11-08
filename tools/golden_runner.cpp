@@ -1570,14 +1570,17 @@ int main(int argc, char** argv) {
         auto* recycler = host && !host->getChildren().empty()
             ? dynamic_cast<brls::RecyclerFrame*>(host->getChildren().front())
             : nullptr;
-        const std::vector<ShelfCell*> shelves = visibleCells<ShelfCell>(recycler);
-        if (shelves.empty())
-            return fail("catalog-header-clearance: no rendered shelf");
-        const float clearance = shelves.front()->getFrame().getMinY() -
+        // The catalogue has no shelves any more (Populares, Acción… moved to the
+        // Categorías filter): the first row of the grid is what sits under the
+        // filters now, so that row is what must clear the collapsed header.
+        const std::vector<GridRowCell*> rows = visibleCells<GridRowCell>(recycler);
+        if (rows.empty())
+            return fail("catalog-header-clearance: no rendered grid row");
+        const float clearance = rows.front()->getFrame().getMinY() -
                                 header->getFrame().getMaxY();
         if (clearance < 28.0f)
-            return fail("catalog-header-clearance: first shelf overlaps filters");
-        std::printf("golden_runner: first shelf clears collapsed header by %.0fpx\n",
+            return fail("catalog-header-clearance: first grid row overlaps filters");
+        std::printf("golden_runner: first grid row clears collapsed header by %.0fpx\n",
                     clearance);
         manager.shutdown();
         std::fflush(nullptr);
