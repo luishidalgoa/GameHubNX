@@ -22,6 +22,7 @@
 extern "C" {
 #include "../core/bencode.h"
 #include "../core/metainfo.h"
+#include "../core/sha1.h"
 #include "../core/util.h"
 }
 
@@ -695,7 +696,8 @@ bool DownloadManager::importTorrentActions(
                                     const std::vector<uint8_t>& fileActions,
                                     std::string& taskId,
                                     std::string& error,
-                                    const std::vector<uint8_t>& initialPeers) {
+                                    const std::vector<uint8_t>& initialPeers,
+                                    const std::string& taskKey) {
     TorrentPreview preview;
     if (!previewTorrent(path, preview, error))
         return false;
@@ -739,14 +741,29 @@ bool DownloadManager::importTorrentActions(
         : TransferMode::DownloadOnly;
 
     std::lock_guard<std::mutex> lock(mutex_);
-    if (findLocked(preview.infoHash)) {
+    // La identidad de la tarea: el infohash si no hay clave, o un hash del torrent
+    // mas la clave. Asi dos juegos de una misma coleccion son dos tareas.
+    const std::string id = taskKey.empty()
+        ? preview.infoHash
+        : [&] {
+              const std::string text = preview.infoHash + "\n" + taskKey;
+              uint8_t digest[20];
+              sha1(text.data(), text.size(), digest);
+              char hex[41];
+              for (int i = 0; i < 20; ++i)
+                  std::snprintf(hex + i * 2, 3, "%02x", digest[i]);
+              return std::string(hex);
+          }();
+    if (findLocked(id)) {
         error = "This torrent is already in the download manager.";
         return false;
     }
 
-    std::string metainfoPath = torrentRoot_ + "/" + preview.infoHash + ".torrent";
+    // El .torrent y la carpeta van por la identidad de la tarea: quitar una no debe
+    // borrar lo de otra que comparte torrent.
+    std::string metainfoPath = torrentRoot_ + "/" + id + ".torrent";
     std::string dataPath = downloadRoot_ + "/" + safeComponent(preview.name) +
-                           "-" + preview.infoHash.substr(0, 8);
+                           "-" + id.substr(0, 8);
     if (!copyFile(path, metainfoPath)) {
         error = "Unable to copy the torrent file into application storage.";
         return false;
@@ -758,7 +775,7 @@ bool DownloadManager::importTorrentActions(
     }
 
     DownloadTask task;
-    task.id = preview.infoHash;
+    task.id = id;
     task.name = preview.name;
     task.metainfoPath = metainfoPath;
     task.dataPath = dataPath;
@@ -783,7 +800,7 @@ bool DownloadManager::importTorrentActions(
         task.resumeBitfield.assign((preview.pieceCount + 7) / 8, 0);
     task.installTarget = installTarget_.load(std::memory_order_relaxed);
     tasks_.push_back(std::move(task));
-    taskId = preview.infoHash;
+    taskId = id;
 
     if (!saveLocked(error)) {
         tasks_.pop_back();

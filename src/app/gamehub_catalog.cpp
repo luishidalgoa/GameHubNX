@@ -26,6 +26,30 @@ const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
 #define GAMEHUBNX_VERSION "dev"
 #endif
 const char* const kClientId    = "GameHubNX/" GAMEHUBNX_VERSION;
+std::vector<size_t> torrentFilesNamed(const std::vector<std::string>& paths,
+                                      const std::string& wanted) {
+    auto baseName = [](const std::string& path) {
+        const size_t slash = path.find_last_of('/');
+        return slash == std::string::npos ? path : path.substr(slash + 1);
+    };
+    std::vector<size_t> exact, loose;
+    const std::string want = wanted;
+    for (size_t i = 0; i < paths.size(); ++i) {
+        const std::string name = baseName(paths[i]);
+        if (name == want) {
+            exact.push_back(i);
+            continue;
+        }
+        if (name.size() == want.size() &&
+            std::equal(name.begin(), name.end(), want.begin(),
+                       [](unsigned char a, unsigned char b) {
+                           return std::tolower(a) == std::tolower(b);
+                       }))
+            loose.push_back(i);
+    }
+    return exact.empty() ? loose : exact;
+}
+
 const char* const kTorrentReportUrl = "https://gamehub.hdglabs.com/api/track/torrent";
 
 std::string torrentReportBody(const std::string& infoHash,
@@ -497,6 +521,8 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
             e.shopMagnet = shopMagnetPeek;
             e.magnetUri  = shopMagnetPeek;
             e.infoHash   = shopBtih;
+            if (const auto gf = f.find("gh_file"); gf != f.end() && gf->is_string())
+                e.torrentFile = gf->get<std::string>();
         }
 
         const auto sizeIt = f.find("size");

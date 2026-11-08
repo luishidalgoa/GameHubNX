@@ -1,4 +1,5 @@
 #include "app/catalog_service.hpp"
+#include "app/gamehub_catalog.hpp"
 #include "app/catalog_refresh.hpp"
 #include "app/catalog_presentation.hpp"
 #include "app/game_metadata_service.hpp"
@@ -1428,7 +1429,29 @@ static void testSourceFilter() {
     assert(gamehubnx::nextSourceFilter(gamehubnx::SourceFilter::Torrent) == gamehubnx::SourceFilter::Both);
 }
 
+// Una coleccion de Minerva: el magnet es el mismo para todos y el fichero de cada
+// juego es el que se elige dentro del torrent.
+static void testTorrentFileChoice() {
+    const std::vector<std::string> paths = {
+        "Sony - PlayStation 2/0 Story (Japan).iso",
+        "Sony - PlayStation 2/Dir/0 Story (USA).iso",
+        "Sony - PlayStation 2/Other Game (Europe).iso",
+    };
+    auto one = gamehubnx::gamehub::torrentFilesNamed(paths, "Other Game (Europe).iso");
+    assert(one.size() == 1 && one[0] == 2);
+    // Sin coincidencia exacta, sin distinguir mayusculas.
+    auto loose = gamehubnx::gamehub::torrentFilesNamed(paths, "other game (europe).ISO");
+    assert(loose.size() == 1 && loose[0] == 2);
+    auto ci = gamehubnx::gamehub::torrentFilesNamed(paths, "OTHER GAME (EUROPE).iso");
+    assert(ci.size() == 1 && ci[0] == 2);
+    // Dos ficheros con el mismo nombre en carpetas distintas: el llamador lo rechaza.
+    auto dup = gamehubnx::gamehub::torrentFilesNamed(paths, "0 Story (USA).iso");
+    assert(dup.size() == 1);
+    assert(gamehubnx::gamehub::torrentFilesNamed(paths, "No existe.iso").empty());
+}
+
 int main() {
+    testTorrentFileChoice();
     testSourceFilter();
     testMagnetParsing();
     testTrustedSourceAllowlist();

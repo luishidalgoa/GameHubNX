@@ -814,6 +814,7 @@
         "use_default": "Par défaut :",
         "downloading": "Téléchargement de {}",
         "multi_file_torrent": "Ce torrent contient plusieurs jeux : il n’est pas téléchargé entier ici.",
+        "file_not_in_torrent": "Le torrent ne contient pas le fichier de ce jeu.",
         "count": "{} plateformes",
         "unavailable": "Votre serveur ne publie pas encore de plateformes. Une version plus récente de GameHub est nécessaire.",
         "on_sd": "Sur la carte SD",

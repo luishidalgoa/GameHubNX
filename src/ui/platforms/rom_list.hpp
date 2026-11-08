@@ -386,8 +386,9 @@ private:
         DownloadManager* manager = manager_;
         const std::string magnet = rom.magnetUri;
         const std::string title = rom.title;
+        const std::string torrentFile = rom.torrentFile;
         brls::Application::notify(tr("gamehubnx/detail/finding_peers"));
-        brls::async([alive, manager, magnet, title, destination] {
+        brls::async([alive, manager, magnet, title, destination, torrentFile] {
             const std::string tmp = manager->rootPath() + "/_rom_magnet_" +
                 std::to_string(std::chrono::steady_clock::now()
                                    .time_since_epoch().count()) + ".torrent";
@@ -398,7 +399,7 @@ private:
             const bool ok = resolver.resolveToFile(
                 magnet, tmp, cancelled, {}, err, &peers, nullptr);
             brls::sync([alive, manager, ok, err, tmp, title, destination,
-                        peers = std::move(peers)]() mutable {
+                        torrentFile, peers = std::move(peers)]() mutable {
                 if (!alive->load()) {
                     ::unlink(tmp.c_str());
                     return;
@@ -416,21 +417,38 @@ private:
                     ::unlink(tmp.c_str());
                     return;
                 }
-                // Un magnet de una coleccion (Minerva) apunta a un torrent con
-                // muchos juegos: bajarlo entero seria absurdo. Sin ficheros que
-                // elegir aqui, se para en vez de bajar todo.
-                if (preview.files.size() != 1) {
-                    brls::Application::notify(
-                        tr("gamehubnx/platforms/multi_file_torrent"));
-                    ::unlink(tmp.c_str());
-                    return;
+                // Una coleccion (Minerva) trae muchos juegos con el mismo magnet: solo
+                // se baja el fichero de esta ROM. Sin ese nombre no hay forma de
+                // saber cual es, asi que se para en vez de bajar todo.
+                std::vector<std::string> paths;
+                for (const auto& file : preview.files)
+                    paths.push_back(file.path);
+                std::vector<uint8_t> actions(
+                    paths.size(), static_cast<uint8_t>(FileAction::Skip));
+                std::string taskKey;
+                if (!torrentFile.empty()) {
+                    const auto hits = gamehubnx::gamehub::torrentFilesNamed(
+                        paths, torrentFile);
+                    if (hits.size() != 1) {
+                        brls::Application::notify(
+                            tr("gamehubnx/platforms/file_not_in_torrent"));
+                        ::unlink(tmp.c_str());
+                        return;
+                    }
+                    actions[hits[0]] = static_cast<uint8_t>(FileAction::Download);
+                    taskKey = torrentFile;
+                } else {
+                    if (paths.size() != 1) {
+                        brls::Application::notify(
+                            tr("gamehubnx/platforms/multi_file_torrent"));
+                        ::unlink(tmp.c_str());
+                        return;
+                    }
+                    actions[0] = static_cast<uint8_t>(FileAction::Download);
                 }
-                const std::vector<uint8_t> actions(
-                    preview.files.size(),
-                    static_cast<uint8_t>(FileAction::Download));
                 std::string taskId;
                 const bool imported = manager->importTorrentActions(
-                    tmp, actions, taskId, error, peers);
+                    tmp, actions, taskId, error, peers, taskKey);
                 ::unlink(tmp.c_str());
                 if (!imported) {
                     brls::Application::notify(error);

@@ -70,6 +70,9 @@ struct CatalogEntry {
        por directUrl y no debe parecer torrent (magnetUri vacio es lo que lo
        garantiza en el resto del codigo). Informativo: nada lo usa todavia. */
     std::string shopMagnet;
+    // Nombre del fichero de esta ROM dentro del torrent (gh_file). Una coleccion
+    // (Minerva) trae muchos juegos con el mismo magnet: hay que elegir este fichero.
+    std::string torrentFile;
     uint64_t topicId = 0;
     uint64_t size = 0;
     int64_t publishedAt = 0;

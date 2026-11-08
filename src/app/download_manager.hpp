@@ -229,10 +229,13 @@ public:
                        const std::vector<uint8_t>& selectedFiles,
                        std::string& taskId, std::string& error,
                        const std::vector<uint8_t>& initialPeers = {});
+    // taskKey separa tareas que comparten torrent: una coleccion con un magnet por
+    // juego, donde cada juego es un fichero distinto. Vacio = identidad del torrent.
     bool importTorrentActions(const std::string& path,
                               const std::vector<uint8_t>& fileActions,
                               std::string& taskId, std::string& error,
-                              const std::vector<uint8_t>& initialPeers = {});
+                              const std::vector<uint8_t>& initialPeers = {},
+                              const std::string& taskKey = {});
     bool importTorrent(const std::string& path, TransferMode mode,
                        std::string& taskId, std::string& error) {
         std::vector<uint8_t> selectedFiles;

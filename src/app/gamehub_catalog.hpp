@@ -46,6 +46,12 @@ extern const char* const kTorrentReportUrl;
 std::string torrentReportBody(const std::string& infoHash,
                               const std::string& name, uint64_t size);
 
+/// Indices de los ficheros de un torrent cuyo nombre (sin carpetas) es `wanted`.
+/// Primero exacto; si no hay ninguno, sin distinguir mayusculas. Una coleccion
+/// con dos ficheros del mismo nombre devuelve los dos: el llamador debe rechazarlo.
+std::vector<size_t> torrentFilesNamed(const std::vector<std::string>& paths,
+                                      const std::string& wanted);
+
 /// Un Title ID de Switch dice que es la entrada por sus ultimos digitos:
 /// `...000` juego base, `...800` actualizacion, cualquier otro DLC. Vacio o
 /// mal formado se trata como base, para no esconder una entrada por no saber
