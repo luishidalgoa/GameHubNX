@@ -26,6 +26,17 @@ const char* const kCatalogUrl  = "https://gamehub.hdglabs.com/api/shop";
 #define GAMEHUBNX_VERSION "dev"
 #endif
 const char* const kClientId    = "GameHubNX/" GAMEHUBNX_VERSION;
+const char* const kTorrentReportUrl = "https://gamehub.hdglabs.com/api/track/torrent";
+
+std::string torrentReportBody(const std::string& infoHash,
+                              const std::string& name, uint64_t size) {
+    nlohmann::json body = {
+        {"infoHash", infoHash},
+        {"name", name},
+        {"size", size},
+    };
+    return body.dump();
+}
 
 std::string baseTitleIdOf(const std::string& titleId) {
     if (titleId.size() != 16)

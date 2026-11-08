@@ -36,6 +36,16 @@ extern const char* const kSourceLabel;
 /// version rides along, which consoles are still on an old build.
 extern const char* const kClientId;
 
+/// Donde se avisa a GameHub al terminar de bajar un torrent de su tienda. Asi la
+/// descarga entra en el trafico igual que una directa, aunque los bytes hayan
+/// llegado de otros pares.
+extern const char* const kTorrentReportUrl;
+
+/// Cuerpo JSON de ese aviso: infohash, nombre y tamano del torrent terminado.
+/// GameHub ignora los infohash que no son de su tienda.
+std::string torrentReportBody(const std::string& infoHash,
+                              const std::string& name, uint64_t size);
+
 /// Un Title ID de Switch dice que es la entrada por sus ultimos digitos:
 /// `...000` juego base, `...800` actualizacion, cualquier otro DLC. Vacio o
 /// mal formado se trata como base, para no esconder una entrada por no saber

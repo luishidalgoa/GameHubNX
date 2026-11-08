@@ -3,6 +3,8 @@
 // URL-encoded file names, a titledb keyed by Title ID, announced sub-indexes.
 
 #include "app/gamehub_catalog.hpp"
+
+#include <borealis/extern/nlohmann/json.hpp>
 #include "app/rom_paths.hpp"
 
 #include <cassert>
@@ -788,6 +790,20 @@ void test_entrada_solo_magnet() {
     assert(e.titleId    == "0100F4300BF2C000");
 }
 
+void test_informe_de_descarga_torrent() {
+    // El aviso lleva el infohash, el nombre y el tamano; con comillas en el nombre
+    // sigue siendo JSON valido.
+    const std::string body = gamehub::torrentReportBody(
+        "9e2471d4ffbe0efecf4d5ada4f5c6607e57a2244", "Juego \"raro\".nsp", 1234ULL);
+    nlohmann::json j = nlohmann::json::parse(body, nullptr, false);
+    assert(!j.is_discarded());
+    assert(j["infoHash"] == "9e2471d4ffbe0efecf4d5ada4f5c6607e57a2244");
+    assert(j["name"] == "Juego \"raro\".nsp");
+    assert(j["size"] == 1234);
+    // El aviso va a GameHub y no a otro sitio.
+    assert(std::string(gamehub::kTorrentReportUrl).rfind("https://gamehub.hdglabs.com/", 0) == 0);
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -824,6 +840,7 @@ int main() {
     test_total_desde_content_range();
     test_gh_magnet_por_fichero();
     test_entrada_solo_magnet();
+    test_informe_de_descarga_torrent();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

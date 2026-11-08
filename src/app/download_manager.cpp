@@ -1,3 +1,4 @@
+#include "gamehub_catalog.hpp"
 #include "gamehub_provider.hpp"
 #include "download_manager.hpp"
 #include "base_title_guard.hpp"
@@ -2483,6 +2484,9 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
     coordinator.reset();
     metainfo_free(&metainfo);
 
+    // Aviso a GameHub de la descarga terminada, para que entre en el trafico como
+    // una directa. Se arma dentro del lock y se envia fuera de el.
+    std::string torrentReport;
     {
         std::unique_lock<std::mutex> lock(mutex_);
         DownloadTask* task = findLocked(activeId);
@@ -2501,13 +2505,22 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
                 task->resumeBitfield = std::move(teardownBitfield);
             std::string ignored;
             saveLocked(ignored);
-            if (finished)
+            if (finished) {
                 log_msg("[manager] completion saved %s\n",
                         activeId.c_str());
+                torrentReport = gamehub::torrentReportBody(
+                    task->id, task->name, task->totalBytes);
+            }
         }
     }
     if (finished)
         condition_.notify_all();
+    if (!torrentReport.empty()) {
+        std::string reportError;
+        if (!reportTorrentDownload(torrentReport, reportError))
+            log_msg("[torrent] aviso a GameHub no enviado: %s\n",
+                    reportError.c_str());
+    }
 }
 
 void DownloadManager::shutdown() {

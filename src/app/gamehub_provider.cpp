@@ -39,6 +39,11 @@ size_t discardBody(char*, size_t size, size_t nmemb, void*) {
     return 0;
 }
 
+size_t ignoreBody(char*, size_t size, size_t nmemb, void*) {
+    // La respuesta del aviso no aporta nada: se descarta entera.
+    return size * nmemb;
+}
+
 size_t readContentRange(char* buffer, size_t size, size_t nitems, void* userp) {
     const std::string line(buffer, size * nitems);
     const std::string key = "content-range:";
@@ -268,5 +273,47 @@ bool GameHubProvider::remove(const std::string& id, std::string& error) {
 }
 
 const char* GameHubProvider::name() const { return gamehub::kSourceLabel; }
+
+// Aviso de fin de descarga torrent (ver gamehub::torrentReportBody). Va con un
+// tope de tiempo corto y sin reintentos: la descarga ya esta hecha y un fallo
+// de red solo deja de contarla. GameHub responde 404 a un infohash que no es
+// de su tienda; eso no es un error.
+bool reportTorrentDownload(const std::string& body, std::string& error) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        error = "gamehub: curl init failed";
+        return false;
+    }
+    const std::string url = gamehub::kTorrentReportUrl;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(body.size()));
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ignoreBody);
+    struct curl_slist* headers = applyClientIdentity(curl);
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    curlPinHttpsOnly(curl);
+    curlPinScheme(curl, url);
+    curlApplyTrustedSsl(curl);
+
+    const CURLcode rc = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (rc != CURLE_OK) {
+        error = curl_easy_strerror(rc);
+        return false;
+    }
+    if (status == 204 || status == 200 || status == 404)
+        return true;
+    error = "gamehub: torrent report answered " + std::to_string(status);
+    return false;
+}
 
 } // namespace gamehubnx

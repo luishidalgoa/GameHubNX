@@ -61,4 +61,8 @@ private:
     SizeProbe probe_;
 };
 
+// Avisa a GameHub de que una descarga torrent de su tienda ha terminado. `body`
+// viene de gamehub::torrentReportBody. Devuelve false solo si el aviso no llego.
+bool reportTorrentDownload(const std::string& body, std::string& error);
+
 } // namespace gamehubnx
