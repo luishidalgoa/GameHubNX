@@ -131,6 +131,15 @@ inline NVGcolor textPrimary() { return color(Tok::TextPrimary); }
 inline NVGcolor textSecondary() { return color(Tok::TextSecondary); }
 inline NVGcolor textTertiary() { return color(Tok::TextTertiary); }
 inline NVGcolor textDisabled() { return color(Tok::TextDisabled); }
+// Fondo de la pantalla de carga: el del tema activo, para que el logo siempre
+// tenga el contraste correcto.
+inline bool darkThemeActive() {
+    return brls::Application::getThemeVariant() == brls::ThemeVariant::DARK;
+}
+inline NVGcolor startupBackground() {
+    return darkThemeActive() ? nvgRGB(45, 45, 45) : nvgRGB(235, 235, 235);
+}
+
 inline NVGcolor surface() { return color(Tok::Surface); }
 inline NVGcolor overlay() { return color(Tok::Overlay); }
 inline NVGcolor panel() { return color(Tok::Panel); }

@@ -486,6 +486,7 @@ add_custom_target(sync_i18n ALL
 file(COPY
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png
     ${CMAKE_CURRENT_SOURCE_DIR}/resources/logo.png
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/logo-light-theme.png
     DESTINATION ${ROMFS_DIR}
 )
 # TorBox (and other GTS/Cloudflare) HTTPS: switch-curl/libnx imports these

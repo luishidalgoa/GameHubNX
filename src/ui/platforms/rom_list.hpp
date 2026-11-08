@@ -416,6 +416,15 @@ private:
                     ::unlink(tmp.c_str());
                     return;
                 }
+                // Un magnet de una coleccion (Minerva) apunta a un torrent con
+                // muchos juegos: bajarlo entero seria absurdo. Sin ficheros que
+                // elegir aqui, se para en vez de bajar todo.
+                if (preview.files.size() != 1) {
+                    brls::Application::notify(
+                        tr("gamehubnx/platforms/multi_file_torrent"));
+                    ::unlink(tmp.c_str());
+                    return;
+                }
                 const std::vector<uint8_t> actions(
                     preview.files.size(),
                     static_cast<uint8_t>(FileAction::Download));

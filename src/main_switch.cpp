@@ -31,6 +31,7 @@ extern "C" {
 #include <cstdlib>
 #include <exception>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -137,9 +138,21 @@ const std::string& borealisLocaleFor(const std::string& language) {
     return brls::LOCALE_AUTO;
 }
 
+// Base vacia bajo la pantalla de carga. Borealis no quita la primera actividad,
+// asi que la pantalla de carga necesita una debajo para poder retirarse.
+class StartupBaseActivity : public brls::Activity {
+public:
+    brls::View* createContentView() override {
+        auto* box = new brls::Box(brls::Axis::COLUMN);
+        box->setGrow(1);
+        box->setBackgroundColor(gamehubnx::ui::theme::startupBackground());
+        return box;
+    }
+};
+
 // Lo que se ve mientras el catalogo y los metadatos cargan. Sin ella la consola
 // se queda en negro hasta que la biblioteca puede pintarse (10-15 s con un cache
-// grande). Se retira justo antes de empujar MainActivity.
+// grande). Se retira antes de empujar MainActivity.
 class StartupLoadingActivity : public brls::Activity {
 public:
     brls::View* createContentView() override {
@@ -147,12 +160,14 @@ public:
         box->setGrow(1);
         box->setAlignItems(brls::AlignItems::CENTER);
         box->setJustifyContent(brls::JustifyContent::CENTER);
-        // El logo de GameHub (logo.png, la version clara para fondo oscuro).
+        box->setBackgroundColor(gamehubnx::ui::theme::startupBackground());
+        // El logo sigue al tema: la version clara en fondo oscuro, la oscura en claro.
         auto* logo = new brls::Image();
         logo->setWidth(160);
         logo->setHeight(160);
         logo->setScalingType(brls::ImageScalingType::FIT);
-        logo->setImageFromRes("logo.png");
+        logo->setImageFromRes(gamehubnx::ui::theme::darkThemeActive()
+                                  ? "logo.png" : "logo-light-theme.png");
         box->addView(logo);
         auto* spinner = new brls::ProgressSpinner();
         spinner->setMarginTop(28);
@@ -433,7 +448,10 @@ int main(int argc, char** argv) {
         startupStage("Borealis createWindow");
         brls::Application::createWindow("gamehubnx");
         brls::Application::setGlobalQuit(false);
-        brls::Application::pushActivity(new StartupLoadingActivity());
+        brls::Application::pushActivity(new StartupBaseActivity(),
+                                        brls::TransitionAnimation::NONE);
+        brls::Application::pushActivity(new StartupLoadingActivity(),
+                                        brls::TransitionAnimation::NONE);
 
         startupStage("CatalogService construction");
         log_msg("[startup] image relay: relays-first + disk cache (rev4)\n");
@@ -578,8 +596,21 @@ int main(int argc, char** argv) {
             });
 
         startupStage("push MainActivity");
-        brls::Application::popActivity(brls::TransitionAnimation::NONE);
-        brls::Application::pushActivity(activity);
+        // Retirar la pantalla de carga del todo antes de mostrar la biblioteca. Si
+        // se quedaba debajo, la biblioteca aparecia semitransparente.
+        {
+            auto popped = std::make_shared<std::atomic<bool>>(false);
+            brls::Application::popActivity(brls::TransitionAnimation::NONE,
+                                           [popped] { popped->store(true); }, true);
+            const uint64_t popStartedMs = now_ms();
+            while (!popped->load() && now_ms() - popStartedMs < 3000) {
+                if (!brls::Application::mainLoop()) {
+                    log_msg("[startup] closed while leaving the loading screen\n");
+                    return 0;
+                }
+            }
+        }
+        brls::Application::pushActivity(activity, brls::TransitionAnimation::NONE);
         if (updatePendingFinish) {
             // Finish an update staged before a previous quit. User-triggered so
             // a helper that fails to load can never become an automatic loop.

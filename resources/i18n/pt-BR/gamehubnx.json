@@ -813,6 +813,7 @@
         "type_path_prompt": "Caminho completo no cartão SD",
         "use_default": "O padrão:",
         "downloading": "Baixando {}",
+        "multi_file_torrent": "Este torrent tem vários jogos: não é baixado inteiro daqui.",
         "count": "{} plataformas",
         "unavailable": "Seu servidor ainda não publica plataformas. É necessária uma versão mais recente do GameHub.",
         "on_sd": "No cartão SD",

@@ -812,6 +812,7 @@
         "type_path_prompt": "SD 卡上的完整路径",
         "use_default": "默认：",
         "downloading": "正在下载 {}",
+        "multi_file_torrent": "此种子包含多个游戏，无法在此整体下载。",
         "count": "{} 个平台",
         "unavailable": "你的服务器尚未发布平台。需要更新版本的 GameHub。",
         "on_sd": "已在 SD 卡",
