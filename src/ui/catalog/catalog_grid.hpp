@@ -10,6 +10,7 @@
 
 #include "app/game_metadata_service.hpp"
 #include "ui/common/async_image.hpp"
+#include "ui/common/card_title.hpp"
 #include "ui/i18n.hpp"
 #include "ui/common/ui_helpers.hpp"
 #include "ui/theme.hpp"
@@ -115,8 +116,8 @@ inline float gameCoverHeight() {
     const float porAncho = gameCoverWidth() / aspecto;
     return porAncho > coverSlotHeight() ? coverSlotHeight() : porAncho;
 }
-// Cover + name line (17px) + sub line (15px) + inner margins.
-inline constexpr float kCardTextHeight = 52.0f;
+// Cover + name (hasta dos lineas de 18 caracteres) + sub line (15px) + inner margins.
+inline constexpr float kCardTextHeight = 72.0f;
 inline constexpr float kRowGap = 16.0f;
 inline float cardHeight() { return coverSlotHeight() + kCardTextHeight; }
 inline float rowHeight() { return cardHeight() + kRowGap; }
@@ -301,11 +302,17 @@ public:
 
         addView(cover_);
 
+        // El titulo ocupa el ancho de SU tarjeta y se parte en dos lineas, cortadas con
+        // "…" (ver cardTitleText). Sin desplazamiento al enfocar: antes el texto largo se
+        // salia de la tarjeta y se pisaba con el de la vecina.
         name_ = new brls::Label();
-        name_->setSingleLine(true);
-        // Keep ellipsis at rest and marquee only the focused card title.
+        name_->setSingleLine(false);
         name_->setAutoAnimate(false);
         name_->setFontSize(theme::kFontSmall);
+        name_->setWidth(grid::kCardWidth);
+        // Sin altura fija: borealis solo mide el texto (y lo parte en dos lineas)
+        // cuando la altura no esta fijada. Con setHeight(44) el titulo salia en una
+        // sola linea y se pisaba con la tarjeta vecina.
         name_->setMarginTop(6);
         addView(name_);
 
@@ -313,6 +320,7 @@ public:
         sub_->setSingleLine(true);
         sub_->setAutoAnimate(false);
         sub_->setFontSize(theme::kFontCaption);
+        sub_->setWidth(grid::kCardWidth);
         sub_->setMarginTop(2);
         sub_->setTextColor(theme::textTertiary());
         addView(sub_);
@@ -334,7 +342,7 @@ public:
         shelfRow_ = shelfRow;
         onActivate_ = std::move(onActivate);
         onFocus_ = std::move(onFocus);
-        name_->setText(info.title);
+        name_->setText(cardTitleText(info.title));
         placeholder_->setText(placeholderLetter(info.title));
         sub_->setText(info.sub);
         sub_->setTextColor(info.subIsBadge ? theme::accent()
@@ -405,7 +413,6 @@ public:
         brls::Box::onFocusGained();
         focused_ = true;
         applyZoom(true);
-        name_->setAnimated(true);
         if (onFocus_)
             onFocus_();
     }
@@ -414,7 +421,6 @@ public:
         brls::Box::onFocusLost();
         focused_ = false;
         applyZoom(false);
-        name_->setAnimated(false);
     }
 
     int entryIndex() const { return entryIndex_; }

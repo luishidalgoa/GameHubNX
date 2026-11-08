@@ -1,4 +1,5 @@
 #include "app/app_paths.h"
+#include "ui/common/overlay_guard.hpp"
 #include "app/app_settings.hpp"
 #include "app/catalog_service.hpp"
 #include "app/gamehub_catalog.hpp"
@@ -434,8 +435,11 @@ int main(int argc, char** argv) {
         startupStage("Borealis createWindow");
         brls::Application::createWindow("gamehubnx");
         brls::Application::setGlobalQuit(false);
-        brls::Application::pushActivity(new StartupBaseActivity(),
-                                        brls::TransitionAnimation::NONE);
+        // La base del arranque queda debajo de la principal toda la sesion: se
+        // registra para que no cuente como overlay (ver overlay_guard.hpp).
+        auto* startupBase = new StartupBaseActivity();
+        gamehubnx::ui::startupBaseSlot<brls::Activity>() = startupBase;
+        brls::Application::pushActivity(startupBase, brls::TransitionAnimation::NONE);
         brls::Application::pushActivity(new StartupLoadingActivity(),
                                         brls::TransitionAnimation::NONE);
 

@@ -1163,156 +1163,26 @@ private:
         std::vector<CatalogShelf> shelves;
         int heroIndex = -1;
         std::string heroImage;
-        if (query_.empty() && !shelfDrilldown_ && !batchMode_ &&
-            !visible.empty()) {
-            bool popularFallback = false;
-            const std::vector<int> popular =
-                popularityOrder(visible, popularFallback);
-            const size_t withPeers = static_cast<size_t>(std::count_if(
-                visible.begin(), visible.end(),
-                [](const CatalogEntry& e) { return e.peerCount > 0; }));
-            // F5.1 diagnostics: make a silent peer_count outage observable.
-            if (shelfDiagTotal_ != visible.size() ||
-                shelfDiagPeers_ != withPeers) {
-                shelfDiagTotal_ = visible.size();
-                shelfDiagPeers_ = withPeers;
-                telemetry_log("catalog", "-",
-                              "event=popular_shelf entries=%zu with_peers=%zu "
-                              "mode=%s",
-                              visible.size(), withPeers,
-                              popularFallback ? "fallback" : "peers");
-            }
-
-            // Dedup key: titleId when known (metadata or catalogue field),
-            // info-hash otherwise.
-            auto keyOf = [&](int index) {
-                const size_t i = static_cast<size_t>(index);
-                const GameMetadata* meta = metas[i];
-                if (meta && !meta->titleId.empty())
-                    return std::string("t:") + meta->titleId;
-                if (!visible[i].titleId.empty())
-                    return std::string("t:") + visible[i].titleId;
-                return "h:" + lowerAscii(visible[i].infoHash);
-            };
-            std::unordered_set<std::string> used;
-
-            // Take up to kShelfItems unique, not-yet-used titles; commit the
-            // keys only when the shelf is actually shown.
-            auto buildShelf = [&](const std::vector<int>& candidates,
-                                  size_t minItems) {
-                std::vector<int> items;
-                std::vector<std::string> keys;
-                std::unordered_set<std::string> local;
-                for (int index : candidates) {
-                    if (items.size() >= grid::kShelfItems)
-                        break;
-                    std::string key = keyOf(index);
-                    if (used.count(key) || local.count(key))
-                        continue;
-                    local.insert(key);
-                    keys.push_back(std::move(key));
-                    items.push_back(index);
-                }
-                if (items.size() < minItems)
-                    return std::vector<int>();
-                used.insert(keys.begin(), keys.end());
-                return items;
-            };
-
-            // Popular: peered entries, or the full fallback ranking when the
-            // source carries no peer data. Never hidden silently (F5.1) —
-            // if dedup drained it, refill from the overall ranking.
-            std::vector<int> popularCandidates;
-            for (int index : popular) {
-                if (popularFallback ||
-                    visible[static_cast<size_t>(index)].peerCount > 0)
-                    popularCandidates.push_back(index);
-            }
-            std::vector<int> items = buildShelf(popularCandidates, 1);
-            if (items.empty() && visible.size() > 1)
-                items = buildShelf(popular, 1);
-            if (!items.empty())
-                shelves.push_back({tr("gamehubnx/catalog/shelf_popular"), std::move(items),
-                           [this] {
-                    openShelfDrilldown(SortMode::Popular);
-                    focusGrid();
-                }});
-
-            // New: by published_at, minus everything already shown above.
-            std::vector<int> byDate(visible.size());
-            std::iota(byDate.begin(), byDate.end(), 0);
-            std::stable_sort(byDate.begin(), byDate.end(),
-                [&visible](int left, int right) {
-                    return visible[static_cast<size_t>(left)].publishedAt >
-                           visible[static_cast<size_t>(right)].publishedAt;
-                });
-            items = buildShelf(byDate, grid::kMinShelfItems);
-            if (!items.empty())
-                shelves.push_back({tr("gamehubnx/catalog/shelf_new"), std::move(items),
-                           [this] {
-                    openShelfDrilldown(SortMode::Latest);
-                    focusGrid();
-                }});
-
-            // Recently updated: source updated after the original release.
-            std::vector<int> updated;
-            for (size_t i = 0; i < visible.size(); ++i) {
-                if (visible[i].sourceUpdatedAt > visible[i].publishedAt)
-                    updated.push_back(static_cast<int>(i));
-            }
-            std::stable_sort(updated.begin(), updated.end(),
-                [&visible](int left, int right) {
-                    return visible[static_cast<size_t>(left)].sourceUpdatedAt >
-                           visible[static_cast<size_t>(right)].sourceUpdatedAt;
-                });
-            items = buildShelf(updated, grid::kMinShelfItems);
-            if (!items.empty())
-                shelves.push_back({tr("gamehubnx/catalog/shelf_updated"), std::move(items),
-                                   std::function<void()>()});
-
-            // Genre picks from GameMetadataService categories: the two
-            // biggest genres that still have enough unused titles. "See all"
-            // hands the genre to search (categories match the query above).
-            std::unordered_map<std::string, int> genreCounts;
+        // Categorias: ya no son secciones de la reja. Se listan en el filtro
+        // "Categorias" a partir de los metadatos de lo visible, mas frecuentes primero.
+        {
+            std::unordered_map<std::string, int> counts;
             for (const GameMetadata* meta : metas) {
                 if (!meta)
                     continue;
                 for (const std::string& category : meta->categories)
-                    ++genreCounts[category];
+                    ++counts[category];
             }
-            std::vector<std::pair<std::string, int>> genres(
-                genreCounts.begin(), genreCounts.end());
-            std::sort(genres.begin(), genres.end(),
+            std::vector<std::pair<std::string, int>> ranked(counts.begin(), counts.end());
+            std::sort(ranked.begin(), ranked.end(),
                 [](const auto& left, const auto& right) {
                     if (left.second != right.second)
                         return left.second > right.second;
                     return left.first < right.first;
                 });
-            int genreShelves = 0;
-            for (const auto& genre : genres) {
-                if (genreShelves == 2)
-                    break;
-                std::vector<int> candidates;
-                for (int index : popular) {
-                    const GameMetadata* meta =
-                        metas[static_cast<size_t>(index)];
-                    if (meta && std::find(meta->categories.begin(),
-                                          meta->categories.end(),
-                                          genre.first) !=
-                                    meta->categories.end())
-                        candidates.push_back(index);
-                }
-                items = buildShelf(candidates, grid::kMinShelfItems);
-                if (items.empty())
-                    continue;
-                shelves.push_back({genre.first, std::move(items),
-                                   [this, category = genre.first] {
-                    query_ = category;
-                    rebuildEntries();
-                    focusGrid();
-                }});
-                ++genreShelves;
-            }
+            categoryNames_.clear();
+            for (size_t i = 0; i < ranked.size() && i < 60; ++i)
+                categoryNames_.push_back(ranked[i].first);
         }
 
         size_t count = visible.size();
@@ -1520,6 +1390,8 @@ private:
                                tr("gamehubnx/catalog/filter_missing_desc")),
             tr("gamehubnx/catalog/filter_players") + ": " +
                 tr("gamehubnx/catalog/filter_players_desc"),
+            mark(!query_.empty(), tr("gamehubnx/catalog/filter_categories") + ": " +
+                                  tr("gamehubnx/catalog/filter_categories_desc")),
         };
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/filter_menu_title"), labels,
@@ -1540,8 +1412,36 @@ private:
                     rebuildEntries();
                     break;
                 case 6: openPlayerFilterMenu(); break;
+                case 7: openCategoryMenu(); break;
                 default: break;
                 }
+            });
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    // Elegir una categoria: la reja se busca por ella, como lo hacian las secciones.
+    void openCategoryMenu() {
+        if (busy_)
+            return;
+        std::vector<std::string> labels = {tr("gamehubnx/catalog/categories_all")};
+        int selected = 0;
+        for (size_t i = 0; i < categoryNames_.size(); ++i) {
+            labels.push_back(categoryNames_[i]);
+            if (categoryNames_[i] == query_)
+                selected = static_cast<int>(i) + 1;
+        }
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/filter_categories"), labels,
+            [](int) {},
+            selected,
+            [this](int index) {
+                if (index < 0 || index > static_cast<int>(categoryNames_.size()))
+                    return;
+                query_ = index == 0 ? std::string()
+                                    : categoryNames_[static_cast<size_t>(index) - 1];
+                shelfDrilldown_ = false;
+                rebuildEntries();
+                focusGrid();
             });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
@@ -2316,6 +2216,7 @@ private:
     bool busy_ = false;
     // Mods fetches run outside busy_, so they need their own re-entry guard.
     bool modsInFlight_ = false;
+    std::vector<std::string> categoryNames_;
     bool batchMode_ = false;
     bool shelfDrilldown_ = false;
     // Session-only view filters: deliberately not persisted, so a relaunch

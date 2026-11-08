@@ -370,6 +370,15 @@ $(BUILD_DIR)/tests/test_rgba_image: tests/test_rgba_image.cpp src/app/rgba_image
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_rgba_image.cpp $(LDFLAGS)
 
+# Pure helpers of the catalogue card and the overlay guard: no libnx, no borealis.
+$(BUILD_DIR)/tests/test_card_title: tests/test_card_title.cpp src/ui/common/card_title.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_card_title.cpp $(LDFLAGS)
+
+$(BUILD_DIR)/tests/test_overlay_guard: tests/test_overlay_guard.cpp src/ui/common/overlay_guard.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_overlay_guard.cpp $(LDFLAGS)
+
 $(BUILD_DIR)/tests/test_storage_manager: tests/test_storage_manager.cpp \
 		src/app/storage_manager.cpp src/app/install_space.cpp
 	@mkdir -p $(dir $@)

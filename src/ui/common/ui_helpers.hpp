@@ -23,6 +23,7 @@ extern "C" {
 #include "app/installed_title_service.hpp"
 #include "install/install_backend.hpp"
 #include "platform/switch_crashlog.h"
+#include "ui/common/overlay_guard.hpp"
 #include "ui/i18n.hpp"
 #include "ui/theme.hpp"
 
@@ -238,7 +239,9 @@ inline brls::Box* recyclerHost(brls::RecyclerFrame* recycler) {
 // Reloading a recycler while an overlay owns focus frees cells that Borealis
 // still keeps on focusStack — dismiss then UAF in giveFocus/onFocusLost.
 inline bool activityStackHasOverlay() {
-    return brls::Application::getActivitiesStack().size() > 1;
+    return gamehubnx::ui::stackHasOverlay<brls::Activity>(
+        brls::Application::getActivitiesStack(),
+        gamehubnx::ui::startupBaseSlot<brls::Activity>());
 }
 
 // The cells currently on screen — enough to repaint a row in place instead of
