@@ -218,6 +218,14 @@ public:
         recyclerHost_->setVisibility(brls::Visibility::GONE);
         addView(recyclerHost_);
 
+        // Igual que el catalogo: RB vuelve a pedir la lista de plataformas a la
+        // tienda, para no quedarse con la que se bajo al abrir la pestana.
+        registerAction(tr("gamehubnx/common/refresh"), brls::BUTTON_RB,
+                       [this](brls::View*) {
+            reload();
+            return true;
+        });
+
         load();
     }
 
@@ -244,7 +252,16 @@ public:
     }
 
 private:
+    // Una sola peticion a la vez: RB mientras carga no lanza otra.
+    void reload() {
+        if (loading_)
+            return;
+        status_->setText(tr("gamehubnx/common/loading"));
+        load();
+    }
+
     void load() {
+        loading_ = true;
         auto alive = alive_;
         CatalogService* catalog = catalog_;
         brls::async([this, alive, catalog] {
@@ -255,6 +272,7 @@ private:
                         fetched = std::move(fetched)]() mutable {
                 if (!alive->load())
                     return;
+                loading_ = false;
                 if (!ok) {
                     status_->setText(error.empty()
                         ? tr("gamehubnx/platforms/unavailable") : error);
@@ -287,6 +305,7 @@ private:
     FavoritesService* favorites_;
     std::function<void()> openCatalog_;
     brls::Label* status_ = nullptr;
+    bool loading_ = false;
     brls::RecyclerFrame* recycler_ = nullptr;
     brls::Box* recyclerHost_ = nullptr;
     PlatformsDataSource* dataSource_ = nullptr;
