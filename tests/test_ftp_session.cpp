@@ -120,16 +120,36 @@ void test_no_se_sale_del_arbol() {
     assert(t.cwd() == "sdmc:/switch/sdmc:");
 }
 
-void test_solo_lectura() {
+void test_escritura_dentro_de_la_raiz() {
     FtpSession s = open();
-    // Todo lo que escribe se rechaza DICIENDO que es de solo lectura, no con
-    // un "no implementado": la respuesta es no, no una carencia.
-    for (const char* c : {"STOR x", "STOU", "APPE x", "DELE x", "RMD x",
-                          "MKD x", "RNFR x", "RNTO y"}) {
-        const FtpSession::Reply r = s.handle(c);
-        assert(r.text.rfind("550", 0) == 0);
-        assert(r.text.find("solo lectura") != std::string::npos);
-    }
+    // Subir, borrar, crear y renombrar funcionan dentro de la raiz.
+    FtpSession::Reply up = s.handle("STOR nuevo.nsp");
+    assert(up.action == FtpSession::Action::ReceiveFile);
+    assert(up.text.rfind("150", 0) == 0);
+    assert(!s.appendMode());
+    assert(s.handle("APPE nuevo.nsp").action == FtpSession::Action::ReceiveFile);
+    assert(s.appendMode());
+    assert(s.handle("DELE nuevo.nsp").action == FtpSession::Action::DeleteFile);
+    assert(s.handle("MKD carpeta").action == FtpSession::Action::MakeDir);
+    assert(s.handle("RMD carpeta").action == FtpSession::Action::RemoveDir);
+    // Renombrar: RNFR primero, luego RNTO.
+    assert(s.handle("RNFR viejo.nsp").text.rfind("350", 0) == 0);
+    FtpSession::Reply to = s.handle("RNTO nuevo.nsp");
+    assert(to.action == FtpSession::Action::Rename);
+    assert(s.path().find("nuevo.nsp") != std::string::npos);
+    assert(s.renameSource().find("viejo.nsp") != std::string::npos);
+    // Sin RNFR no hay renombre.
+    FtpSession fresh = open();
+    assert(fresh.handle("RNTO x").text.rfind("503", 0) == 0);
+}
+
+void test_raiz_protegida() {
+    FtpSession s = open();
+    // La raiz no se borra ni se renombra, y nada sale de ella.
+    assert(s.handle("RMD /").text.rfind("550", 0) == 0);
+    assert(s.handle("RNFR /").text.rfind("550", 0) == 0);
+    assert(s.handle("STOR ../../escape").text.rfind("550", 0) == 0);
+    assert(s.handle("DELE ../../escape").text.rfind("550", 0) == 0);
 }
 
 void test_acciones() {
@@ -201,7 +221,8 @@ int main() {
     test_ruta_que_se_ensena();
     test_utf8();
     test_no_se_sale_del_arbol();
-    test_solo_lectura();
+    test_escritura_dentro_de_la_raiz();
+    test_raiz_protegida();
     test_acciones();
     test_pasv();
     std::printf("ftp session tests passed\n");

@@ -461,7 +461,7 @@ bool parsePlatformIndex(const std::string& json, const std::string& slug,
     // Los sub-indices son cosa de Switch --actualizaciones y DLC-- y una
     // plataforma emulada no los tiene, asi que lo que venga se descarta.
     std::vector<std::string> ignoredSubIndexes;
-    if (!parseCatalog(json, out, ignoredSubIndexes, error))
+    if (!parseCatalog(json, out, ignoredSubIndexes, error, true))
         return false;
 
     for (size_t i = before; i < out.size(); ++i)
@@ -470,7 +470,8 @@ bool parsePlatformIndex(const std::string& json, const std::string& slug,
 }
 
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
-                  std::vector<std::string>& subIndexes, std::string& error) {
+                  std::vector<std::string>& subIndexes, std::string& error,
+                  bool anyTrackerMagnets) {
     nlohmann::json root = nlohmann::json::parse(json, nullptr, false);
     if (root.is_discarded() || !root.is_object()) {
         error = "gamehub: payload is not a JSON object";
@@ -498,7 +499,7 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         std::string shopBtih;
         if (const auto it = f.find("gh_magnet"); it != f.end()) {
             const std::string m = asString(*it);
-            shopBtih = storeMagnetBtih(m, true);
+            shopBtih = storeMagnetBtih(m, !anyTrackerMagnets);
             if (!shopBtih.empty()) shopMagnetPeek = m;
         }
 

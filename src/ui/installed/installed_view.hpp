@@ -14,6 +14,8 @@
 #include "app/game_update_install.hpp"
 #include "app/addon_status.hpp"
 #include "app/game_update_service.hpp"
+#include "app/torrent_update_probe.hpp"
+#include "app/torrent_update_source.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/magnet_resolver.hpp"
 #include "ui/catalog/catalog_helpers.hpp"
@@ -313,11 +315,13 @@ public:
                   bool checkOnEntry = true, Mode mode = Mode::Library,
                   ModIndexService* mods = nullptr,
                   FavoritesService* favorites = nullptr,
-                  SwitchDeployService* deploy = nullptr)
+                  SwitchDeployService* deploy = nullptr,
+                  TorrentUpdateSource* torrentUpdates = nullptr)
         : brls::Box(brls::Axis::COLUMN), installed_(installed),
           manager_(manager), metadata_(metadata), settings_(settings),
           catalog_(catalog), updates_(updates), checkOnEntry_(checkOnEntry),
           mode_(mode), mods_(mods), favorites_(favorites), deploy_(deploy),
+          torrentUpdates_(torrentUpdates),
           alive_(std::make_shared<std::atomic<bool>>(true)) {
         status_ = new brls::Label();
         status_->setFontSize(15);
@@ -373,6 +377,13 @@ public:
             checkAllTitles();
             return true;
         });
+        if (mode_ == Mode::Updates && torrentUpdates_) {
+            registerAction(tr("gamehubnx/updates/probe_torrents"),
+                           brls::BUTTON_RB, [this](brls::View*) {
+                probeTorrentsAll();
+                return true;
+            });
+        }
         if (mode_ == Mode::Updates) {
             registerAction(tr("gamehubnx/updates/update_all"),
                            brls::BUTTON_X, [this](brls::View*) {
@@ -462,11 +473,125 @@ private:
         const CatalogEntry* shop =
             shopUpdateFor(titleId, std::string(), &version);
         if (!shop) {
+            if (queueTorrentUpdate(titleId))
+                return;
             brls::Application::notify(
                 tr("gamehubnx/installed/update_no_bundle"));
             return;
         }
         confirmUpdateInstall(*shop, version);
+    }
+
+    // Busca, en los torrents de los juegos instalados que tienen magnet en la
+    // tienda, las actualizaciones que traen. Corre en segundo plano: cada magnet
+    // necesita peers. Al terminar se comprueba la version de cada juego.
+    void probeTorrentsAll() {
+        if (!torrentUpdates_ || probing_ || refreshing_ || updateInFlight_)
+            return;
+        std::vector<std::pair<std::string, std::string>> jobs;
+        for (const InstalledTitle& title : installed_->titles()) {
+            const std::string magnet = torrentUpdates_->magnetFor(title.titleId);
+            if (!magnet.empty())
+                jobs.emplace_back(title.titleId, magnet);
+        }
+        if (jobs.empty()) {
+            brls::Application::notify(tr("gamehubnx/updates/probe_none"));
+            return;
+        }
+        probing_ = true;
+        status_->setText(tr("gamehubnx/updates/probe_running",
+                            static_cast<int>(jobs.size())));
+        auto alive = alive_;
+        TorrentUpdateSource* source = torrentUpdates_;
+        const std::string tmpDir = manager_->rootPath();
+        brls::async([this, alive, source, jobs, tmpDir] {
+            size_t done = 0;
+            for (const auto& job : jobs) {
+                std::string error;
+                probeTorrentUpdates(*source, job.first, job.second, tmpDir,
+                                    error);
+                ++done;
+                brls::sync([this, alive, done, total = jobs.size()] {
+                    if (alive->load())
+                        status_->setText(tr("gamehubnx/updates/probe_progress",
+                                            static_cast<int>(done),
+                                            static_cast<int>(total)));
+                });
+            }
+            std::string saveError;
+            source->save(saveError);
+            brls::sync([this, alive] {
+                if (!alive->load())
+                    return;
+                probing_ = false;
+                checkAllTitles();
+            });
+        });
+    }
+
+    // Descarga la actualizacion de un juego desde su torrent: solo el fichero de
+    // esa version, instalado como paquete. Devuelve false si no hay torrent o
+    // version conocidos.
+    bool queueTorrentUpdate(const std::string& titleId) {
+        if (!torrentUpdates_ || !updates_)
+            return false;
+        const std::string magnet = torrentUpdates_->magnetFor(titleId);
+        if (magnet.empty())
+            return false;
+        std::string latest;
+        for (const auto& entry : updates_->results()) {
+            if (catalogLower(entry.first) == catalogLower(titleId)) {
+                latest = entry.second.foundVersion;
+                break;
+            }
+        }
+        if (latest.empty())
+            return false;
+        status_->setText(tr("gamehubnx/detail/finding_peers"));
+        auto alive = alive_;
+        const std::string tmpDir = manager_->rootPath();
+        DownloadManager* manager = manager_;
+        brls::async([this, alive, manager, magnet, titleId, latest, tmpDir] {
+            const std::string tmp = tmpDir + "/_update_magnet.torrent";
+            MagnetResolver resolver;
+            std::atomic<bool> cancelled {false};
+            std::string error;
+            std::vector<uint8_t> peers;
+            const bool resolved = resolver.resolveToFile(magnet, tmp, cancelled,
+                                                         {}, error, &peers,
+                                                         nullptr);
+            std::string taskId;
+            std::string importError;
+            bool imported = false;
+            if (resolved) {
+                TorrentPreview preview;
+                if (DownloadManager::previewTorrent(tmp, preview, importError)) {
+                    const std::vector<size_t> matches =
+                        updateVersionMatches(preview, latest, titleId);
+                    if (matches.empty()) {
+                        importError = tr("gamehubnx/installed/update_no_bundle");
+                    } else {
+                        imported = manager->importTorrentActions(
+                            tmp, selectFiles(preview, matches), taskId,
+                            importError, peers, "update:" + latest);
+                    }
+                }
+            } else {
+                importError = error;
+            }
+            ::unlink(tmp.c_str());
+            brls::sync([this, alive, imported, taskId, importError] {
+                if (!alive->load())
+                    return;
+                if (!imported) {
+                    status_->setText(importError);
+                    brls::Application::notify(importError);
+                    return;
+                }
+                status_->setText(tr("gamehubnx/detail/shop_queued"));
+            });
+        });
+        return true;
     }
 
     void queueAllUpdates() {
@@ -876,6 +1001,8 @@ private:
     ModIndexService* mods_ = nullptr;
     FavoritesService* favorites_ = nullptr;
     SwitchDeployService* deploy_ = nullptr;
+    TorrentUpdateSource* torrentUpdates_ = nullptr;
+    bool probing_ = false;
     brls::Label* status_ = nullptr;
     EmptyStateView* emptyState_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;

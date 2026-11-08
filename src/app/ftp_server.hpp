@@ -7,7 +7,7 @@
 
 namespace gamehubnx {
 
-// Servidor FTP de SOLO LECTURA sobre la tarjeta.
+// Servidor FTP con acceso completo a la tarjeta (leer, subir, borrar, carpetas).
 //
 // Existe para poder sacar de la consola lo que hace falta para diagnosticar
 // --el registro, un volcado, una descarga a medias-- sin depender de otro

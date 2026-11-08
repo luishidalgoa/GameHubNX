@@ -16,12 +16,9 @@ namespace gamehubnx {
 // se puede probar en el PC. El transporte (escuchar, canal de datos, hilos) va
 // aparte y no toma ninguna decision.
 //
-// SOLO LECTURA, y es deliberado. Lo que hacia falta era poder sacar los
-// registros y los ficheros de la consola; un servicio de red que ademas pueda
-// sobrescribir la tarjeta es una superficie mucho mayor, y para escribir ya
-// esta el explorador de ficheros de la propia aplicacion, que pide confirmacion
-// y no esta expuesto a la red. Si algun dia hace falta subir, se anade a
-// proposito y no de rebote.
+// Acceso completo a la tarjeta dentro de la raiz permitida: leer, subir, borrar,
+// crear carpetas y renombrar. Todo se confina a la raiz (resolve), y la raiz
+// nunca se puede borrar ni renombrar.
 // La respuesta a PASV: "227 Entering Passive Mode (a,b,c,d,p1,p2)".
 //
 // Vive fuera de la clase y del transporte porque es exactamente el trozo que
@@ -59,6 +56,11 @@ public:
         SendFile,      // volcar el fichero de `path()` por el canal de datos
         ReportSize,    // responder "213 <bytes>" de `path()`
         Close,         // cerrar la conexion tras responder
+        ReceiveFile,   // recibir por el canal de datos y escribir `path()` (APPE: al final)
+        DeleteFile,    // borrar el fichero `path()`
+        MakeDir,       // crear la carpeta `path()`
+        RemoveDir,     // borrar la carpeta `path()`
+        Rename,        // renombrar renameSource() a `path()`
     };
 
     struct Reply {
@@ -93,6 +95,8 @@ public:
         return rest[0] == '/' ? rest : "/" + rest;
     }
     const std::string& path() const { return path_; }
+    const std::string& renameSource() const { return renameSource_; }
+    bool appendMode() const { return appendMode_; }
     bool authenticated() const { return authenticated_; }
     bool binary() const { return binary_; }
 
@@ -191,13 +195,52 @@ public:
                 return {"", Action::ReportSize};
             return {"150 Enviando", Action::SendFile};
         }
-        // Todo lo que escribe se rechaza explicitamente, en vez de con un
-        // "comando desconocido": asi el que lo intente sabe que la respuesta es
-        // no, no que le falte soporte.
-        if (verb == "STOR" || verb == "STOU" || verb == "APPE" ||
-            verb == "DELE" || verb == "RMD" || verb == "MKD" ||
-            verb == "RNFR" || verb == "RNTO")
-            return {"550 Este servidor es de solo lectura"};
+        if (verb == "STOR" || verb == "APPE") {
+            std::string target;
+            if (arg.empty() || !resolve(arg, target) || target == root_)
+                return {"550 Ruta no permitida"};
+            path_ = target;
+            appendMode_ = verb == "APPE";
+            return {"150 Recibiendo", Action::ReceiveFile};
+        }
+        if (verb == "STOU")
+            return {"502 STOU no implementado"};
+        if (verb == "DELE" || verb == "MKD") {
+            std::string target;
+            if (arg.empty() || !resolve(arg, target) || target == root_)
+                return {"550 Ruta no permitida"};
+            path_ = target;
+            return {"", verb == "DELE" ? Action::DeleteFile : Action::MakeDir};
+        }
+        if (verb == "RMD") {
+            std::string target;
+            if (arg.empty() || !resolve(arg, target) || target == root_)
+                return {"550 Ruta no permitida"};
+            path_ = target;
+            return {"", Action::RemoveDir};
+        }
+        if (verb == "RNFR") {
+            std::string target;
+            if (arg.empty() || !resolve(arg, target) || target == root_) {
+                renameFrom_.clear();
+                return {"550 Ruta no permitida"};
+            }
+            renameFrom_ = target;
+            return {"350 Indica el nuevo nombre"};
+        }
+        if (verb == "RNTO") {
+            if (renameFrom_.empty())
+                return {"503 Primero RNFR"};
+            std::string target;
+            if (arg.empty() || !resolve(arg, target) || target == root_) {
+                renameFrom_.clear();
+                return {"550 Ruta no permitida"};
+            }
+            renameSource_ = renameFrom_;
+            renameFrom_.clear();
+            path_ = target;
+            return {"", Action::Rename};
+        }
         return {"502 No implementado"};
     }
 
@@ -285,6 +328,9 @@ private:
     std::string password_;
     std::string cwd_;
     std::string path_;
+    std::string renameFrom_;
+    std::string renameSource_;
+    bool appendMode_ = false;
     bool authenticated_ = false;
     bool binary_ = true;
 };

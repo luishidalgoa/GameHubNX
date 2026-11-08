@@ -365,7 +365,25 @@ void testUtf8TruncateBoundary() {
 
 } // namespace
 
+// Las actualizaciones de un torrent se leen de sus nombres: base +0x800 y [vN].
+static void testTorrentUpdateVersionsFromNames() {
+    const std::vector<std::string> paths = {
+        "Titanic Mystery [0100750014426000][v0][Base].nsz",
+        "Titanic Mystery [0100750014426800][v65536][Update].nsz",
+        "Titanic Mystery [0100750014426800][v131072][Update].nsz",
+        "Titanic Mystery [0100750014426800][v65536][Update].nsz",
+        "Otro Juego [0100AAAA00000800][v65536][Update].nsz",
+    };
+    const auto versions = gamehubnx::torrentUpdateVersions(paths, "0100750014426000");
+    assert(versions.size() == 2);
+    assert(versions[0] == "65536");
+    assert(versions[1] == "131072");
+    // Un juego sin torrent de actualizaciones no tiene versiones.
+    assert(gamehubnx::torrentUpdateVersions(paths, "0100BBBB00000000").empty());
+}
+
 int main() {
+    testTorrentUpdateVersionsFromNames();
     testExactVersionTagIsTheUpdate();
     testModBundleWithOlderVersionTagIsExcluded();
     testExactVersionWinsOverOtherTags();

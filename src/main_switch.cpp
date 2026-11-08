@@ -8,6 +8,8 @@
 #include "app/game_update_service.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/shop_update_source.hpp"
+#include "app/torrent_update_source.hpp"
+#include "app/torrent_update_probe.hpp"
 #include "app/switch_deploy.hpp"
 #include "app/update_service.hpp"
 #include "platform/switch_crashlog.h"
@@ -188,11 +190,13 @@ public:
                  InstalledTitleService* installed, AppSettings* settings,
                  UpdateService* updater, ModIndexService* mods,
                  FavoritesService* favorites, FtpServer* ftpServer,
-                 SwitchDeployService* deploy, GameUpdateService* gameUpdates)
+                 SwitchDeployService* deploy, GameUpdateService* gameUpdates,
+                 TorrentUpdateSource* torrentUpdates)
         : manager_(manager), catalog_(catalog), metadata_(metadata),
           installed_(installed), settings_(settings), updater_(updater),
           mods_(mods), favorites_(favorites), ftpServer_(ftpServer),
-          deploy_(deploy), gameUpdates_(gameUpdates) {
+          deploy_(deploy), gameUpdates_(gameUpdates),
+          torrentUpdates_(torrentUpdates) {
         auto* tabs = new gamehubnx::ui::MainFrame();
         using gamehubnx::ui::NavIconType;
         tabs->addNavTab(tr("gamehubnx/nav/catalog"), NavIconType::Catalog,
@@ -221,19 +225,19 @@ public:
         });
         tabs->addNavTab(tr("gamehubnx/nav/installed"), NavIconType::Installed,
                         [installed, manager, metadata, settings, catalog,
-                         gameUpdates, mods, favorites, deploy] {
+                         gameUpdates, mods, favorites, deploy, torrentUpdates] {
             return new InstalledView(installed, manager, metadata, settings,
                                      catalog, gameUpdates, true,
                                      InstalledView::Mode::Library, mods,
-                                     favorites, deploy);
+                                     favorites, deploy, torrentUpdates);
         });
         tabs->addNavTab(tr("gamehubnx/nav/updates"), NavIconType::Updates,
                         [installed, manager, metadata, settings, catalog,
-                         gameUpdates, mods, favorites, deploy] {
+                         gameUpdates, mods, favorites, deploy, torrentUpdates] {
             return new InstalledView(installed, manager, metadata, settings,
                                      catalog, gameUpdates, true,
                                      InstalledView::Mode::Updates, mods,
-                                     favorites, deploy);
+                                     favorites, deploy, torrentUpdates);
         });
         // El explorador, con pestana propia. Estuvo enterrado el octavo en
         // Ajustes y no se encontraba: dos veces se reporto que no estaba,
@@ -325,6 +329,7 @@ private:
     FtpServer* ftpServer_;
     SwitchDeployService* deploy_;
     GameUpdateService* gameUpdates_;
+    TorrentUpdateSource* torrentUpdates_;
     brls::AppletFrame* frame_;
 };
 
@@ -566,8 +571,11 @@ int main(int argc, char** argv) {
 
         startupStage("GameUpdateService load");
         // La tienda es la unica fuente de versiones nuevas (shop_update_source.hpp).
-        gamehubnx::ShopUpdateSource shopUpdates(&catalog);
-        GameUpdateService gameUpdates(&shopUpdates,
+        // La tienda y las actualizaciones que traen los torrents de los juegos.
+        gamehubnx::TorrentUpdateSource torrentUpdates(
+            &catalog, GHNX_PATH("torrent-updates.json"));
+        torrentUpdates.load();
+        GameUpdateService gameUpdates(&torrentUpdates,
                                       GHNX_PATH("game-updates.json"));
         std::string gameUpdatesError;
         if (!gameUpdates.load(gameUpdatesError))
@@ -578,7 +586,7 @@ int main(int argc, char** argv) {
         auto* activity = new MainActivity(&manager, &catalog, &metadata,
                                            &installed, &settings, &updater,
                                            &mods, &favorites, &ftpServer,
-                                           &deploy, &gameUpdates);
+                                           &deploy, &gameUpdates, &torrentUpdates);
 
         // Diagnostico del recuadro de foco mal dibujado (issue #15/#25). El
         // recuadro se pinta con getX/getY/getWidth/getHeight de la vista

@@ -396,8 +396,9 @@ private:
             std::atomic<bool> cancelled {false};
             std::string err;
             std::vector<uint8_t> peers;
+            // Magnets de plataforma: pueden llevar trackers publicos.
             const bool ok = resolver.resolveToFile(
-                magnet, tmp, cancelled, {}, err, &peers, nullptr);
+                magnet, tmp, cancelled, {}, err, &peers, nullptr, true);
             brls::sync([alive, manager, ok, err, tmp, title, destination,
                         torrentFile, peers = std::move(peers)]() mutable {
                 if (!alive->load()) {

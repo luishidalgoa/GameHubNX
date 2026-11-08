@@ -12,6 +12,9 @@ struct MagnetSpec {
     uint8_t infoHash[20]{};
     std::string infoHashHex;
     std::string trackerUrl;
+    // Trackers publicos (udp/http/https) del magnet, solo si el llamador los admite
+    // (magnets de plataformas servidos por GameHub). Vacio en el resto de casos.
+    std::vector<std::string> publicTrackers;
 };
 
 struct MagnetProgress {
@@ -34,7 +37,7 @@ public:
     using ProgressCallback = std::function<void(const MagnetProgress&)>;
 
     static bool parse(const std::string& uri, MagnetSpec& spec,
-                      std::string& error);
+                      std::string& error, bool allowPublicTrackers = false);
     static bool buildTorrent(const MagnetSpec& spec,
                              const std::vector<uint8_t>& info,
                              std::vector<uint8_t>& torrent,
@@ -49,7 +52,8 @@ public:
                        const ProgressCallback& progress,
                        std::string& error,
                        std::vector<uint8_t>* verifiedPeers = nullptr,
-                       const std::vector<uint8_t>* presetInfo = nullptr) const;
+                       const std::vector<uint8_t>* presetInfo = nullptr,
+                       bool allowPublicTrackers = false) const;
 };
 
 } // namespace gamehubnx

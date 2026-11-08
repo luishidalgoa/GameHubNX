@@ -42,6 +42,12 @@ inline size_t utf8TruncateBoundary(const std::string& text, size_t maxBytes) {
 // nombre no lleva ninguna.
 bool fileVersionTag(const std::string& path, uint64_t& value);
 
+// Versiones (decimal) de las actualizaciones que trae un torrent para un juego:
+// los ficheros cuyo Title ID es el del juego base +0x800 y lleva [vN] en el
+// nombre. Son las que la pestana de actualizaciones compara con la instalada.
+std::vector<std::string> torrentUpdateVersions(
+    const std::vector<std::string>& paths, const std::string& titleId);
+
 std::vector<size_t> updateVersionMatches(const TorrentPreview& preview,
                                          const std::string& latestVersion,
                                          const std::string& titleId = {});

@@ -350,10 +350,26 @@ public:
         // Un solo badge para el origen (ambos / directa / torrent), en vez de
         // un chip por cada opcion. Cada estado tiene su color de texto.
         filterSource_ = makeChip(tr("gamehubnx/catalog/filter_source_both"), [this] {
-            sourceFilter_ = nextSourceFilter(sourceFilter_);
-            rebuildEntries();
+            openOriginMenu();
         });
         header_->addView(filterSource_);
+        // Orden, filtros y origen se agrupan en tres botones con menu desplegable:
+        // cada opcion lleva su titulo y su descripcion. Los chips sueltos se ocultan.
+        sortButton_ = makeChip(tr("gamehubnx/catalog/sort_latest"), [this] {
+            openSortMenu();
+        });
+        filterButton_ = makeChip(tr("gamehubnx/catalog/filter_menu_title"), [this] {
+            openFilterMenu();
+        });
+        header_->addView(sortButton_);
+        header_->addView(filterButton_);
+        for (brls::Button* chip : {sortLatest_, sortPopular_, sortAlpha_, sortSize_,
+                                   filterAll_, filterGames_, filterFavorites_,
+                                   filterOnline_, filterFits_, filterMissing_,
+                                   filterPlayers_}) {
+            if (chip)
+                chip->setVisibility(brls::Visibility::GONE);
+        }
         if (!favorites_)
             filterFavorites_->setVisibility(brls::Visibility::GONE);
         if (!installed_)
@@ -974,6 +990,10 @@ private:
             visible.push_back(entry);
         }
 
+        // Diagnostico de la rejilla vacia: cuantas entradas hay y cuantas pasan los filtros.
+        log_msg("[catalog] rebuild entries=%zu visible=%zu\n",
+                catalog_ ? catalog_->entries().size() : size_t(0), visible.size());
+
         // Ediciones del mismo juego: la tienda GameHub marca con groupKey las
         // entradas que son el mismo titulo en distinta region o edicion. Sin
         // esto la rejilla ensena la europea y la americana como dos fichas
@@ -1394,6 +1414,7 @@ private:
         styleChip(filterFits_, fitsOnly_);
         styleChip(filterMissing_, missingOnly_);
         updateSourceChip();
+        updateHeaderButtons();
         // The chip carries the active choice, so the header states the filter
         // in force without opening the menu.
         filterPlayers_->setText(playerFilter_ == PlayerFilter::Any
@@ -1447,6 +1468,124 @@ private:
             chip->setText(label);
         }
         styleChip(chip, active);
+    }
+
+    // Menus desplegables: cada opcion lleva titulo y descripcion.
+    void openSortMenu() {
+        if (busy_)
+            return;
+        const std::vector<SortMode> modes = {SortMode::Latest, SortMode::Popular,
+                                             SortMode::Alphabetical, SortMode::Largest};
+        const std::vector<std::string> labels = {
+            tr("gamehubnx/catalog/sort_latest_desc"),
+            tr("gamehubnx/catalog/sort_popular_desc"),
+            tr("gamehubnx/catalog/sort_alpha_desc"),
+            tr("gamehubnx/catalog/sort_size_desc")};
+        int selected = 0;
+        for (size_t i = 0; i < modes.size(); ++i)
+            if (modes[i] == sort_)
+                selected = static_cast<int>(i);
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/sort_menu_title"), labels,
+            [this, modes](int index) {
+                if (index >= 0 && index < static_cast<int>(modes.size()))
+                    setSort(modes[static_cast<size_t>(index)]);
+            },
+            selected);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    void openFilterMenu() {
+        if (busy_)
+            return;
+        const bool gamesOnly = settings_ &&
+            settings_->get().catalogFilter == CatalogFilter::Games;
+        auto mark = [](bool on, const std::string& text) {
+            return std::string(on ? "[x] " : "[ ] ") + text;
+        };
+        const std::vector<std::string> labels = {
+            mark(!gamesOnly, tr("gamehubnx/catalog/filter_all") + ": " +
+                              tr("gamehubnx/catalog/filter_all_desc")),
+            mark(gamesOnly, tr("gamehubnx/catalog/filter_games") + ": " +
+                             tr("gamehubnx/catalog/filter_games_desc")),
+            mark(favoritesOnly_, tr("gamehubnx/catalog/filter_favorites_desc")),
+            mark(onlineOnly_, tr("gamehubnx/catalog/filter_online") + ": " +
+                              tr("gamehubnx/catalog/filter_online_desc")),
+            mark(fitsOnly_, tr("gamehubnx/catalog/filter_fits") + ": " +
+                            tr("gamehubnx/catalog/filter_fits_desc")),
+            mark(missingOnly_, tr("gamehubnx/catalog/filter_missing") + ": " +
+                               tr("gamehubnx/catalog/filter_missing_desc")),
+            tr("gamehubnx/catalog/filter_players") + ": " +
+                tr("gamehubnx/catalog/filter_players_desc"),
+        };
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/filter_menu_title"), labels,
+            [this](int index) {
+                switch (index) {
+                case 0: setFilter(CatalogFilter::All); break;
+                case 1: setFilter(CatalogFilter::Games); break;
+                case 2:
+                    if (favorites_) favoritesOnly_ = !favoritesOnly_;
+                    rebuildEntries();
+                    break;
+                case 3: onlineOnly_ = !onlineOnly_; rebuildEntries(); break;
+                case 4: fitsOnly_ = !fitsOnly_; rebuildEntries(); break;
+                case 5:
+                    if (installed_) missingOnly_ = !missingOnly_;
+                    rebuildEntries();
+                    break;
+                case 6: openPlayerFilterMenu(); break;
+                default: break;
+                }
+            },
+            0);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    void openOriginMenu() {
+        if (busy_)
+            return;
+        const std::vector<SourceFilter> options = {SourceFilter::Both,
+                                                   SourceFilter::Torrent,
+                                                   SourceFilter::Direct};
+        const std::vector<std::string> labels = {
+            tr("gamehubnx/catalog/origin_both_desc"),
+            tr("gamehubnx/catalog/origin_torrent_desc"),
+            tr("gamehubnx/catalog/origin_direct_desc")};
+        int selected = 0;
+        for (size_t i = 0; i < options.size(); ++i)
+            if (options[i] == sourceFilter_)
+                selected = static_cast<int>(i);
+        auto* dropdown = new brls::Dropdown(
+            tr("gamehubnx/catalog/origin_menu_title"), labels,
+            [this, options](int index) {
+                if (index < 0 || index >= static_cast<int>(options.size()))
+                    return;
+                sourceFilter_ = options[static_cast<size_t>(index)];
+                rebuildEntries();
+            },
+            selected);
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+    }
+
+    // Texto de los botones de orden y filtros, y su estilo cuando hay algo activo.
+    void updateHeaderButtons() {
+        if (!sortButton_ || !filterButton_)
+            return;
+        const char* sortKey = "gamehubnx/catalog/sort_latest";
+        switch (sort_) {
+        case SortMode::Popular: sortKey = "gamehubnx/catalog/sort_popular"; break;
+        case SortMode::Alphabetical: sortKey = "gamehubnx/catalog/sort_alpha"; break;
+        case SortMode::Largest: sortKey = "gamehubnx/catalog/sort_size"; break;
+        default: break;
+        }
+        sortButton_->setText(tr(sortKey));
+        const bool gamesOnly = settings_ &&
+            settings_->get().catalogFilter == CatalogFilter::Games;
+        const bool anyFilter = gamesOnly || favoritesOnly_ || onlineOnly_ ||
+            fitsOnly_ || missingOnly_ || playerFilter_ != PlayerFilter::Any;
+        filterButton_->setText(tr("gamehubnx/catalog/filter_menu_title"));
+        styleChip(filterButton_, anyFilter);
     }
 
     // Texto de color segun el origen activo: ambos = texto normal, directa =
@@ -2179,6 +2318,8 @@ private:
     bool onlineOnly_ = false;
     SourceFilter sourceFilter_ = SourceFilter::Both;
     brls::Button* filterSource_ = nullptr;
+    brls::Button* sortButton_ = nullptr;
+    brls::Button* filterButton_ = nullptr;
     bool fitsOnly_ = false;
     bool missingOnly_ = false;
     PlayerFilter playerFilter_ = PlayerFilter::Any;

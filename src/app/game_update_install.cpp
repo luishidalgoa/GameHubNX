@@ -1,5 +1,6 @@
 #include "game_update_install.hpp"
 #include "installed_title_service.hpp"
+#include "gamehub_catalog.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -166,6 +167,31 @@ std::unordered_set<std::string> normalizedSet(
 }
 
 } // namespace
+
+std::vector<std::string> torrentUpdateVersions(
+    const std::vector<std::string>& paths, const std::string& titleId) {
+    std::vector<std::string> versions;
+    const std::string base = gamehub::baseTitleIdOf(titleId);
+    if (base.empty())
+        return versions;
+    for (const std::string& path : paths) {
+        bool update = false;
+        for (const std::string& id : titleIdsInPath(path)) {
+            if (gamehub::isUpdateTitleId(id) &&
+                gamehub::baseTitleIdOf(id) == base) {
+                update = true;
+                break;
+            }
+        }
+        uint64_t tag = 0;
+        if (!update || !fileVersionTag(path, tag) || tag == 0)
+            continue;
+        const std::string text = std::to_string(tag);
+        if (std::find(versions.begin(), versions.end(), text) == versions.end())
+            versions.push_back(text);
+    }
+    return versions;
+}
 
 std::vector<size_t> updateVersionMatches(const TorrentPreview& preview,
                                          const std::string& latestVersion,

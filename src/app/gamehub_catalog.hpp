@@ -102,8 +102,11 @@ std::string baseTitleIdOf(const std::string& titleId);
 // Returns false and fills `error` when the payload is not a usable index. A
 // malformed individual entry is skipped, not fatal: a single bad row should
 // never cost the user the rest of their library.
+// anyTrackerMagnets: el indice de una plataforma servido por GameHub. Sus magnets
+// pueden llevar trackers publicos (no solo RuTracker), y se aceptan.
 bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
-                  std::vector<std::string>& subIndexes, std::string& error);
+                  std::vector<std::string>& subIndexes, std::string& error,
+                  bool anyTrackerMagnets = false);
 
 // Una plataforma que la tienda puede servir, tal y como la describe
 // /api/shop/platforms.

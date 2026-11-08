@@ -118,6 +118,18 @@ std::vector<std::string> rutrackerTrackerCandidates(
     return urls;
 }
 
+// Trackers a los que anunciar un magnet: los de RuTracker si el magnet trae uno,
+// mas los publicos que el llamador admitio.
+std::vector<std::string> trackerCandidatesFor(const MagnetSpec& spec) {
+    std::vector<std::string> urls;
+    if (allowedTracker(spec.trackerUrl))
+        urls = rutrackerTrackerCandidates(spec.trackerUrl);
+    for (const std::string& url : spec.publicTrackers)
+        if (std::find(urls.begin(), urls.end(), url) == urls.end())
+            urls.push_back(url);
+    return urls;
+}
+
 bool containsCaseInsensitive(const char* text, const char* needle) {
     if (!text || !needle || !*needle)
         return false;
@@ -745,8 +757,20 @@ std::string bencodeString(const std::string& value) {
 
 } // namespace
 
+namespace {
+
+// Un tracker publico que el magnet puede usar: udp, http o https, con host.
+bool publicTrackerUrl(const std::string& url) {
+    if (url.size() > 512)
+        return false;
+    return url.rfind("udp://", 0) == 0 || url.rfind("http://", 0) == 0 ||
+           url.rfind("https://", 0) == 0;
+}
+
+} // namespace
+
 bool MagnetResolver::parse(const std::string& uri, MagnetSpec& spec,
-                           std::string& error) {
+                           std::string& error, bool allowPublicTrackers) {
     spec = {};
     if (uri.rfind("magnet:?", 0) != 0) {
         error = "Catalog entry has an invalid magnet URI.";
@@ -785,6 +809,13 @@ bool MagnetResolver::parse(const std::string& uri, MagnetSpec& spec,
         } else if (key == "tr" && spec.trackerUrl.empty() &&
                    allowedTracker(value)) {
             spec.trackerUrl = value;
+        } else if (key == "tr" && allowPublicTrackers &&
+                   publicTrackerUrl(value) &&
+                   spec.publicTrackers.size() < 32 &&
+                   std::find(spec.publicTrackers.begin(),
+                             spec.publicTrackers.end(),
+                             value) == spec.publicTrackers.end()) {
+            spec.publicTrackers.push_back(value);
         }
         if (end == std::string::npos)
             break;
@@ -794,8 +825,12 @@ bool MagnetResolver::parse(const std::string& uri, MagnetSpec& spec,
         error = "The magnet does not contain a BitTorrent v1 info hash.";
         return false;
     }
+    if (spec.trackerUrl.empty() && !spec.publicTrackers.empty())
+        spec.trackerUrl = spec.publicTrackers.front();
     if (spec.trackerUrl.empty()) {
-        error = "The magnet does not contain a supported RuTracker tracker.";
+        error = allowPublicTrackers
+            ? "The magnet does not contain a supported tracker."
+            : "The magnet does not contain a supported RuTracker tracker.";
         return false;
     }
     return true;
@@ -830,8 +865,7 @@ bool MagnetResolver::buildTorrent(const MagnetSpec& spec,
        to one mirror, starving the swarm. metainfo_parse flattens every
        announce-list tier into mi->trackers[] and announces to all of them.
        Dict keys stay sorted: announce < announce-list < info. */
-    std::vector<std::string> trackers =
-        rutrackerTrackerCandidates(spec.trackerUrl);
+    std::vector<std::string> trackers = trackerCandidatesFor(spec);
     std::string announceList = "13:announce-listl";
     for (const std::string& tracker : trackers)
         announceList += "l" + bencodeString(tracker) + "e";
@@ -862,12 +896,13 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
                                    const ProgressCallback& progress,
                                    std::string& error,
                                    std::vector<uint8_t>* verifiedPeers,
-                                   const std::vector<uint8_t>* presetInfo)
+                                   const std::vector<uint8_t>* presetInfo,
+                                   bool allowPublicTrackers)
     const {
     if (verifiedPeers)
         verifiedPeers->clear();
     MagnetSpec spec;
-    if (!parse(uri, spec, error))
+    if (!parse(uri, spec, error, allowPublicTrackers))
         return false;
 
     /* Pre-resolved info dictionary from the catalog (RF_ACCESS_PLAN П2.1):
@@ -915,7 +950,7 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
     std::string firstFailure;
     bool sawTrackerFailure = false;
     bool sawNotRegistered = false;
-    auto trackers = rutrackerTrackerCandidates(spec.trackerUrl);
+    auto trackers = trackerCandidatesFor(spec);
     for (const std::string& tracker : trackers) {
         if (cancelled)
             break;

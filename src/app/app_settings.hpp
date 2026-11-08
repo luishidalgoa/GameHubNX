@@ -63,8 +63,8 @@ struct AppSettingsData {
     bool checkForUpdatesOnLaunch = true;
     // First-run disclaimer: catalog comes from a third party. Shown once.
     bool catalogDisclaimerAcknowledged = false;
-    // Servidor FTP de SOLO LECTURA sobre la tarjeta, para sacar registros y
-    // ficheros de la consola sin depender de otro homebrew.
+    // Servidor FTP con acceso completo a la tarjeta, para sacar y subir ficheros
+    // de la consola sin depender de otro homebrew.
     //
     // Apagado por defecto, al reves que el acompanante web al que sustituye: es
     // un servicio que publica la tarjeta entera en la red local, y eso no se

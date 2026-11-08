@@ -5,6 +5,7 @@
 // metadatos no entra aqui: ese era el origen de la actualizacion que no existia.
 
 #include "app/shop_update_source.hpp"
+#include "app/torrent_update_source.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -88,7 +89,37 @@ void testSourceWithoutCatalogHasNoVersions() {
 
 } // namespace
 
+// Fuente compuesta: la tienda y lo que un sondeo de torrent encontro. Lo guardado
+// sobrevive a reiniciar, y un juego sin nada no inventa version.
+static void testTorrentVersionsJoinTheShopAndPersist() {
+    const std::string path = "/tmp/gamehubnx-torrent-updates-test.json";
+    std::remove(path.c_str());
+    {
+        gamehubnx::TorrentUpdateSource source(nullptr, path);
+        std::vector<std::string> out;
+        assert(!source.collectLatestVersions("0100750014426000", out));
+        source.setVersions("0100750014426000", {"65536", "131072"});
+        assert(source.collectLatestVersions("0100750014426000", out));
+        assert(out.size() == 2 && out[1] == "131072");
+        // Sondeado sin actualizaciones: fuente conocida, sin versiones.
+        source.setVersions("0100BBBB00000000", {});
+        std::vector<std::string> none;
+        assert(source.collectLatestVersions("0100BBBB00000000", none) && none.empty());
+        std::string error;
+        assert(source.save(error));
+    }
+    {
+        gamehubnx::TorrentUpdateSource source(nullptr, path);
+        source.load();
+        std::vector<std::string> out;
+        assert(source.collectLatestVersions("0100750014426800", out));
+        assert(out.size() == 2 && out[0] == "65536");
+    }
+    std::remove(path.c_str());
+}
+
 int main() {
+    testTorrentVersionsJoinTheShopAndPersist();
     testCollectsOnlyShopUpdatesOfTheGame();
     testNoShopEntryMeansNoSource();
     testUntaggedShopUpdateIsNotOffered();

@@ -1450,7 +1450,33 @@ static void testTorrentFileChoice() {
     assert(gamehubnx::gamehub::torrentFilesNamed(paths, "No existe.iso").empty());
 }
 
+// Un magnet de plataforma (coleccion de Minerva) trae trackers publicos: el indice de
+// la plataforma los acepta, y el resolvedor solo los usa si se le pide.
+static void testPublicTrackerMagnetsOnlyWhenAllowed() {
+    const std::string hash = "1edfd986f73cc2875561050c239c3e42d1e459bc";
+    const std::string magnet = "magnet:?xt=urn:btih:" + hash +
+        "&dn=Minerva_Myrient&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce";
+    gamehubnx::MagnetSpec spec;
+    std::string error;
+    assert(!gamehubnx::MagnetResolver::parse(magnet, spec, error));
+    assert(gamehubnx::MagnetResolver::parse(magnet, spec, error, true));
+    assert(spec.publicTrackers.size() == 1);
+    assert(spec.trackerUrl == spec.publicTrackers[0]);
+    assert(spec.infoHashHex == "1EDFD986F73CC2875561050C239C3E42D1E459BC");
+
+    const std::string json =
+        "{\"files\":[{\"gh_magnet\":\"" + magnet + "\",\"gh_title\":\"0 Story\",\"gh_kind\":\"rom\"}]}";
+    std::vector<gamehubnx::CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string parseError;
+    assert(gamehubnx::gamehub::parseCatalog(json, out, subs, parseError) && out.empty());
+    out.clear();
+    assert(gamehubnx::gamehub::parsePlatformIndex(json, "ps2", out, parseError));
+    assert(out.size() == 1 && out[0].magnetUri == magnet);
+}
+
 int main() {
+    testPublicTrackerMagnetsOnlyWhenAllowed();
     testTorrentFileChoice();
     testSourceFilter();
     testMagnetParsing();

@@ -245,6 +245,88 @@ void FtpServer::serve() {
                     continue;
                 }
 
+                if (reply.action == FtpSession::Action::DeleteFile ||
+                    reply.action == FtpSession::Action::MakeDir ||
+                    reply.action == FtpSession::Action::RemoveDir ||
+                    reply.action == FtpSession::Action::Rename) {
+                    // El registro de la app lo tiene abierto este proceso: ni se borra
+                    // ni se renombra desde el FTP.
+                    const std::string& target = session.path();
+                    const std::string& from = session.renameSource();
+                    if (target == kLogPath || from == kLogPath) {
+                        sendLine(control, "550 El registro esta en uso",
+                                 stopping_);
+                        continue;
+                    }
+                    bool ok = false;
+                    const char* success = "250 Hecho";
+                    if (reply.action == FtpSession::Action::DeleteFile) {
+                        ok = unlink(target.c_str()) == 0;
+                    } else if (reply.action == FtpSession::Action::MakeDir) {
+                        ok = mkdir(target.c_str(), 0777) == 0;
+                        success = "257 Carpeta creada";
+                    } else if (reply.action == FtpSession::Action::RemoveDir) {
+                        ok = rmdir(target.c_str()) == 0;
+                    } else {
+                        ok = rename(from.c_str(), target.c_str()) == 0;
+                    }
+                    sendLine(control, ok ? success : "550 No se pudo hacer",
+                             stopping_);
+                    continue;
+                }
+
+                if (reply.action == FtpSession::Action::ReceiveFile) {
+                    if (dataListener < 0) {
+                        sendLine(control, "425 Abre antes el canal de datos",
+                                 stopping_);
+                        continue;
+                    }
+                    if (session.path() == kLogPath) {
+                        net_close(dataListener);
+                        dataListener = -1;
+                        sendLine(control, "550 El registro esta en uso",
+                                 stopping_);
+                        continue;
+                    }
+                    sendLine(control, reply.text, stopping_);
+
+                    socket_t data = -1;
+                    for (int i = 0; i < kIdleSeconds * 100 && data < 0 &&
+                                    !stopping_.load(); ++i) {
+                        data = net_accept(dataListener, nullptr);
+                        if (data < 0)
+                            std::this_thread::sleep_for(
+                                std::chrono::milliseconds(10));
+                    }
+                    net_close(dataListener);
+                    dataListener = -1;
+                    if (data < 0) {
+                        sendLine(control, "425 El canal de datos no llego",
+                                 stopping_);
+                        continue;
+                    }
+                    FILE* out = std::fopen(session.path().c_str(),
+                                           session.appendMode() ? "ab" : "wb");
+                    bool ok = out != nullptr;
+                    uint8_t chunk[16 * 1024];
+                    while (ok) {
+                        const int n = net_recv(data, chunk, sizeof(chunk));
+                        if (n == 0)
+                            break;
+                        if (n < 0 ||
+                            std::fwrite(chunk, 1, static_cast<size_t>(n),
+                                        out) != static_cast<size_t>(n))
+                            ok = false;
+                    }
+                    if (out && std::fclose(out) != 0)
+                        ok = false;
+                    net_close(data);
+                    sendLine(control, ok ? "226 Recibido"
+                                         : "451 No se pudo escribir",
+                             stopping_);
+                    continue;
+                }
+
                 if (reply.action == FtpSession::Action::SendListing ||
                     reply.action == FtpSession::Action::SendFile) {
                     if (dataListener < 0) {

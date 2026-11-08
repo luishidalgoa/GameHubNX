@@ -320,9 +320,9 @@ $(BUILD_DIR)/tests/test_game_update_service: tests/test_game_update_service.cpp 
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^ $(LDFLAGS)
 
 $(BUILD_DIR)/tests/test_update_file_select: tests/test_update_file_select.cpp \
-		src/app/game_update_install.cpp
+		src/app/game_update_install.cpp $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ $^
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_update_file_select.cpp src/app/game_update_install.cpp $(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o
 
 $(BUILD_DIR)/tests/test_shop_update_source: tests/test_shop_update_source.cpp \
 		$(BUILD_DIR)/src/app/gamehub_catalog.o $(BUILD_DIR)/src/core/sha1.o src/app/game_update_install.cpp
