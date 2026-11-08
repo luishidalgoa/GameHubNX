@@ -550,23 +550,65 @@ private:
         // Una sola busqueda de torrent a la vez: cada una abre su DHT y sus sockets,
         // y varias pulsaciones seguidas agotaban los sockets de la consola.
         if (torrentUpdateInFlight_) {
-            brls::Application::notify(tr("gamehubnx/detail/finding_peers"));
+            /* Segunda pulsacion sobre la busqueda en curso: la cancela. */
+            if (updateCancelled_)
+                updateCancelled_->store(true);
+            status_->setText(tr("gamehubnx/installed/update_cancelling"));
             return true;
         }
         torrentUpdateInFlight_ = true;
-        status_->setText(tr("gamehubnx/detail/finding_peers"));
+        auto cancelFlag = std::make_shared<std::atomic<bool>>(false);
+        updateCancelled_ = cancelFlag;
+        status_->setText(tr("gamehubnx/detail/finding_peers") +
+                         tr("gamehubnx/installed/update_progress_hint"));
         auto alive = alive_;
         const std::string tmpDir = manager_->rootPath();
         DownloadManager* manager = manager_;
-        brls::async([this, alive, manager, magnet, titleId, latest, tmpDir] {
+        brls::async([this, alive, manager, magnet, titleId, latest, tmpDir,
+                     cancelFlag] {
             const std::string tmp = tmpDir + "/_update_magnet.torrent";
             MagnetResolver resolver;
-            std::atomic<bool> cancelled {false};
             std::string error;
             std::vector<uint8_t> peers;
-            const bool resolved = resolver.resolveToFile(magnet, tmp, cancelled,
-                                                         {}, error, &peers,
-                                                         nullptr);
+            /* Progreso al estado de la fila. El callback corre en hilos del
+               resolutor: la etiqueta solo se toca desde el hilo de la UI. */
+            auto progress = [this, alive](const MagnetProgress& p) {
+                std::string text;
+                switch (p.stage) {
+                    case MagnetProgress::Stage::FindingPeers:
+                        text = p.peerCount
+                                   ? tr("gamehubnx/installed/update_finding_dht",
+                                        p.peerCount)
+                                   : tr("gamehubnx/detail/finding_peers");
+                        break;
+                    case MagnetProgress::Stage::Connecting:
+                        text = tr("gamehubnx/detail/contacting_peer",
+                                  p.peerIndex, p.peerCount);
+                        break;
+                    case MagnetProgress::Stage::FetchingMetadata:
+                        text = tr("gamehubnx/detail/fetching_metadata",
+                                  p.completedPieces, p.totalPieces);
+                        break;
+                    case MagnetProgress::Stage::Validating:
+                        text = tr("gamehubnx/detail/validating");
+                        break;
+                }
+                text += tr("gamehubnx/installed/update_progress_hint");
+                brls::sync([this, alive, text] {
+                    if (!alive->load() || !torrentUpdateInFlight_)
+                        return;
+                    status_->setText(text);
+                });
+            };
+            bool resolved = false;
+            try {
+                resolved = resolver.resolveToFile(magnet, tmp, *cancelFlag,
+                                                  progress, error, &peers,
+                                                  nullptr);
+            } catch (...) {
+                /* Antes, una excepcion aqui escapaba del hilo y cerraba la app. */
+                error = tr("gamehubnx/installed/update_error_no_peers");
+            }
             std::string taskId;
             std::string importError;
             bool imported = false;
@@ -583,6 +625,8 @@ private:
                             importError, peers, "update:" + latest);
                     }
                 }
+            } else if (cancelFlag->load()) {
+                importError = tr("gamehubnx/installed/update_cancelled");
             } else {
                 importError = error;
             }
@@ -1020,6 +1064,7 @@ private:
     TorrentUpdateSource* torrentUpdates_ = nullptr;
     bool probing_ = false;
     bool torrentUpdateInFlight_ = false;
+    std::shared_ptr<std::atomic<bool>> updateCancelled_;
     brls::Label* status_ = nullptr;
     EmptyStateView* emptyState_ = nullptr;
     brls::RecyclerFrame* recycler_ = nullptr;

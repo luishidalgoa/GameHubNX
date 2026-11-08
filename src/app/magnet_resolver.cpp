@@ -930,11 +930,33 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
 
     if (progress)
         progress({MagnetProgress::Stage::FindingPeers});
+    /* Peer workers report from several threads at once, so the caller's callback
+       is serialised here and never runs concurrently with itself. */
+    ProgressCallback serialProgress;
+    std::mutex progressMutex;
+    if (progress) {
+        serialProgress = [&progress, &progressMutex](const MagnetProgress& p) {
+            std::lock_guard<std::mutex> lock(progressMutex);
+            progress(p);
+        };
+    }
     DhtSearch dhtSearch;
     std::atomic<bool> dhtStop{false};
-    std::thread dhtThread([&spec, &cancelled, &dhtStop, &dhtSearch] {
-        runDhtSearch(spec.infoHash, cancelled, dhtStop, dhtSearch);
-    });
+    std::atomic<bool> dhtDone{false};
+    std::thread dhtThread;
+    try {
+        dhtThread = std::thread([&spec, &cancelled, &dhtStop, &dhtSearch, &dhtDone] {
+            try {
+                runDhtSearch(spec.infoHash, cancelled, dhtStop, dhtSearch);
+            } catch (...) {
+                log_msg("[magnet] DHT search failed\n");
+            }
+            dhtDone.store(true);
+        });
+    } catch (...) {
+        /* No DHT search this time; the trackers and the rest still run. */
+        log_msg("[magnet] DHT search not started (thread creation failed)\n");
+    }
     /* The search now outlives the tracker phase, so every exit path below has
        to stop and join it. */
     struct DhtJoin {
@@ -974,6 +996,8 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
             if (sawNotRegistered)
                 break;
         }
+        if (!result.tracker_failure && count == 0)
+            log_msg("[magnet] tracker %s returned no peers\n", tracker.c_str());
         appendUniquePeers(peers, batch, count);
         if (count)
             log_msg("[magnet] tracker %s added %u peers, total=%u\n",
@@ -1009,8 +1033,23 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
        so wait for it here. */
     if (sawNotRegistered)
         dhtStop.store(true);
-    if (peers.empty() || sawNotRegistered)
-        dhtThread.join();
+    if (peers.empty() || sawNotRegistered) {
+        /* Wait for the DHT search and keep reporting how many peers it has found,
+           so the caller sees progress instead of a frozen label. Only a thread
+           that exists is joined: join() on a non-joinable std::thread throws, and
+           that escaped resolveToFile and aborted the app. */
+        uint64_t lastReport = 0;
+        while (dhtThread.joinable() && !dhtDone.load() && !cancelled) {
+            if (serialProgress && now_ms() - lastReport >= 1000) {
+                lastReport = now_ms();
+                serialProgress({MagnetProgress::Stage::FindingPeers, 0, 0, 0,
+                                dhtPeerCount(dhtSearch)});
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (dhtThread.joinable())
+            dhtThread.join();
+    }
     mergeDht();
     uint32_t peerCount = static_cast<uint32_t>(peers.size() / 6);
     if (!peerCount) {
@@ -1121,65 +1160,87 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
         }
 
         std::vector<std::thread> workers;
+        /* Joins every started worker on any exit from this round, so an exception
+           can never destroy a joinable std::thread (that calls std::terminate). */
+        struct WorkersJoin {
+            std::vector<std::thread>& threads;
+            ~WorkersJoin() {
+                for (std::thread& worker : threads)
+                    if (worker.joinable())
+                        worker.join();
+            }
+        } workersJoin{workers};
         uint32_t pending = roundEnd - nextPeer;
         uint32_t workerCount = std::min(pending, kMaxConcurrentPeers);
-        for (uint32_t worker = 0; worker < workerCount; ++worker) {
-            workers.emplace_back([&, roundEnd] {
-                while (!cancelled && !stopWorkers && now_ms() < deadline) {
-                    uint32_t peerIndex = 0;
-                    {
-                        std::lock_guard<std::mutex> lock(mutex);
-                        if (resolved || nextPeer >= roundEnd)
-                            return;
-                        peerIndex = nextPeer++;
-                    }
-
-                    std::vector<uint8_t> candidate;
-                    PeerAttempt attempt;
-                    bool fetched = fetchMetadataFromPeer(
-                        peers.data() + peerIndex * 6, spec, peerId, peerIndex,
-                        peerCount, deadline, cancelled, stopWorkers, progress,
-                        candidate, attempt);
-                    if (attempt.connected)
-                        reachedPeers.fetch_add(1);
-                    if (attempt.handshakeVerified) {
-                        std::lock_guard<std::mutex> lock(mutex);
-                        appendUniquePeers(verifiedEndpoints,
-                                          peers.data() + peerIndex * 6, 1);
-                    }
-                    if (!fetched)
-                        continue;
-
-                    std::vector<uint8_t> torrentProbe;
-                    std::string probeError;
-                    if (!buildTorrent(spec, candidate, torrentProbe,
-                                      probeError)) {
-                        log_msg("[magnet] peer %u/%u metadata rejected: %s\n",
-                                peerIndex + 1, peerCount, probeError.c_str());
-                        /* Same info-hash → same dictionary. A parse/safety
-                           reject will never succeed from another peer. */
-                        if (probeError ==
-                            "Resolved metadata is not a supported safe torrent.") {
-                            std::lock_guard<std::mutex> lock(mutex);
-                            if (unsafeMetadata.empty())
-                                unsafeMetadata = probeError;
-                            stopWorkers.store(true);
-                        }
-                        continue;
-                    }
-
-                    {
-                        std::lock_guard<std::mutex> lock(mutex);
-                        if (!resolved) {
-                            metadata = std::move(candidate);
-                            resolved = true;
-                            stopWorkers.store(true);
-                        }
-                    }
-                    return;
+        auto workerBody = [&, roundEnd] {
+            while (!cancelled && !stopWorkers && now_ms() < deadline) {
+                uint32_t peerIndex = 0;
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    if (resolved || nextPeer >= roundEnd)
+                        return;
+                    peerIndex = nextPeer++;
                 }
-            });
+
+                std::vector<uint8_t> candidate;
+                PeerAttempt attempt;
+                bool fetched = fetchMetadataFromPeer(
+                    peers.data() + peerIndex * 6, spec, peerId, peerIndex,
+                    peerCount, deadline, cancelled, stopWorkers, serialProgress,
+                    candidate, attempt);
+                if (attempt.connected)
+                    reachedPeers.fetch_add(1);
+                if (attempt.handshakeVerified) {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    appendUniquePeers(verifiedEndpoints,
+                                      peers.data() + peerIndex * 6, 1);
+                }
+                if (!fetched)
+                    continue;
+
+                std::vector<uint8_t> torrentProbe;
+                std::string probeError;
+                if (!buildTorrent(spec, candidate, torrentProbe,
+                                  probeError)) {
+                    log_msg("[magnet] peer %u/%u metadata rejected: %s\n",
+                            peerIndex + 1, peerCount, probeError.c_str());
+                    /* Same info-hash → same dictionary. A parse/safety
+                       reject will never succeed from another peer. */
+                    if (probeError ==
+                        "Resolved metadata is not a supported safe torrent.") {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        if (unsafeMetadata.empty())
+                            unsafeMetadata = probeError;
+                        stopWorkers.store(true);
+                    }
+                    continue;
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    if (!resolved) {
+                        metadata = std::move(candidate);
+                        resolved = true;
+                        stopWorkers.store(true);
+                    }
+                }
+                return;
+            }
+        };
+        /* Thread creation can fail on the console (memory or thread limits). Thrown
+           from inside this loop it used to unwind past threads already started and
+           not yet joined, and ~thread then aborted the whole app. Keep the workers
+           that did start; if none did, run this round on the current thread. */
+        try {
+            workers.reserve(workerCount);
+            for (uint32_t worker = 0; worker < workerCount; ++worker)
+                workers.emplace_back(workerBody);
+        } catch (...) {
+            log_msg("[magnet] peer worker creation failed, %zu running\n",
+                    workers.size());
         }
+        if (workers.empty())
+            workerBody();
         for (std::thread& worker : workers)
             worker.join();
     }
