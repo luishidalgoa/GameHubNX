@@ -138,6 +138,30 @@ struct CatalogEntry {
     }
 };
 
+// Filtro de origen de una lista: todo, solo descarga directa o solo torrent.
+enum class SourceFilter { Both, Direct, Torrent };
+
+inline bool matchesSourceFilter(const CatalogEntry& entry, SourceFilter filter) {
+    switch (filter) {
+    case SourceFilter::Direct:
+        return entry.isDirectDownload();
+    case SourceFilter::Torrent:
+        return !entry.isDirectDownload() && !entry.magnetUri.empty();
+    case SourceFilter::Both:
+        break;
+    }
+    return true;
+}
+
+inline SourceFilter nextSourceFilter(SourceFilter filter) {
+    switch (filter) {
+    case SourceFilter::Both:    return SourceFilter::Direct;
+    case SourceFilter::Direct:  return SourceFilter::Torrent;
+    case SourceFilter::Torrent: return SourceFilter::Both;
+    }
+    return SourceFilter::Both;
+}
+
 // Built-in Langegen switch_games.json URL used when catalogSourceUrl is empty.
 std::string defaultCatalogSourceUrl();
 

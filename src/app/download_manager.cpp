@@ -1036,6 +1036,18 @@ bool DownloadManager::setTaskInstallTarget(
     return true;
 }
 
+bool DownloadManager::setTaskDestinationDir(const std::string& taskId,
+                                            const std::string& dir) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    DownloadTask* task = findLocked(taskId);
+    if (!task)
+        return false;
+    task->destinationDir = dir;
+    std::string ignored;
+    saveLocked(ignored);
+    return true;
+}
+
 bool DownloadManager::resume(const std::string& taskId) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (externallyLeasedLocked(taskId))

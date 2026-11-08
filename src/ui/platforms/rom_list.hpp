@@ -1,6 +1,8 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
+#include <unistd.h>
 #include <map>
 #include <memory>
 #include <string>
@@ -13,6 +15,7 @@
 #include "app/download_manager.hpp"
 #include "app/favorites_service.hpp"
 #include "app/gamehub_catalog.hpp"
+#include "app/magnet_resolver.hpp"
 #include "app/rom_paths.hpp"
 #include "ui/catalog/catalog_grid.hpp"
 #include "ui/platforms/rom_grid.hpp"
@@ -176,6 +179,23 @@ public:
             return true;
         });
         headerRow->addView(onlineChip_);
+
+        // Un solo badge para el origen (ambos / directa / torrent), igual que en
+        // el catalogo: el texto cambia de color segun lo que filtra.
+        sourceChip_ = new brls::Button();
+        sourceChip_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
+        sourceChip_->setHeight(40);
+        sourceChip_->setFontSize(theme::kFontCaption);
+        sourceChip_->setShrink(0.0f);
+        sourceChip_->setPaddingLeft(14);
+        sourceChip_->setPaddingRight(14);
+        sourceChip_->setText(tr("gamehubnx/catalog/filter_source_both"));
+        sourceChip_->registerClickAction([this](brls::View*) {
+            sourceFilter_ = nextSourceFilter(sourceFilter_);
+            rebuild();
+            return true;
+        });
+        headerRow->addView(sourceChip_);
         content->addView(headerRow);
 
         recycler_ = new brls::RecyclerFrame();
@@ -358,10 +378,72 @@ private:
         enqueueEntry(roms[index], destination);
     }
 
+    // Un magnet de la tienda para una ROM: se resuelve a un .torrent y se baja
+    // entero a la carpeta del emulador. A diferencia de Switch no hay ficheros
+    // que elegir: la ROM es el torrent.
+    void enqueueMagnet(const CatalogEntry& rom, const std::string& destination) {
+        auto alive = alive_;
+        DownloadManager* manager = manager_;
+        const std::string magnet = rom.magnetUri;
+        const std::string title = rom.title;
+        brls::Application::notify(tr("gamehubnx/detail/finding_peers"));
+        brls::async([alive, manager, magnet, title, destination] {
+            const std::string tmp = manager->rootPath() + "/_rom_magnet_" +
+                std::to_string(std::chrono::steady_clock::now()
+                                   .time_since_epoch().count()) + ".torrent";
+            MagnetResolver resolver;
+            std::atomic<bool> cancelled {false};
+            std::string err;
+            std::vector<uint8_t> peers;
+            const bool ok = resolver.resolveToFile(
+                magnet, tmp, cancelled, {}, err, &peers, nullptr);
+            brls::sync([alive, manager, ok, err, tmp, title, destination,
+                        peers = std::move(peers)]() mutable {
+                if (!alive->load()) {
+                    ::unlink(tmp.c_str());
+                    return;
+                }
+                if (!ok) {
+                    brls::Application::notify(err.empty()
+                        ? tr("gamehubnx/detail/shop_unavailable") : err);
+                    ::unlink(tmp.c_str());
+                    return;
+                }
+                TorrentPreview preview;
+                std::string error;
+                if (!DownloadManager::previewTorrent(tmp, preview, error)) {
+                    brls::Application::notify(error);
+                    ::unlink(tmp.c_str());
+                    return;
+                }
+                const std::vector<uint8_t> actions(
+                    preview.files.size(),
+                    static_cast<uint8_t>(FileAction::Download));
+                std::string taskId;
+                const bool imported = manager->importTorrentActions(
+                    tmp, actions, taskId, error, peers);
+                ::unlink(tmp.c_str());
+                if (!imported) {
+                    brls::Application::notify(error);
+                    return;
+                }
+                manager->setTaskDestinationDir(taskId, destination);
+                brls::Application::notify(
+                    tr("gamehubnx/platforms/downloading", title));
+            });
+        });
+    }
+
     // Por entrada y no por indice: la version que elige la ficha --una edicion
     // regional-- no esta en la lista, se construye clonando la entrada con otra
     // URL.
     void enqueueEntry(const CatalogEntry& rom, const std::string& destination) {
+        // Solo magnet (torrent de la tienda): no hay URL que pedir al servidor,
+        // hay que resolverlo y bajarlo como torrent.
+        if (!rom.isDirectDownload() && !rom.magnetUri.empty()) {
+            enqueueMagnet(rom, destination);
+            return;
+        }
         DebridImport import;
         import.infoHash = catalogLower(rom.infoHash);
         import.name = rom.title;
@@ -479,6 +561,8 @@ private:
                 continue;
             if (onlineOnly_ && !rom.online)
                 continue;
+            if (!matchesSourceFilter(rom, sourceFilter_))
+                continue;
             shown.push_back(rom);
         }
         const size_t count = shown.size();
@@ -500,6 +584,22 @@ private:
             onlineChip_->setStyle(onlineOnly_
                                       ? &brls::BUTTONSTYLE_PRIMARY
                                       : &brls::BUTTONSTYLE_DEFAULT);
+        if (sourceChip_) {
+            switch (sourceFilter_) {
+            case SourceFilter::Both:
+                sourceChip_->setText(tr("gamehubnx/catalog/filter_source_both"));
+                sourceChip_->setTextColor(theme::textPrimary());
+                break;
+            case SourceFilter::Direct:
+                sourceChip_->setText(tr("gamehubnx/catalog/filter_source_direct"));
+                sourceChip_->setTextColor(theme::success());
+                break;
+            case SourceFilter::Torrent:
+                sourceChip_->setText(tr("gamehubnx/catalog/filter_source_torrent"));
+                sourceChip_->setTextColor(theme::accent());
+                break;
+            }
+        }
         recyclerHost_->setVisibility(count == 0 ? brls::Visibility::GONE
                                                 : brls::Visibility::VISIBLE);
         recycler_->reloadData();
@@ -548,6 +648,8 @@ private:
     bool favoritesOnly_ = false;
     bool onlineOnly_ = false;
     brls::Button* onlineChip_ = nullptr;
+    SourceFilter sourceFilter_ = SourceFilter::Both;
+    brls::Button* sourceChip_ = nullptr;
     brls::Button* favoritesChip_ = nullptr;
     std::string destination_;
     brls::AppletFrame* frame_ = nullptr;

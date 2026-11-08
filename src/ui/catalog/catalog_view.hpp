@@ -347,6 +347,13 @@ public:
         header_->addView(filterFits_);
         header_->addView(filterMissing_);
         header_->addView(filterPlayers_);
+        // Un solo badge para el origen (ambos / directa / torrent), en vez de
+        // un chip por cada opcion. Cada estado tiene su color de texto.
+        filterSource_ = makeChip(tr("gamehubnx/catalog/filter_source_both"), [this] {
+            sourceFilter_ = nextSourceFilter(sourceFilter_);
+            rebuildEntries();
+        });
+        header_->addView(filterSource_);
         if (!favorites_)
             filterFavorites_->setVisibility(brls::Visibility::GONE);
         if (!installed_)
@@ -904,6 +911,8 @@ private:
                 continue;
             if (onlineOnly && !entry.online)
                 continue;
+            if (!matchesSourceFilter(entry, sourceFilter_))
+                continue;
             if (fitsOnly_ && !catalogEntryFitsFreeSpace(entry.size, storage))
                 continue;
             const GameMetadata* meta =
@@ -1384,6 +1393,7 @@ private:
         styleChip(filterOnline_, onlineOnly_);
         styleChip(filterFits_, fitsOnly_);
         styleChip(filterMissing_, missingOnly_);
+        updateSourceChip();
         // The chip carries the active choice, so the header states the filter
         // in force without opening the menu.
         filterPlayers_->setText(playerFilter_ == PlayerFilter::Any
@@ -1437,6 +1447,27 @@ private:
             chip->setText(label);
         }
         styleChip(chip, active);
+    }
+
+    // Texto de color segun el origen activo: ambos = texto normal, directa =
+    // verde, torrent = acento.
+    void updateSourceChip() {
+        if (!filterSource_)
+            return;
+        switch (sourceFilter_) {
+        case SourceFilter::Both:
+            filterSource_->setText(tr("gamehubnx/catalog/filter_source_both"));
+            filterSource_->setTextColor(theme::textPrimary());
+            break;
+        case SourceFilter::Direct:
+            filterSource_->setText(tr("gamehubnx/catalog/filter_source_direct"));
+            filterSource_->setTextColor(theme::success());
+            break;
+        case SourceFilter::Torrent:
+            filterSource_->setText(tr("gamehubnx/catalog/filter_source_torrent"));
+            filterSource_->setTextColor(theme::accent());
+            break;
+        }
     }
 
     static void styleChip(brls::Button* chip, bool active) {
@@ -2146,6 +2177,8 @@ private:
     // always comes back to the full catalog.
     bool favoritesOnly_ = false;
     bool onlineOnly_ = false;
+    SourceFilter sourceFilter_ = SourceFilter::Both;
+    brls::Button* filterSource_ = nullptr;
     bool fitsOnly_ = false;
     bool missingOnly_ = false;
     PlayerFilter playerFilter_ = PlayerFilter::Any;

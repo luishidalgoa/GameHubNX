@@ -297,6 +297,9 @@ public:
     // terminada: a partir de ahi el backend ya escribe en una memoria.
     bool setTaskInstallTarget(const std::string& id,
                               install::InstallStorageTarget target);
+    // Carpeta a la que mover una descarga al terminar (ROMs de plataformas). Va
+    // despues del import porque un torrent de magnet se crea antes de saber el destino.
+    bool setTaskDestinationDir(const std::string& id, const std::string& dir);
 
     void setInstallTarget(install::InstallStorageTarget target) {
         installTarget_.store(target, std::memory_order_relaxed);

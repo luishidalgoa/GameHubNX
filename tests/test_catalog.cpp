@@ -1399,7 +1399,37 @@ void testBundledMetadataSnapshotLoadsWithoutNetwork() {
     rmdir(root.c_str());
 }
 
+// Filtro de origen: ambos, solo directa o solo torrent. Y el ciclo del badge.
+static void testSourceFilter() {
+    CatalogEntry direct;
+    direct.directUrl = "https://gamehub.hdglabs.com/api/shop/download/1/a.nsp";
+    CatalogEntry torrent;
+    torrent.magnetUri = "magnet:?xt=urn:btih:9e2471d4ffbe0efecf4d5ada4f5c6607e57a2244";
+    CatalogEntry none;
+
+    assert(gamehubnx::matchesSourceFilter(direct, gamehubnx::SourceFilter::Both));
+    assert(gamehubnx::matchesSourceFilter(torrent, gamehubnx::SourceFilter::Both));
+    assert(gamehubnx::matchesSourceFilter(none, gamehubnx::SourceFilter::Both));
+
+    assert(gamehubnx::matchesSourceFilter(direct, gamehubnx::SourceFilter::Direct));
+    assert(!gamehubnx::matchesSourceFilter(torrent, gamehubnx::SourceFilter::Direct));
+
+    assert(!gamehubnx::matchesSourceFilter(direct, gamehubnx::SourceFilter::Torrent));
+    assert(gamehubnx::matchesSourceFilter(torrent, gamehubnx::SourceFilter::Torrent));
+    // Una entrada con las dos cosas es directa: el torrent solo cuenta cuando no hay URL.
+    CatalogEntry both = direct;
+    both.magnetUri = torrent.magnetUri;
+    assert(gamehubnx::matchesSourceFilter(both, gamehubnx::SourceFilter::Direct));
+    assert(!gamehubnx::matchesSourceFilter(both, gamehubnx::SourceFilter::Torrent));
+    assert(!gamehubnx::matchesSourceFilter(none, gamehubnx::SourceFilter::Torrent));
+
+    assert(gamehubnx::nextSourceFilter(gamehubnx::SourceFilter::Both) == gamehubnx::SourceFilter::Direct);
+    assert(gamehubnx::nextSourceFilter(gamehubnx::SourceFilter::Direct) == gamehubnx::SourceFilter::Torrent);
+    assert(gamehubnx::nextSourceFilter(gamehubnx::SourceFilter::Torrent) == gamehubnx::SourceFilter::Both);
+}
+
 int main() {
+    testSourceFilter();
     testMagnetParsing();
     testTrustedSourceAllowlist();
     testCatalogParsing();
