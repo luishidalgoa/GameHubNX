@@ -878,7 +878,12 @@ private:
             return;
         }
         if (debridModeActive(settings_)) {
-            startDebridInstall(TransferMode::StreamInstall, forcePicker);
+            auto alive = alive_;
+            ensureTorrentingEnabled(settings_, manager_,
+                [this, alive, forcePicker] {
+                    if (alive->load())
+                        startInstall(forcePicker);
+                });
             return;
         }
         setBusy(true);
@@ -1098,158 +1103,6 @@ private:
                 onChange_();
         }
         refreshButtons();
-    }
-
-    void startDebridInstall(TransferMode mode, bool forcePicker = false) {
-        if (busy_ || !ensureDebridLinked(settings_, manager_))
-            return;
-        setBusy(true);
-        cancelled_->store(false);
-        primary_->setState(brls::ButtonState::DISABLED);
-        secondary_->setState(brls::ButtonState::DISABLED);
-        primary_->setText(tr("gamehubnx/debrid/submitting"));
-        statusLabel_->setText(tr("gamehubnx/debrid/sending_magnet"));
-
-        auto alive = alive_;
-        auto cancelled = cancelled_;
-        const AppSettingsData values = settings_->get();
-        const DebridProviderKind providerKind = values.debridProvider;
-        const std::string key = activeDebridKey(values);
-        const CatalogEntry entry = entry_;
-        brls::async([this, alive, cancelled, providerKind, key, entry, mode,
-                     forcePicker] {
-            auto provider = makeDebridProvider(providerKind, key);
-            std::string debridId;
-            std::string error;
-            DebridInfo info;
-            bool ok = provider->createFromMagnet(entry.magnetUri, debridId,
-                                                  error);
-            if (ok) {
-                const auto deadline = std::chrono::steady_clock::now() +
-                                      std::chrono::seconds(60);
-                do {
-                    std::string fetchError;
-                    if (!provider->fetchInfo(debridId, info, fetchError))
-                        error = std::move(fetchError);
-                    log_msg("[DEBUG-debrid-picker] poll id=%s files=%u\n",
-                            debridId.c_str(),
-                            static_cast<unsigned>(info.files.size()));
-                    if (!forcePicker || !info.files.empty())
-                        break;
-                    for (int i = 0; i < 8 && alive->load() &&
-                                         !cancelled->load(); ++i)
-                        std::this_thread::sleep_for(
-                            std::chrono::milliseconds(250));
-                } while (alive->load() && !cancelled->load() &&
-                         std::chrono::steady_clock::now() < deadline);
-                if (forcePicker && info.files.empty() && alive->load() &&
-                    !cancelled->load()) {
-                    ok = false;
-                    if (error.empty())
-                        error = "Unable to resolve torrent metadata.";
-                }
-            }
-            brls::sync([this, alive, cancelled, ok, error, debridId, info,
-                        entry, providerKind, key, mode, forcePicker] {
-                if (!alive->load() || cancelled->load()) {
-                    if (!debridId.empty())
-                        removeDebridTransferAsync(providerKind, key, debridId);
-                    if (alive->load()) {
-                        setBusy(false);
-                        refreshButtons();
-                    }
-                    return;
-                }
-                setBusy(false);
-                if (!ok) {
-                    if (!debridId.empty())
-                        removeDebridTransferAsync(providerKind, key, debridId);
-                    operationMessage_ = error.empty()
-                        ? tr("gamehubnx/debrid/magnet_rejected") : error;
-                    refreshButtons();
-                    brls::Application::notify(operationMessage_);
-                    return;
-                }
-                DebridImport import;
-                import.infoHash = catalogLower(entry.infoHash);
-                import.name = info.name.empty() ? entry.title : info.name;
-                import.totalBytes = info.bytes ? info.bytes : entry.size;
-                import.provider = providerKind;
-                import.debridId = debridId;
-                import.mode = mode;
-                if (forcePicker && !info.files.empty()) {
-                    TorrentPreview preview;
-                    preview.name = import.name;
-                    preview.totalBytes = import.totalBytes;
-                    preview.fileCount = static_cast<uint32_t>(info.files.size());
-                    for (const DebridFile& file : info.files) {
-                        const bool package = isPackageName(file.path);
-                        preview.files.push_back({file.path, file.bytes, package,
-                                                 isCompressedName(file.path),
-                                                 isCartridgeName(file.path)});
-                        preview.packageCount += package ? 1 : 0;
-                        preview.cartridgeCount += isCartridgeName(file.path) ? 1 : 0;
-                    }
-                    StreamSelection selection = settings_->get().streamSelection;
-                    log_msg("[DEBUG-debrid-picker] push id=%s files=%u\n",
-                            debridId.c_str(), preview.fileCount);
-                    brls::Application::pushActivity(new TorrentSelectionActivity(
-                        manager_, "", std::move(preview),
-                        TransferMode::StreamInstall, selection, {}, import,
-                        [providerKind, key, debridId] {
-                            removeDebridTransferAsync(providerKind, key, debridId);
-                        }));
-                    log_msg("[DEBUG-debrid-picker] push complete id=%s\n",
-                            debridId.c_str());
-                    return;
-                }
-                if (mode == TransferMode::StreamInstall && !info.files.empty()) {
-                    TorrentPreview preview;
-                    preview.name = import.name;
-                    preview.totalBytes = import.totalBytes;
-                    preview.fileCount = static_cast<uint32_t>(info.files.size());
-                    for (const DebridFile& file : info.files) {
-                        const bool package = isPackageName(file.path);
-                        preview.files.push_back({file.path, file.bytes, package,
-                                                 isCompressedName(file.path),
-                                                 isCartridgeName(file.path)});
-                        preview.packageCount += package ? 1 : 0;
-                        preview.cartridgeCount += isCartridgeName(file.path) ? 1 : 0;
-                    }
-                    import.fileSelection = smartInstallMask(preview);
-                    import.packageCount = 0;
-                    for (uint8_t action : import.fileSelection) {
-                        if (action == static_cast<uint8_t>(FileAction::Install))
-                            ++import.packageCount;
-                    }
-                    if (import.packageCount == 0) {
-                        operationMessage_ = tr("gamehubnx/detail/smart_open_options");
-                        refreshButtons();
-                        brls::Application::notify(operationMessage_);
-                        brls::Application::pushActivity(new TorrentSelectionActivity(
-                            manager_, "", std::move(preview),
-                            TransferMode::StreamInstall,
-                            settings_->get().streamSelection, {}, import,
-                            [providerKind, key, debridId] {
-                                removeDebridTransferAsync(providerKind, key, debridId);
-                            }));
-                        return;
-                    }
-                }
-                std::string id;
-                std::string importError;
-                if (!manager_->importDebrid(import, id, importError)) {
-                    removeDebridTransferAsync(providerKind, key, debridId);
-                    operationMessage_ = importError;
-                    brls::Application::notify(importError);
-                } else {
-                    statusLabel_->setText(tr("gamehubnx/debrid/queued"));
-                    if (onChange_)
-                        onChange_();
-                }
-                refreshButtons();
-            });
-        });
     }
 
     void finishImport(const std::string& path, bool forcePicker,

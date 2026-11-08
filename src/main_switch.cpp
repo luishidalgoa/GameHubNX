@@ -591,13 +591,11 @@ int main(int argc, char** argv) {
             gamehubnx::AppSettingsData next = settings.get();
             const bool cambia = !next.firstRunCompleted ||
                                 !next.catalogDisclaimerAcknowledged ||
-                                next.torrentingEnabled ||
                                 !next.catalogSourceUrl.empty();
             if (cambia) {
                 startupStage("aplicando invariantes de GameHubNX");
                 next.firstRunCompleted = true;
                 next.catalogDisclaimerAcknowledged = true;
-                next.torrentingEnabled = false;
                 // Una fuente heredada de otra instalacion haria que la tienda
                 // apuntase a otro catalogo; se limpia para que mande el defecto.
                 next.catalogSourceUrl.clear();

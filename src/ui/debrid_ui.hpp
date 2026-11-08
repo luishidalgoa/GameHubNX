@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -393,6 +394,29 @@ inline bool ensureDebridLinked(AppSettings* settings,
 
 inline bool debridModeActive(const AppSettings* settings) {
     return settings && !settings->get().torrentingEnabled;
+}
+
+// Las entradas de la tienda se instalan por torrent nativo, nunca por debrid. Si
+// el torrent esta apagado pide el mismo aviso que los Ajustes; al aceptarlo se
+// guarda y no vuelve a preguntar.
+inline void ensureTorrentingEnabled(AppSettings* settings,
+                                    DownloadManager* manager,
+                                    std::function<void()> onEnabled) {
+    auto* dialog = new brls::Dialog(tr("gamehubnx/settings/torrenting_warning"));
+    dialog->addButton(tr("gamehubnx/settings/torrenting_enable"),
+        [settings, manager, onEnabled] {
+            AppSettingsData values = settings->get();
+            values.torrentingEnabled = true;
+            std::string error;
+            if (!settings->update(values, error)) {
+                brls::Application::notify(error);
+                return;
+            }
+            manager->setTorrentingEnabled(true);
+            onEnabled();
+        });
+    dialog->addButton(tr("gamehubnx/common/cancel"), [] {});
+    dialog->open();
 }
 
 }  // namespace gamehubnx::ui

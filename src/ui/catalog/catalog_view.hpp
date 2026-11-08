@@ -790,9 +790,14 @@ private:
                         [](const CatalogEntry& entry) {
                             return entry.isDirectDownload();
                         });
-        if (!shopOnly && debridModeActive(settings_) &&
-            !ensureDebridLinked(settings_, manager_))
+        if (!shopOnly && debridModeActive(settings_)) {
+            auto alive = alive_;
+            ensureTorrentingEnabled(settings_, manager_, [this, alive] {
+                if (alive->load())
+                    prepareSelectedEntries();
+            });
             return;
+        }
 
         const StreamSelection selection = settings_
             ? settings_->get().streamSelection
