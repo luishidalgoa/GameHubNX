@@ -1,4 +1,5 @@
 #include "magnet_resolver.hpp"
+#include "magnet_messages.hpp"
 
 extern "C" {
 #include "../core/bencode.h"
@@ -972,6 +973,10 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
     std::string firstFailure;
     bool sawTrackerFailure = false;
     bool sawNotRegistered = false;
+    bool sawEmptyTracker = false;
+    /* Some tracker listed at least one peer, so "the trackers listed no peers" would
+       be false. Written only on the caller thread. */
+    bool trackersListedPeers = false;
     auto trackers = trackerCandidatesFor(spec);
     for (const std::string& tracker : trackers) {
         if (cancelled)
@@ -996,9 +1001,19 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
             if (sawNotRegistered)
                 break;
         }
-        if (!result.tracker_failure && count == 0)
-            log_msg("[magnet] tracker %s returned no peers\n", tracker.c_str());
+        if (!result.tracker_failure && count == 0) {
+            /* request_ok is set only when the tracker answered (HTTP). A silent
+               tracker also returns zero peers, and that is not an answer. UDP
+               announces never set it, so only HTTP trackers can set the flag. */
+            if (result.request_ok)
+                sawEmptyTracker = true;
+            log_msg("[magnet] tracker %s %s\n", tracker.c_str(),
+                    result.request_ok ? "returned no peers"
+                                      : "gave no peers (no HTTP answer recorded)");
+        }
         appendUniquePeers(peers, batch, count);
+        if (count)
+            trackersListedPeers = true;
         if (count)
             log_msg("[magnet] tracker %s added %u peers, total=%u\n",
                     tracker.c_str(), count,
@@ -1092,6 +1107,30 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
     bool resolved = false;
     std::atomic<bool> stopWorkers{false};
     std::atomic<uint32_t> reachedPeers{0}; // peers we got a TCP session to
+    std::atomic<uint32_t> refusedAttempts{0};
+    std::atomic<uint32_t> timedOutAttempts{0};
+    std::atomic<uint32_t> unreachableAttempts{0};
+    std::atomic<uint32_t> localAttempts{0};
+    /* Sorts a failed connect by what it says about the network (see
+       classifyConnectFailure). A refusal means the peer answered. */
+    auto countConnectFailure = [&](const PeerAttempt& a) {
+        if (!a.failure || !*a.failure)
+            return;
+        switch (classifyConnectFailure(a.failure, a.error)) {
+        case ConnectOutcome::Refused:
+            refusedAttempts.fetch_add(1);
+            break;
+        case ConnectOutcome::TimedOut:
+            timedOutAttempts.fetch_add(1);
+            break;
+        case ConnectOutcome::Local:
+            localAttempts.fetch_add(1);
+            break;
+        case ConnectOutcome::Unreachable:
+            unreachableAttempts.fetch_add(1);
+            break;
+        }
+    };
     std::vector<uint8_t> metadata;
     std::vector<uint8_t> verifiedEndpoints;
     std::string unsafeMetadata;
@@ -1115,6 +1154,8 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
             if (cancelled)
                 break;
             appendUniquePeers(peers, batch, count);
+            if (count)
+                trackersListedPeers = true;
         }
         uint32_t added = static_cast<uint32_t>(peers.size() / 6) - before;
         if (added)
@@ -1190,6 +1231,8 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
                     candidate, attempt);
                 if (attempt.connected)
                     reachedPeers.fetch_add(1);
+                else
+                    countConnectFailure(attempt);
                 if (attempt.handshakeVerified) {
                     std::lock_guard<std::mutex> lock(mutex);
                     appendUniquePeers(verifiedEndpoints,
@@ -1257,15 +1300,14 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
             error = unsafeMetadata;
             return false;
         }
-        /* Not one of them let us open a TCP session — that is a network
-           blocking BitTorrent, not a stale catalog entry, and telling the two
-           apart is the difference between "try again later" (useless here)
-           and "try another network" (the thing that actually works). */
+        /* Not one of them let us open a TCP session. Why they refused, timed out
+           or were unreachable decides what the user can do, so say that. */
         if (!reachedPeers.load())
-            error = "Found " + std::to_string(peerCount) +
-                    " peers but could not connect to any of them. This "
-                    "network appears to block BitTorrent — try another "
-                    "Wi-Fi or a phone hotspot.";
+            error = describeConnectFailures(peerCount, refusedAttempts.load(),
+                                            timedOutAttempts.load(),
+                                            unreachableAttempts.load(),
+                                            localAttempts.load(),
+                                            sawEmptyTracker && !trackersListedPeers);
         else
             error = "Peers were found, but none returned torrent metadata. "
                     "Try this catalog item again later.";

@@ -10,6 +10,7 @@
 
 #include "app/catalog_presentation.hpp"
 #include "app/catalog_service.hpp"
+#include "app/magnet_messages.hpp"
 #include "ui/i18n.hpp"
 #include "app/game_metadata_service.hpp"
 #include "ui/common/async_image.hpp"
@@ -35,12 +36,21 @@ inline std::string classifyResolveFailure(const std::string& error) {
         return tr("gamehubnx/health/stale");
     // Reachable-peer failures come before the metadata one: not getting a
     // connection open is a network problem, and "no metadata" would send the
-    // reporter after the catalog entry instead of their Wi-Fi.
-    if (lower.find("could not connect") != std::string::npos)
+    // reporter after the catalog entry instead of their Wi-Fi. Timeouts and
+    // unreachable routes blame the network; refusals mean the peers answered
+    // and said no, so they are "no peers". Local socket exhaustion is neither.
+    // Local socket exhaustion is this console's, not the network's and not "no
+    // peers". It is checked first, because the trackers sentence that can precede
+    // it says "no peers" and would otherwise win.
+    if (lower.find(catalogLower(gamehubnx::kPhraseLocal)) != std::string::npos)
+        return tr("gamehubnx/health/resolve_failed");
+    if (lower.find(catalogLower(gamehubnx::kPhraseCouldNotReach)) != std::string::npos ||
+        lower.find(catalogLower(gamehubnx::kPhraseMayBlock)) != std::string::npos)
         return tr("gamehubnx/health/network_blocked");
     if (lower.find("metadata") != std::string::npos)
         return tr("gamehubnx/health/no_metadata");
-    if (lower.find("no usable peers") != std::string::npos ||
+    if (lower.find(catalogLower(gamehubnx::kPhraseRefused)) != std::string::npos ||
+        lower.find("no usable peers") != std::string::npos ||
         lower.find("no peers") != std::string::npos)
         return tr("gamehubnx/health/no_peers");
     return tr("gamehubnx/health/resolve_failed");

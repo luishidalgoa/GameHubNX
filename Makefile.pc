@@ -379,6 +379,10 @@ $(BUILD_DIR)/tests/test_overlay_guard: tests/test_overlay_guard.cpp src/ui/commo
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_overlay_guard.cpp $(LDFLAGS)
 
+$(BUILD_DIR)/tests/test_magnet_messages: tests/test_magnet_messages.cpp src/app/magnet_messages.hpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/test_magnet_messages.cpp $(LDFLAGS)
+
 $(BUILD_DIR)/tests/test_storage_manager: tests/test_storage_manager.cpp \
 		src/app/storage_manager.cpp src/app/install_space.cpp
 	@mkdir -p $(dir $@)
