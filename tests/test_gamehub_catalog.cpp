@@ -747,6 +747,37 @@ void test_gh_magnet_por_fichero() {
     }
 }
 
+void test_entrada_solo_magnet() {
+    const std::string kMagnet =
+        "magnet:?xt=urn:btih:9E2471D4FFBE0EFECF4D5ADA4F5C6607E57A2244"
+        "&tr=http%3A%2F%2Fbt2.t-ru.org%2Fann%3Fmagnet";
+    // Entrada sin URL: solo magnet válido y título.
+    const std::string json = std::string(R"({
+      "files": [
+        { "gh_magnet": ")" + kMagnet + R"(",
+          "gh_title": "Some Torrent Game",
+          "gh_titleid": "0100F4300BF2C000" },
+        { "gh_magnet": "http://no-magnet.example/x",
+          "gh_title": "Se descarta: magnet inválido" },
+        {}
+      ]
+    })");
+    std::vector<CatalogEntry> out;
+    std::vector<std::string> subs;
+    std::string err;
+    assert(gamehub::parseCatalog(json, out, subs, err));
+    // Solo la primera entrada es válida.
+    assert(out.size() == 1);
+    const CatalogEntry& e = out[0];
+    assert(e.directUrl.empty());
+    assert(!e.isDirectDownload());
+    assert(e.shopMagnet == kMagnet);
+    assert(e.magnetUri  == kMagnet);
+    assert(e.infoHash   == "9e2471d4ffbe0efecf4d5ada4f5c6607e57a2244");
+    assert(e.title      == "Some Torrent Game");
+    assert(e.titleId    == "0100F4300BF2C000");
+}
+
 int main() {
     test_parses_files();
     test_titledb_metadata_applied();
@@ -782,6 +813,7 @@ int main() {
     test_cabecera_solo_con_identificador();
     test_total_desde_content_range();
     test_gh_magnet_por_fichero();
+    test_entrada_solo_magnet();
     std::printf("gamehub catalog tests passed\n");
     return 0;
 }

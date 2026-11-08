@@ -415,24 +415,54 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
 
     for (const auto& f : *filesIt) {
         if (!f.is_object()) continue;
+
+        // Lee gh_magnet antes de descartar la fila: sin URL pero con magnet
+        // válido es una entrada solo-torrent sin descarga directa.
+        std::string shopMagnetPeek;
+        if (const auto it = f.find("gh_magnet"); it != f.end()) {
+            const std::string m = asString(*it);
+            if (isMagnetUri(m)) shopMagnetPeek = m;
+        }
+
         const auto urlIt = f.find("url");
-        if (urlIt == f.end() || !urlIt->is_string()) continue;
-        const std::string url = urlIt->get<std::string>();
-        if (url.empty()) continue;
+        const std::string url = (urlIt != f.end() && urlIt->is_string())
+            ? urlIt->get<std::string>() : "";
+
+        // Sin URL ni magnet no hay nada que hacer.
+        if (url.empty() && shopMagnetPeek.empty()) continue;
 
         CatalogEntry e;
-        e.directUrl = url;
-        e.infoHash  = synthesizeInfoHash(url);
+        if (!url.empty()) {
+            e.directUrl = url;
+            e.infoHash  = synthesizeInfoHash(url);
+            const std::string name = urlDecode(fileNameOf(url));
+            e.title   = name;
+            e.titleId = titleIdOf(name);
+        } else {
+            // Entrada solo-torrent: se descarga por magnet, sin descarga directa.
+            e.shopMagnet = shopMagnetPeek;
+            e.magnetUri  = shopMagnetPeek;
+            // El info-hash real está en el URI (urn:btih:<hash>).
+            static const std::string kBtih = "urn:btih:";
+            const size_t pos = shopMagnetPeek.find(kBtih);
+            if (pos != std::string::npos) {
+                const size_t start = pos + kBtih.size();
+                const size_t end = shopMagnetPeek.find_first_of("&?", start);
+                std::string hash = shopMagnetPeek.substr(
+                    start, end == std::string::npos ? std::string::npos : end - start);
+                for (char& c : hash)
+                    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                e.infoHash = std::move(hash);
+            } else {
+                e.infoHash = synthesizeInfoHash(shopMagnetPeek);
+            }
+        }
 
         const auto sizeIt = f.find("size");
         if (sizeIt != f.end() && sizeIt->is_number()) {
             const int64_t s = sizeIt->get<int64_t>();
             if (s > 0) e.size = static_cast<uint64_t>(s);
         }
-
-        const std::string name = urlDecode(fileNameOf(url));
-        e.title   = name;
-        e.titleId = titleIdOf(name);
 
         // ── Claves gh_ por fichero ──────────────────────────────────────────
         // El titledb va indexado por Title ID, que sale del nombre del fichero:
@@ -461,6 +491,16 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         // gh_kind ("dlc"/"update") no se guarda: la procedencia --de que indice
         // vino-- ya dice que es un complemento, y el Title ID distingue el tipo
         // cuando hace falta. Se documenta aqui para que nadie lo busque.
+
+        // Para entradas sin URL, gh_titleid aporta el Title ID para buscar en el titledb.
+        if (e.titleId.empty()) {
+            if (const auto it = f.find("gh_titleid"); it != f.end()) {
+                std::string t = asString(*it);
+                for (char& c : t)
+                    c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                if (!t.empty()) e.titleId = std::move(t);
+            }
+        }
 
         // Rich metadata when the index carries it for this Title ID.
         if (titledb && !e.titleId.empty()) {
