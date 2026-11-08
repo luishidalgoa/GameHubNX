@@ -610,15 +610,37 @@ bool GameMetadataService::prepareSnapshot(const std::string& manifestJson,
         error = "Metadata index SHA-256 is invalid.";
         return false;
     }
-    uint8_t digest[32];
-    sha256(indexJson.data(), indexJson.size(), digest);
+    // La comprobacion SHA-256 y el parseo no dependen el uno del otro: van a la
+    // vez. El resultado solo se acepta si el hash cuadra, asi que el arranque
+    // paga el mas lento de los dos y no la suma.
+    uint8_t digest[32] = {0};
+    std::thread hashing;
+    bool hashThreaded = true;
+    try {
+        hashing = std::thread([&indexJson, &digest] {
+            sha256(indexJson.data(), indexJson.size(), digest);
+        });
+    } catch (...) {
+        hashThreaded = false;
+        sha256(indexJson.data(), indexJson.size(), digest);
+    }
+    const uint64_t parseStartedMs = now_ms();
+    std::vector<GameMetadata> items;
+    std::string parseError;
+    const bool parsed = parseIndex(indexJson, items, parseError);
+    const uint64_t parseMs = now_ms() - parseStartedMs;
+    if (hashThreaded)
+        hashing.join();
     if (hex32String(digest) != manifest.indexSha256) {
         error = "Metadata index SHA-256 does not match.";
         return false;
     }
-    std::vector<GameMetadata> items;
-    if (!parseIndex(indexJson, items, error))
+    if (!parsed) {
+        error = parseError;
         return false;
+    }
+    log_msg("[metadata] index parse %llu ms\n",
+            static_cast<unsigned long long>(parseMs));
     if (items.size() != manifest.entryCount) {
         error = "Metadata manifest entry count does not match.";
         return false;
@@ -640,6 +662,7 @@ bool GameMetadataService::loadCachedSnapshot(MetadataSnapshot& snapshot,
     const std::string manifestJson(
         reinterpret_cast<const char*>(manifestBytes.data()),
         manifestBytes.size());
+    const uint64_t readStartedMs = now_ms();
     const std::string sha = manifestIndexSha(manifestJson);
     if (sha.empty()) {
         error = "Cached metadata manifest is invalid.";
@@ -651,6 +674,9 @@ bool GameMetadataService::loadCachedSnapshot(MetadataSnapshot& snapshot,
         return false;
     const std::string indexJson(
         reinterpret_cast<const char*>(indexBytes.data()), indexBytes.size());
+    log_msg("[metadata] cache read %llu ms (%zu bytes)\n",
+            static_cast<unsigned long long>(now_ms() - readStartedMs),
+            indexBytes.size());
     return prepareSnapshot(manifestJson, indexJson, snapshot, error);
 }
 

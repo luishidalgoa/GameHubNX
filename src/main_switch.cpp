@@ -147,7 +147,15 @@ public:
         box->setGrow(1);
         box->setAlignItems(brls::AlignItems::CENTER);
         box->setJustifyContent(brls::JustifyContent::CENTER);
+        // El logo de GameHub (logo.png, la version clara para fondo oscuro).
+        auto* logo = new brls::Image();
+        logo->setWidth(160);
+        logo->setHeight(160);
+        logo->setScalingType(brls::ImageScalingType::FIT);
+        logo->setImageFromRes("logo.png");
+        box->addView(logo);
         auto* spinner = new brls::ProgressSpinner();
+        spinner->setMarginTop(28);
         box->addView(spinner);
         auto* label = new brls::Label();
         label->setFontSize(20);
