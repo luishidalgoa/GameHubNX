@@ -634,20 +634,35 @@ private:
     // set the 32 MiB interval is ignored — used on worker shutdown so a
     // pause does not discard everything since the last periodic checkpoint.
     void maybeCheckpoint(bool force = false) {
-        if (!stream_ || activeFileIndex_ == UINT32_MAX)
+        if (!stream_ || activeFileIndex_ == UINT32_MAX) {
+            if (force)
+                log_msg("[install] checkpoint skipped: no active package\n");
             return;
+        }
         uint64_t consumed = stream_->consumed();
         if (!force && consumed < journalConsumed_ + kJournalIntervalBytes)
             return;
-        if (force && consumed <= journalConsumed_)
+        if (force && consumed <= journalConsumed_) {
+            log_msg("[install] checkpoint skipped: consumed=%llu journaled=%llu\n",
+                    static_cast<unsigned long long>(consumed),
+                    static_cast<unsigned long long>(journalConsumed_));
             return;
+        }
         install::InstallJournal journal;
         if (!stream_->checkpoint(journal.state) ||
-            journal.state.consumed == 0)
+            journal.state.consumed == 0) {
+            if (force)
+                log_msg("[install] checkpoint refused by stream: consumed=%llu\n",
+                        static_cast<unsigned long long>(consumed));
             return;
+        }
         journal.backendState = backend_->checkpointPackage();
-        if (journal.backendState.empty())
+        if (journal.backendState.empty()) {
+            if (force)
+                log_msg("[install] checkpoint refused by backend: consumed=%llu\n",
+                        static_cast<unsigned long long>(consumed));
             return;
+        }
         const mi_file_t& file = metainfo_.files[activeFileIndex_];
         journal.packageId = file.path;
         journal.packageSize = static_cast<uint64_t>(file.length);
@@ -659,6 +674,9 @@ private:
         }
         journalConsumed_ = consumed;
         journalValid_ = true;
+        if (force)
+            log_msg("[install] checkpoint saved consumed=%llu\n",
+                    static_cast<unsigned long long>(consumed));
     }
 
     void clearJournal() {
