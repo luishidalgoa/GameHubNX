@@ -21,7 +21,6 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <ctime>
 #include <functional>
 #include <set>
 #include <string>
@@ -135,6 +134,18 @@ public:
             unlink(path_.c_str());
     }
 
+    /// Lleva a disco lo escrito hasta ahora. Solo entonces una caché guardada
+    /// en un journal se puede dar por buena tras un corte.
+    bool flush() {
+        if (!active())
+            return false;
+        if (std::fflush(file_) != 0 || fsync(fileno(file_)) != 0) {
+            fail();
+            return false;
+        }
+        return true;
+    }
+
     /// Descarta la caché: el paquete ya no se puede reanudar desde ella.
     void discard() {
         failed_ = true;
@@ -152,13 +163,17 @@ private:
     bool failed_ = false;
 };
 
-/// Da a `sink` los primeros `length` bytes de la caché, en trozos. Falla si la caché es más corta.
-inline bool replay(const std::string& path, uint64_t length,
-                   const std::function<bool(const uint8_t*, size_t)>& sink,
-                   const std::function<bool()>& stopped) {
+/// Da a `sink` los bytes [start, start + length) de la caché, en trozos. Falla si la caché es más corta.
+inline bool replayFrom(const std::string& path, uint64_t start, uint64_t length,
+                       const std::function<bool(const uint8_t*, size_t)>& sink,
+                       const std::function<bool()>& stopped) {
     std::FILE* file = std::fopen(path.c_str(), "rb");
     if (!file)
         return false;
+    if (start > 0 && fseeko(file, static_cast<off_t>(start), SEEK_SET) != 0) {
+        std::fclose(file);
+        return false;
+    }
     std::vector<uint8_t> chunk(kReplayChunk);
     uint64_t left = length;
     bool ok = true;
@@ -181,6 +196,13 @@ inline bool replay(const std::string& path, uint64_t length,
     }
     std::fclose(file);
     return ok && left == 0;
+}
+
+/// Los primeros `length` bytes de la caché. Falla si la caché es más corta.
+inline bool replay(const std::string& path, uint64_t length,
+                   const std::function<bool(const uint8_t*, size_t)>& sink,
+                   const std::function<bool()>& stopped) {
+    return replayFrom(path, 0, length, sink, stopped);
 }
 
 /// Caché de una carpeta que ya no pertenece a ninguna tarea, o que lleva demasiado sin cambios.

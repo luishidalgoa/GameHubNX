@@ -34,7 +34,40 @@ static void ageFile(const std::string& path, time_t secondsAgo) {
     assert(utimes(path.c_str(), times) == 0);
 }
 
+// Reproducir un tramo que no empieza en 0: la instalacion reanuda en su
+// consumido y la caché guarda desde 0.
+static void testReplayFromOffset() {
+    const std::string dir = makeTempDir();
+    const std::string cache = pathFor(dir, "range.nsp");
+    {
+        Writer w(cache, 0);
+        const std::string text = "abcdefghij";
+        assert(w.write(reinterpret_cast<const uint8_t*>(text.data()), text.size()));
+        assert(w.flush());
+    }
+    std::string got;
+    const bool ok = replayFrom(
+        cache, 3, 4,
+        [&got](const uint8_t* data, size_t n) {
+            got.append(reinterpret_cast<const char*>(data), n);
+            return true;
+        },
+        [] { return false; });
+    assert(ok);
+    assert(got == "defg");
+
+    // Pedir más de lo que hay falla.
+    std::string none;
+    assert(!replayFrom(cache, 8, 5,
+                       [&none](const uint8_t* data, size_t n) {
+                           none.append(reinterpret_cast<const char*>(data), n);
+                           return true;
+                       },
+                       [] { return false; }));
+}
+
 int main() {
+    testReplayFromOffset();
     // Nombre estable y reconocible.
     const std::string path = pathFor("/d/task", "Life is Strange.nsz");
     assert(path == pathFor("/d/task", "Life is Strange.nsz"));

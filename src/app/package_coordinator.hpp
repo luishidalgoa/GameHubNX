@@ -1,6 +1,7 @@
 #pragma once
 
 #include "download_manager.hpp"
+#include "input_cache.hpp"
 #include "install_pacer.hpp"
 #include "request_gate.hpp"
 #include "stream_budget_arbiter.hpp"
@@ -58,6 +59,7 @@ public:
           pacer_(64 * 1024 * 1024),
           progress_(std::move(progress)) {
         arbiter_ = &arbiter;
+        workingRoot_ = workingRoot;
         bool useSelection = !fileSelection.empty();
         if (useSelection && fileSelection.size() != metainfo_.num_files) {
             error_ = "Selected file actions do not match the torrent.";
@@ -193,6 +195,7 @@ public:
             return;
         }
         backend_->rollbackPackage();
+        discardPackageCache();
         if (!journalPath_.empty())
             install::removeInstallJournal(journalPath_);
     }
@@ -615,14 +618,46 @@ private:
         activeOrdinal_.store(completedPackages_);
         currentPackage_ = file.path;
         pacer_.beginPackage(journal.compressed);
-        configs_[fileIndex].ready_bytes = journal.state.consumed;
-        producerOffset_ = journal.state.consumed;
+        // La caché del disco cubre lo que el torrent ya tiene: esos bytes se
+        // repiten a la instalacion y no se vuelven a bajar. Si la caché no
+        // cuadra con el journal, se vuelve a bajar desde lo consumido.
+        cachePath_ = packageCachePath(file);
+        const uint64_t onDisk = input_cache::cachedLength(cachePath_);
+        bool cacheUsable =
+            journal.cachedBytes >= journal.state.consumed &&
+            journal.cachedBytes <= static_cast<uint64_t>(file.length) &&
+            onDisk >= journal.cachedBytes;
+        if (cacheUsable && onDisk > journal.cachedBytes &&
+            ::truncate(cachePath_.c_str(),
+                       static_cast<off_t>(journal.cachedBytes)) != 0)
+            cacheUsable = false;
+        if (cacheUsable) {
+            cacheWriter_ = std::make_unique<input_cache::Writer>(
+                cachePath_, journal.cachedBytes);
+            if (!cacheWriter_->active())
+                cacheUsable = false;
+        }
+        if (!cacheUsable) {
+            cacheWriter_.reset();
+            ::unlink(cachePath_.c_str());
+        }
+        const uint64_t ready = cacheUsable ? journal.cachedBytes
+                                           : journal.state.consumed;
+        replayFrom_ = cacheUsable ? journal.state.consumed : 0;
+        replayTo_ = cacheUsable ? journal.cachedBytes : 0;
+        cachedBytes_ = cacheUsable ? journal.cachedBytes : 0;
+        journalCached_ = cachedBytes_;
+        configs_[fileIndex].ready_bytes = ready;
+        producerOffset_ = ready;
         journalConsumed_ = journal.state.consumed;
         journalValid_ = true;
-        log_msg("[install] resuming package='%s' at %llu of %llu bytes\n",
+        log_msg("[install] resuming package='%s' at %llu of %llu bytes "
+                "(cache=%llu replay=%llu)\n",
                 file.path,
                 static_cast<unsigned long long>(journal.state.consumed),
-                static_cast<unsigned long long>(file.length));
+                static_cast<unsigned long long>(file.length),
+                static_cast<unsigned long long>(cachedBytes_),
+                static_cast<unsigned long long>(replayTo_ - replayFrom_));
         telemetry_log("install_resume", taskId_.c_str(),
             "package=%s consumed_bytes=%llu total_bytes=%llu",
             file.path,
@@ -639,14 +674,26 @@ private:
                 log_msg("[install] checkpoint skipped: no active package\n");
             return;
         }
-        uint64_t consumed = stream_->consumed();
-        if (!force && consumed < journalConsumed_ + kJournalIntervalBytes)
+        const uint64_t consumed = stream_->consumed();
+        const uint64_t cached = cacheWriter_ ? cachedBytes_ : 0;
+        if (!force && consumed < journalConsumed_ + kJournalIntervalBytes &&
+            cached < journalCached_ + kJournalIntervalBytes)
             return;
-        if (force && consumed <= journalConsumed_) {
+        if (force && consumed <= journalConsumed_ && cached <= journalCached_) {
             log_msg("[install] checkpoint skipped: consumed=%llu journaled=%llu\n",
                     static_cast<unsigned long long>(consumed),
                     static_cast<unsigned long long>(journalConsumed_));
             return;
+        }
+        // La caché se lleva a disco antes de que el journal la nombre.
+        uint64_t cachedNow = 0;
+        if (cacheWriter_) {
+            if (cacheWriter_->flush())
+                cachedNow = cachedBytes_;
+            else {
+                log_msg("[install] cache flush failed, dropping cache\n");
+                discardPackageCache();
+            }
         }
         install::InstallJournal journal;
         if (!stream_->checkpoint(journal.state) ||
@@ -667,19 +714,81 @@ private:
         journal.packageId = file.path;
         journal.packageSize = static_cast<uint64_t>(file.length);
         journal.compressed = isCompressedName(file.path);
+        journal.cachedBytes = cachedNow;
         if (!saveInstallJournal(journalPath_, journal)) {
             log_msg("[install] journal write failed '%s'\n",
                     journalPath_.c_str());
             return;
         }
         journalConsumed_ = consumed;
+        journalCached_ = cachedNow;
         journalValid_ = true;
         if (force)
-            log_msg("[install] checkpoint saved consumed=%llu\n",
-                    static_cast<unsigned long long>(consumed));
+            log_msg("[install] checkpoint saved consumed=%llu cached=%llu\n",
+                    static_cast<unsigned long long>(consumed),
+                    static_cast<unsigned long long>(cachedNow));
+    }
+
+    // Caché del paquete que se está bajando (input_cache, como en NSZ). Va en
+    // orden: los bytes que llegan a processChunk son los que el torrent ya
+    // tiene y la instalacion todavía no consumió. Sin sitio en disco no hay caché
+    // y la reanudación vuelve a bajar lo que no se consumió, como antes.
+    // Un fichero por tarea y paquete: dos tareas no comparten caché aunque
+    // compartan carpeta.
+    std::string packageCachePath(const mi_file_t& file) const {
+        return input_cache::pathFor(workingRoot_, taskId_ + ":" + file.path);
+    }
+
+    void openPackageCache(const mi_file_t& file) {
+        cacheWriter_.reset();
+        cachedBytes_ = 0;
+        journalCached_ = 0;
+        replayFrom_ = 0;
+        replayTo_ = 0;
+        cachePath_ = packageCachePath(file);
+        if (workingRoot_.empty() ||
+            !input_cache::hasRoomFor(workingRoot_,
+                                     static_cast<uint64_t>(file.length))) {
+            log_msg("[install] sin caché del paquete: no hay espacio\n");
+            return;
+        }
+        cacheWriter_ = std::make_unique<input_cache::Writer>(cachePath_, 0);
+        if (!cacheWriter_->active()) {
+            cacheWriter_.reset();
+            log_msg("[install] sin caché del paquete: no se pudo crear\n");
+        }
+    }
+
+    void cacheAppend(uint64_t fileOffset, const uint8_t* data, size_t size) {
+        if (!cacheWriter_)
+            return;
+        // Solo se guarda lo contiguo. Un salto desactiva la caché: es mejor
+        // volver a bajar que reanudar sobre bytes equivocados.
+        if (fileOffset != cachedBytes_ ||
+            !cacheWriter_->write(data, size)) {
+            log_msg("[install] cache append failed at %llu, dropping cache\n",
+                    static_cast<unsigned long long>(fileOffset));
+            discardPackageCache();
+            return;
+        }
+        cachedBytes_ += size;
+    }
+
+    void discardPackageCache() {
+        if (cacheWriter_) {
+            cacheWriter_->discard();
+            cacheWriter_.reset();
+        }
+        if (!cachePath_.empty())
+            ::unlink(cachePath_.c_str());
+        cachedBytes_ = 0;
+        journalCached_ = 0;
+        replayFrom_ = 0;
+        replayTo_ = 0;
     }
 
     void clearJournal() {
+        discardPackageCache();
         if (!journalPath_.empty())
             install::removeInstallJournal(journalPath_);
         journalValid_ = false;
@@ -700,6 +809,7 @@ private:
             pacer_.beginPackage(isCompressedName(file.path));
             stream_ = std::make_unique<install::PackageStream>(
                 isCompressedName(file.path), makeCallbacks(), taskId_);
+            openPackageCache(file);
             if (progress_)
                 progress_(completedPackages_, currentPackage_, 0, 0,
                           DownloadStatus::Installing);
@@ -713,6 +823,7 @@ private:
             pacer_.setBufferedBytes(pendingBytes_ + queuedBytes_);
             pacer_.setSourceComplete(producerOrdinal_ > ordinal);
         }
+        cacheAppend(chunk.fileOffset, chunk.data.data(), chunk.data.size());
         if (!stream_->write(chunk.data.data(), chunk.data.size())) {
             if (cancelRequested_)
                 return false;
@@ -791,11 +902,58 @@ private:
         return false;
     }
 
+    // Repite a la instalacion los bytes guardados en la caché [replayFrom_,
+    // replayTo_). Corre en el hilo del instalador, antes de los bytes en vivo.
+    bool replayPackageCache() {
+        log_msg("[install] replaying cache [%llu, %llu)\n",
+                static_cast<unsigned long long>(replayFrom_),
+                static_cast<unsigned long long>(replayTo_));
+        const bool ok = input_cache::replayFrom(
+            cachePath_, replayFrom_, replayTo_ - replayFrom_,
+            [this](const uint8_t* data, size_t size) {
+                if (!stream_->write(data, size)) {
+                    if (error().empty())
+                        setError(stream_->error());
+                    return false;
+                }
+                pacer_.observeConsumed(stream_->consumed(),
+                                       backend_->installedBytes(), now_ms());
+                if (progress_)
+                    progress_(completedPackages_, currentPackage_,
+                              backend_->installedBytes(),
+                              backend_->expectedBytes(),
+                              DownloadStatus::Installing);
+                return true;
+            },
+            [this] {
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                return stopping_;
+            });
+        replayFrom_ = replayTo_ = 0;
+        return ok;
+    }
+
     void installMain() {
         log_msg("[install] worker started queue=%zu buffer=%zu window=%llu bytes\n",
                 maxQueuedBytes_, maxBufferedBytes_,
                 static_cast<unsigned long long>(requestAheadBytes_));
-        while (true) {
+        bool replayOk = true;
+        if (replayTo_ > replayFrom_ && stream_) {
+            replayOk = replayPackageCache();
+            if (!replayOk) {
+                // Sin estos bytes el torrent da por hechas las piezas: el paquete
+                // no se puede terminar. Se aborta y se borra la caché.
+                if (error().empty())
+                    setError("No se pudo releer la caché de la descarga.");
+                log_msg("[install] cache replay failed: %s\n", error().c_str());
+                backend_->rollbackPackage();
+                clearJournal();
+                stream_.reset();
+                activeFileIndex_ = UINT32_MAX;
+                activeOrdinal_.store(UINT32_MAX);
+            }
+        }
+        while (replayOk) {
             InstallChunk chunk;
             {
                 std::unique_lock<std::mutex> lock(queueMutex_);
@@ -1035,6 +1193,15 @@ private:
     StreamBudgetArbiter* arbiter_ = nullptr;
     uint64_t arbiterLease_ = 0;
     uint64_t journalConsumed_ = 0;
+    // Caché del paquete en disco (input_cache). Solo la toca el hilo del
+    // instalador, salvo el constructor (tryResume) y el destructor.
+    std::string workingRoot_;
+    std::string cachePath_;
+    std::unique_ptr<input_cache::Writer> cacheWriter_;
+    uint64_t cachedBytes_ = 0;    // bytes escritos en la caché, en orden
+    uint64_t journalCached_ = 0;  // bytes de caché que dice el último journal
+    uint64_t replayFrom_ = 0;     // [replayFrom_, replayTo_) se repite al reanudar
+    uint64_t replayTo_ = 0;
     bool journalValid_ = false;
     bool abandonResume_ = false;
     std::atomic<bool> recoverableError_{false};

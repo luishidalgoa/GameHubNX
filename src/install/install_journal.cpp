@@ -235,6 +235,8 @@ std::string InstallJournal::serialize() const {
     out += 'd';
     putKey(out, "backend");
     putStr(out, backendState);
+    putKey(out, "cached");
+    putInt(out, cachedBytes);
     putKey(out, "compressed");
     putBool(out, compressed);
     putKey(out, "package");
@@ -263,6 +265,7 @@ bool InstallJournal::load(const char* data, size_t size) {
         version != static_cast<uint64_t>(kVersion))
         return false;
     if (!getStr(root, "backend", parsed.backendState) ||
+        !getU64(root, "cached", parsed.cachedBytes) ||
         !getBool(root, "compressed", parsed.compressed) ||
         !getStr(root, "package", parsed.packageId) ||
         !getU64(root, "size", parsed.packageSize))

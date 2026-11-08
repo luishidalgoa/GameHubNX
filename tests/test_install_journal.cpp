@@ -35,6 +35,7 @@ InstallJournal makeSample() {
     journal.packageSize = 123456789;
     journal.compressed = true;
     journal.backendState = std::string("opaque\0blob\xff", 12);
+    journal.cachedBytes = 5 * 1024 * 1024 + 7;
 
     PackageStreamState& s = journal.state;
     s.consumed = 987654;
@@ -77,6 +78,7 @@ void expectEqual(const InstallJournal& a, const InstallJournal& b) {
     assert(a.packageSize == b.packageSize);
     assert(a.compressed == b.compressed);
     assert(a.backendState == b.backendState);
+    assert(a.cachedBytes == b.cachedBytes);
     const PackageStreamState& x = a.state;
     const PackageStreamState& y = b.state;
     assert(x.consumed == y.consumed);
@@ -146,9 +148,9 @@ void testRejectsMalformed() {
     {
         // Wrong version.
         std::string bad = blob;
-        size_t pos = bad.rfind("1:vi1e");
+        size_t pos = bad.rfind("1:vi2e");
         assert(pos != std::string::npos);
-        bad[pos + 4] = '2';
+        bad[pos + 4] = '3';
         InstallJournal loaded;
         assert(!loaded.load(bad.data(), bad.size()));
     }

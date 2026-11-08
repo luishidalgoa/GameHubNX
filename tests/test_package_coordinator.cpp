@@ -1,4 +1,5 @@
 #include "app/package_coordinator.hpp"
+#include "app/input_cache.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -123,7 +124,10 @@ int main() {
 
     assert(gamehubnx::install::loadInstallJournal(journalPath, saved));
     assert(saved.state.consumed > 0);
-    uint64_t resumeOffset = saved.state.consumed;
+    // The disk cache holds everything the torrent delivered, so the resume
+    // starts where the cache ends: those bytes are not downloaded again.
+    assert(saved.cachedBytes >= saved.state.consumed);
+    uint64_t resumeOffset = saved.cachedBytes;
 
     {
         gamehubnx::StreamBudgetArbiter arbiter;
@@ -141,6 +145,96 @@ int main() {
     std::string committed = root + "/install-sim/" + taskId + "-game.nsp";
     assert(stat(committed.c_str(), &st) == 0);
     assert(!gamehubnx::install::loadInstallJournal(journalPath, saved));
+
+    // Without the cache file the resume must fall back to the consumed
+    // point: the torrent gets those bytes again, nothing is trusted blindly.
+    const std::string taskB = "ffeeddccbbaa99887766554433221100ffeeddcc";
+    const std::string journalB = gamehubnx::installJournalPath(root, taskB);
+    {
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
+            mi, taskB, root, true, {}, 0,
+            gamehubnx::install::InstallStorageTarget::SdCard,
+            arbiter, nullptr);
+        assert(coordinator.error().empty());
+        assert(feedRange(coordinator, nsp, 0, 36ull * 1024 * 1024));
+        bool journalLoaded = false;
+        for (int spins = 0; spins < 3000; ++spins) {
+            if (gamehubnx::install::loadInstallJournal(journalB, saved)) {
+                journalLoaded = true;
+                break;
+            }
+            usleep(10000);
+        }
+        assert(journalLoaded);
+        coordinator.markRecoverableError("peer connection timed out");
+    }
+    assert(gamehubnx::install::loadInstallJournal(journalB, saved));
+    assert(saved.cachedBytes >= saved.state.consumed);
+    ::unlink(gamehubnx::input_cache::pathFor(root, taskB + ":game.nsp").c_str());
+    {
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
+            mi, taskB, root, true, {}, 0,
+            gamehubnx::install::InstallStorageTarget::SdCard,
+            arbiter, nullptr);
+        assert(coordinator.error().empty());
+        assert(coordinator.configs()[0].ready_bytes == saved.state.consumed);
+        assert(feedRange(coordinator, nsp, saved.state.consumed, nsp.size()));
+        assert(coordinator.finish());
+    }
+    assert(!gamehubnx::install::loadInstallJournal(journalB, saved));
+
+    // A cache ahead of the consumed point is replayed into the stream before
+    // the live bytes. The cache file is written here by hand, with the bytes
+    // the torrent would have delivered, so the replay path runs for certain.
+    const std::string taskC = "1122334455667788990011223344556677889900";
+    const std::string journalC = gamehubnx::installJournalPath(root, taskC);
+    const uint64_t delivered = 36ull * 1024 * 1024;
+    {
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
+            mi, taskC, root, true, {}, 0,
+            gamehubnx::install::InstallStorageTarget::SdCard,
+            arbiter, nullptr);
+        assert(coordinator.error().empty());
+        assert(feedRange(coordinator, nsp, 0, delivered));
+        bool journalLoaded = false;
+        for (int spins = 0; spins < 3000; ++spins) {
+            if (gamehubnx::install::loadInstallJournal(journalC, saved)) {
+                journalLoaded = true;
+                break;
+            }
+            usleep(10000);
+        }
+        assert(journalLoaded);
+        coordinator.markRecoverableError("peer connection timed out");
+    }
+    assert(gamehubnx::install::loadInstallJournal(journalC, saved));
+    assert(saved.state.consumed < delivered);
+    {
+        const std::string cachePathC =
+            gamehubnx::input_cache::pathFor(root, taskC + ":game.nsp");
+        ::unlink(cachePathC.c_str());
+        gamehubnx::input_cache::Writer writer(cachePathC, 0);
+        assert(writer.active());
+        assert(writer.write(nsp.data(), delivered));
+        assert(writer.flush());
+    }
+    saved.cachedBytes = delivered;
+    assert(gamehubnx::install::saveInstallJournal(journalC, saved));
+    {
+        gamehubnx::StreamBudgetArbiter arbiter;
+        gamehubnx::PackageCoordinator coordinator(
+            mi, taskC, root, true, {}, 0,
+            gamehubnx::install::InstallStorageTarget::SdCard,
+            arbiter, nullptr);
+        assert(coordinator.error().empty());
+        assert(coordinator.configs()[0].ready_bytes == delivered);
+        assert(feedRange(coordinator, nsp, delivered, nsp.size()));
+        assert(coordinator.finish());
+    }
+    assert(!gamehubnx::install::loadInstallJournal(journalC, saved));
 
     metainfo_free(&mi);
     std::filesystem::remove_all(root);

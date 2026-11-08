@@ -14,13 +14,17 @@ namespace gamehubnx::install {
 // package), the PackageStream safe point and an opaque backend blob with
 // backend-specific placeholder bookkeeping.
 struct InstallJournal {
-    static constexpr int64_t kVersion = 1;
+    static constexpr int64_t kVersion = 2;
 
     std::string packageId;     // stable identity (infohash/path/URL)
     uint64_t packageSize = 0;  // total package bytes, 0 when unknown
     bool compressed = false;   // NSZ (true) vs plain NSP
     std::string backendState;  // opaque backend snapshot, may be empty
     PackageStreamState state;
+    // Bytes del paquete guardados en la caché del disco (input_cache). Van desde
+    // `state.consumed` hasta aqui: al reanudar se repiten a la instalacion y el
+    // torrent no vuelve a bajarlos. 0 si no hay caché.
+    uint64_t cachedBytes = 0;
 
     std::string serialize() const;
     // Strict: any missing key, type mismatch, bad version, malformed
