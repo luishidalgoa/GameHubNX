@@ -23,6 +23,7 @@ extern "C" {
 #include <switch.h>
 #include <switch-ipcext.h>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
@@ -135,6 +136,27 @@ const std::string& borealisLocaleFor(const std::string& language) {
         return brls::LOCALE_ZH_CN;
     return brls::LOCALE_AUTO;
 }
+
+// Lo que se ve mientras el catalogo y los metadatos cargan. Sin ella la consola
+// se queda en negro hasta que la biblioteca puede pintarse (10-15 s con un cache
+// grande). Se retira justo antes de empujar MainActivity.
+class StartupLoadingActivity : public brls::Activity {
+public:
+    brls::View* createContentView() override {
+        auto* box = new brls::Box(brls::Axis::COLUMN);
+        box->setGrow(1);
+        box->setAlignItems(brls::AlignItems::CENTER);
+        box->setJustifyContent(brls::JustifyContent::CENTER);
+        auto* spinner = new brls::ProgressSpinner();
+        box->addView(spinner);
+        auto* label = new brls::Label();
+        label->setFontSize(20);
+        label->setMarginTop(24);
+        label->setText(tr("gamehubnx/common/loading"));
+        box->addView(label);
+        return box;
+    }
+};
 
 class MainActivity : public brls::Activity {
 public:
@@ -403,6 +425,7 @@ int main(int argc, char** argv) {
         startupStage("Borealis createWindow");
         brls::Application::createWindow("gamehubnx");
         brls::Application::setGlobalQuit(false);
+        brls::Application::pushActivity(new StartupLoadingActivity());
 
         startupStage("CatalogService construction");
         log_msg("[startup] image relay: relays-first + disk cache (rev4)\n");
@@ -419,13 +442,31 @@ int main(int argc, char** argv) {
         GameMetadataService metadata(GHNX_APP_ROOT);
         std::string metadataError;
         bool metadataOk = true;
+        std::atomic<bool> metadataDone{false};
         ThreadJoiner metadataLoader{
-            std::thread([&metadata, &metadataError, &metadataOk] {
+            std::thread([&metadata, &metadataError, &metadataOk, &metadataDone] {
                 metadataOk = metadata.load(metadataError);
+                metadataDone = true;
             })};
 
+        // El catalogo tambien va en su hilo. Mientras los dos cargan se sigue
+        // dibujando la pantalla de carga, en vez de quedarse la consola en negro.
         std::string catalogError;
-        if (!catalog.load(catalogError))
+        bool catalogOk = true;
+        std::atomic<bool> catalogDone{false};
+        ThreadJoiner catalogLoader{std::thread(
+            [&catalog, &catalogError, &catalogOk, &catalogDone] {
+                catalogOk = catalog.load(catalogError);
+                catalogDone = true;
+            })};
+        while (!catalogDone.load() || !metadataDone.load()) {
+            if (!brls::Application::mainLoop()) {
+                log_msg("[startup] closed while loading\n");
+                return 0;
+            }
+        }
+        catalogLoader.thread.join();
+        if (!catalogOk)
             log_msg("[catalog] initial load failed: %s\n",
                     catalogError.c_str());
 
@@ -529,6 +570,7 @@ int main(int argc, char** argv) {
             });
 
         startupStage("push MainActivity");
+        brls::Application::popActivity(brls::TransitionAnimation::NONE);
         brls::Application::pushActivity(activity);
         if (updatePendingFinish) {
             // Finish an update staged before a previous quit. User-triggered so
