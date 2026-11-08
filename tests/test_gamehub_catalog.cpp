@@ -759,6 +759,16 @@ void test_entrada_solo_magnet() {
           "gh_titleid": "0100F4300BF2C000" },
         { "gh_magnet": "http://no-magnet.example/x",
           "gh_title": "Se descarta: magnet inválido" },
+        { "gh_magnet": "magnet:?xt=urn:btih:4XEJ3HH7X7XQ7ZS5VXM6AZ3WMEB7OEOG&tr=http%3A%2F%2Fbt2.t-ru.org%2Fann%3Fmagnet",
+          "gh_title": "Se descarta: hash base32" },
+        { "gh_magnet": "magnet:?xt=urn:btih:&tr=http%3A%2F%2Fbt2.t-ru.org%2Fann%3Fmagnet",
+          "gh_title": "Se descarta: hash vacío" },
+        { "gh_magnet": "magnet:?xt=urn:btih:9E2471D4FFBE0EFECF4D5ADA4F5C6607E57A2244&xt=urn:btih:9E2471D4FFBE0EFECF4D5ADA4F5C6607E57A2244&tr=http%3A%2F%2Fbt2.t-ru.org%2Fann%3Fmagnet",
+          "gh_title": "Se descarta: dos hashes" },
+        { "gh_magnet": "magnet:?xt=urn:btih:9E2471D4FFBE0EFECF4D5ADA4F5C6607E57A2244",
+          "gh_title": "Se descarta: sin tracker de RuTracker" },
+        { "gh_magnet": "magnet:?xt=urn:btih:9E2471D4FFBE0EFECF4D5ADA4F5C6607E57A2244&tr=http%3A%2F%2Fexample.org%2Fann",
+          "gh_title": "Se descarta: tracker ajeno" },
         {}
       ]
     })");

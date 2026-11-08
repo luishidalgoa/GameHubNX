@@ -2,6 +2,7 @@
 
 #include <borealis/extern/nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
@@ -169,12 +170,52 @@ std::string originOf(const std::string& url) {
     return origin;
 }
 
-// Un magnet de la tienda: el esquema y el hash de BitTorrent, y un tamano sano.
-// Lo que no encaje se descarta en silencio, como cualquier campo gh_ malo.
-bool isMagnetUri(const std::string& m) {
-    static const std::string kPrefix = "magnet:?xt=urn:btih:";
-    return m.size() > kPrefix.size() && m.size() <= 2048 &&
-           m.compare(0, kPrefix.size(), kPrefix) == 0;
+bool isRuTrackerAnnounce(const std::string& url) {
+    static const std::string kPrefix = "http://";
+    if (url.rfind(kPrefix, 0) != 0) return false;
+    const size_t hostEnd = url.find('/', kPrefix.size());
+    std::string host = url.substr(kPrefix.size(),
+        hostEnd == std::string::npos ? std::string::npos : hostEnd - kPrefix.size());
+    for (char& c : host) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return host == "bt.t-ru.org" || host == "bt2.t-ru.org" ||
+           host == "bt3.t-ru.org" || host == "bt4.t-ru.org";
+}
+
+// Hash v1 en minusculas si el magnet tiene un solo hash de 40 hex y, si
+// requireRuTracker, un tracker de RuTracker como MagnetResolver::parse; vacio si
+// no. Sin tracker, la instalacion por magnet fallaria siempre.
+std::string storeMagnetBtih(const std::string& m, bool requireRuTracker) {
+    static const std::string kPrefix = "magnet:?";
+    static const std::string kBtih = "urn:btih:";
+    if (m.size() <= kPrefix.size() || m.size() > 2048 ||
+        m.compare(0, kPrefix.size(), kPrefix) != 0)
+        return {};
+    std::string btih;
+    bool ruTracker = false;
+    size_t start = kPrefix.size();
+    while (start <= m.size()) {
+        const size_t end = m.find('&', start);
+        const std::string pair = m.substr(start,
+            end == std::string::npos ? std::string::npos : end - start);
+        const size_t eq = pair.find('=');
+        const std::string key = pair.substr(0, eq);
+        const std::string value = eq == std::string::npos
+            ? std::string() : urlDecode(pair.substr(eq + 1));
+        if (key == "xt" && value.rfind(kBtih, 0) == 0) {
+            if (!btih.empty()) return {};
+            btih = value.substr(kBtih.size());
+            if (btih.size() != 40 ||
+                !std::all_of(btih.begin(), btih.end(), [](unsigned char c) {
+                    return std::isxdigit(c) != 0; }))
+                return {};
+            for (char& c : btih) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        } else if (key == "tr" && isRuTrackerAnnounce(value)) {
+            ruTracker = true;
+        }
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    return (ruTracker || !requireRuTracker) ? btih : std::string();
 }
 
 // Reads a JSON value as a string whatever its underlying type. The index is
@@ -419,9 +460,11 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         // Lee gh_magnet antes de descartar la fila: sin URL pero con magnet
         // válido es una entrada solo-torrent sin descarga directa.
         std::string shopMagnetPeek;
+        std::string shopBtih;
         if (const auto it = f.find("gh_magnet"); it != f.end()) {
             const std::string m = asString(*it);
-            if (isMagnetUri(m)) shopMagnetPeek = m;
+            shopBtih = storeMagnetBtih(m, true);
+            if (!shopBtih.empty()) shopMagnetPeek = m;
         }
 
         const auto urlIt = f.find("url");
@@ -442,20 +485,7 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
             // Entrada solo-torrent: se descarga por magnet, sin descarga directa.
             e.shopMagnet = shopMagnetPeek;
             e.magnetUri  = shopMagnetPeek;
-            // El info-hash real está en el URI (urn:btih:<hash>).
-            static const std::string kBtih = "urn:btih:";
-            const size_t pos = shopMagnetPeek.find(kBtih);
-            if (pos != std::string::npos) {
-                const size_t start = pos + kBtih.size();
-                const size_t end = shopMagnetPeek.find_first_of("&?", start);
-                std::string hash = shopMagnetPeek.substr(
-                    start, end == std::string::npos ? std::string::npos : end - start);
-                for (char& c : hash)
-                    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                e.infoHash = std::move(hash);
-            } else {
-                e.infoHash = synthesizeInfoHash(shopMagnetPeek);
-            }
+            e.infoHash   = shopBtih;
         }
 
         const auto sizeIt = f.find("size");
@@ -486,7 +516,7 @@ bool parseCatalog(const std::string& json, std::vector<CatalogEntry>& out,
         // Magnet del juego: informativo, la descarga sigue siendo la directa.
         if (const auto it = f.find("gh_magnet"); it != f.end()) {
             const std::string m = asString(*it);
-            if (isMagnetUri(m)) e.shopMagnet = m;
+            if (!storeMagnetBtih(m, false).empty()) e.shopMagnet = m;
         }
         // gh_kind ("dlc"/"update") no se guarda: la procedencia --de que indice
         // vino-- ya dice que es un complemento, y el Title ID distingue el tipo
