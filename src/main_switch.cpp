@@ -296,27 +296,6 @@ public:
                 brls::Application::quit();
                 return true;
             }, /*hidden=*/true);
-        // La direccion del FTP, desde cualquier pantalla. Sin QR: un codigo
-        // servia para que un movil abriera una pagina; esto se teclea en un
-        // cliente de FTP desde un ordenador, asi que lo util es el texto.
-        // Solo icono en el pie (sin etiqueta): va al final por la coleccion de
-        // acciones de borealis, que recorre la vista enfocada antes que el marco.
-        registerAction("", brls::BUTTON_BACK,
-            [this](brls::View*) {
-                const gamehubnx::AppSettingsData& values = settings_->get();
-                const std::string url =
-                    gamehubnx::ui::ftpAddress(ftpServer_, values.ftpEnabled);
-                if (url.empty()) {
-                    brls::Application::notify(
-                        tr(values.ftpEnabled ? "gamehubnx/ftp/no_address"
-                                             : "gamehubnx/ftp/off"));
-                    return true;
-                }
-                // La clave va aparte: ensenarla junto a la direccion la deja a
-                // la vista de cualquiera que pase por delante de la tele.
-                brls::Application::notify(url);
-                return true;
-            });
     }
 
 private:

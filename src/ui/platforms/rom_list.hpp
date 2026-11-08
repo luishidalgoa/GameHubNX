@@ -272,6 +272,8 @@ public:
 
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/platforms/choose_folder"), labels,
+            [](int) {},
+            0,
             [this, paths, typeIndex, defaultIndex](int index) {
                 if (index < 0 || index >= static_cast<int>(paths.size()))
                     return;
@@ -284,8 +286,7 @@ public:
                 // hoy: si manana se corrige el nombre de carpeta, esta
                 // plataforma se corrige sola.
                 applyFolder(paths[i], /*clear=*/i == defaultIndex);
-            },
-            0);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
@@ -586,6 +587,8 @@ private:
                                            tr("gamehubnx/catalog/filter_online_desc")));
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/filter_menu_title"), labels,
+            [](int) {},
+            0,
             [this](int index) {
                 if (index == 0) {
                     if (favorites_)
@@ -594,8 +597,7 @@ private:
                     onlineOnly_ = !onlineOnly_;
                 }
                 rebuild();
-            },
-            0);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
@@ -614,13 +616,14 @@ private:
                 selected = static_cast<int>(i);
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/origin_menu_title"), labels,
+            [](int) {},
+            selected,
             [this, options](int index) {
                 if (index < 0 || index >= static_cast<int>(options.size()))
                     return;
                 sourceFilter_ = options[static_cast<size_t>(index)];
                 rebuild();
-            },
-            selected);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 

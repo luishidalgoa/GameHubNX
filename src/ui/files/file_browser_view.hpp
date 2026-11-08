@@ -207,8 +207,13 @@ private:
 
         const std::string name = valid ? entries[index].name : std::string();
         const bool isDirectory = valid && entries[index].directory;
+        // La accion va en dismissCb: se ejecuta despues de cerrar el desplegable.
+        // Si fuera el callback de seleccion, el dialogo de confirmar borrado se
+        // apilaria encima y el popActivity del desplegable cerraria el dialogo.
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/browser/actions"), labels,
+            [](int) {},
+            0,
             [this, actions, name, isDirectory](int chosen) {
                 if (chosen < 0 || chosen >= static_cast<int>(actions.size()))
                     return;
@@ -219,8 +224,7 @@ private:
                     case DeleteFile: confirmDeleteFile(name); break;
                     case DeleteDirectory: confirmDeleteDirectory(name); break;
                 }
-            },
-            0);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 

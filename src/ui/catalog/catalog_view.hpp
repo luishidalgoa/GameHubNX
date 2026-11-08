@@ -469,8 +469,8 @@ public:
         rebuildEntries();
         updateFreshnessLabel();
 
-        // Pie en orden de izquierda a derecha: buscar (X + lupa), actualizar (RB,
-        // solo icono), favorito (ZR). Ordenar (Y) solo aparece mientras carga: en
+        // Pie en orden de izquierda a derecha: buscar (X + lupa), actualizar (RB +
+        // flecha circular U+E5D5 de Material Icons), favorito (ZR). Ordenar (Y) solo aparece mientras carga: en
         // reposo se oculta para que el pie no se desborde. El modo lotes (LB) sale
         // del pie a proposito por lo mismo.
         // La lupa es el glifo U+E8B6 de Material Icons, la fuente de respaldo que
@@ -481,7 +481,7 @@ public:
             return true;
         });
         registerSortAction(false);
-        registerAction("", brls::BUTTON_RB,
+        registerAction("\uE5D5", brls::BUTTON_RB,
                        [this](brls::View*) {
             if (batchMode_)
                 prepareSelectedEntries();
@@ -1476,11 +1476,12 @@ private:
                 selected = static_cast<int>(i);
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/sort_menu_title"), labels,
+            [](int) {},
+            selected,
             [this, modes](int index) {
                 if (index >= 0 && index < static_cast<int>(modes.size()))
                     setSort(modes[static_cast<size_t>(index)]);
-            },
-            selected);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
@@ -1509,6 +1510,8 @@ private:
         };
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/filter_menu_title"), labels,
+            [](int) {},
+            0,
             [this](int index) {
                 switch (index) {
                 case 0: setFilter(CatalogFilter::All); break;
@@ -1526,8 +1529,7 @@ private:
                 case 6: openPlayerFilterMenu(); break;
                 default: break;
                 }
-            },
-            0);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
@@ -1547,13 +1549,14 @@ private:
                 selected = static_cast<int>(i);
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/origin_menu_title"), labels,
+            [](int) {},
+            selected,
             [this, options](int index) {
                 if (index < 0 || index >= static_cast<int>(options.size()))
                     return;
                 sourceFilter_ = options[static_cast<size_t>(index)];
                 rebuildEntries();
-            },
-            selected);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
@@ -1771,12 +1774,13 @@ private:
         }
         auto* dropdown = new brls::Dropdown(
             tr("gamehubnx/catalog/players_title"), labels,
+            [](int) {},
+            selected,
             [this, choices](int index) {
                 if (index < 0 || index >= static_cast<int>(choices.size()))
                     return;
                 setPlayerFilter(choices[static_cast<size_t>(index)]);
-            },
-            selected);
+            });
         brls::Application::pushActivity(new brls::Activity(dropdown));
     }
 
