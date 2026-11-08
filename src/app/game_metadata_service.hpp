@@ -106,6 +106,9 @@ public:
     bool load(std::string& error);
     void adopt(MetadataSnapshot snapshot);
     const GameMetadata* findByInfoHash(const std::string& infoHash) const;
+    // Metadatos por Title ID, para las entradas que no casan por hash (las de
+    // descarga directa llevan un hash sintetico). Prefiere el que trae banner.
+    const GameMetadata* findByTitleIdBest(const std::string& titleId) const;
     // Appends every index entry matching titleId that carries a non-empty
     // latestVersion (the same entry set collectLatestVersions folds). The
     // caller chooses among bundles; returns false when the title has none.

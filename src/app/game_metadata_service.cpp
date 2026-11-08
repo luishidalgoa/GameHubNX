@@ -694,6 +694,31 @@ void GameMetadataService::rebuildTitleIdIndex() {
     byTitleIdHashes_ = std::move(nextHashes);
 }
 
+const GameMetadata* GameMetadataService::findByTitleIdBest(
+    const std::string& titleId) const {
+    if (titleId.empty())
+        return nullptr;
+    auto upper = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) {
+                           return static_cast<char>(std::toupper(c));
+                       });
+        return text;
+    };
+    const std::string key = upper(titleId);
+    const GameMetadata* first = nullptr;
+    for (const auto& entry : byHash_) {
+        const GameMetadata& meta = entry.second;
+        if (meta.titleId.empty() || upper(meta.titleId) != key)
+            continue;
+        if (!meta.bannerUrl.empty())
+            return &meta;
+        if (!first)
+            first = &meta;
+    }
+    return first;
+}
+
 bool GameMetadataService::findByTitleId(
     const std::string& titleId, std::vector<const GameMetadata*>& out) const {
     std::string key = titleId;

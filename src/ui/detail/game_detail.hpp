@@ -120,7 +120,7 @@ public:
           onClose_(std::move(onClose)),
           alive_(std::make_shared<std::atomic<bool>>(true)),
           cancelled_(std::make_shared<std::atomic<bool>>(false)) {
-        const GameMetadata* found = metadata_->findByInfoHash(entry_.infoHash);
+        const GameMetadata* found = metadataFor(entry_);
         presentation_ = resolveCatalogPresentation(entry_, found,
                                                    catalogTextPreference());
         titleId_ = presentation_.titleId;
@@ -328,41 +328,10 @@ private:
         installContract_->setText(tr("gamehubnx/detail/smart_install_contract"));
         left->addView(installContract_);
 
-        // File selection and the wishlist toggle share one row: a fourth full-width
-        // button does not fit the column budget, and a square star needs no
-        // translation (Russian "В избранном" would not fit it anyway).
+        // Instalar (arriba) abre el selector de archivos; la fila de acciones
+        // solo lleva la estrella de favoritos.
         auto* actions = new brls::Box(brls::Axis::ROW);
         actions->setMarginTop(12);
-
-        secondary_ = new brls::Button();
-        secondary_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
-        secondary_->setFontSize(theme::kFontSmall);
-        secondary_->setGrow(1);
-        secondary_->setHeight(56);
-        secondary_->setText(tr("gamehubnx/common/choose_files"));
-        secondary_->registerClickAction([this](brls::View*) {
-            onSecondary();
-            return true;
-        });
-        actions->addView(secondary_);
-
-        // Torrent de la tienda: solo si el juego trae magnet y el torrent esta
-        // activado en Ajustes. La descarga directa sigue siendo la principal.
-        if (!entry_.shopMagnet.empty() && settings_ &&
-            settings_->get().torrentingEnabled) {
-            torrent_ = new brls::Button();
-            torrent_->setStyle(&brls::BUTTONSTYLE_DEFAULT);
-            torrent_->setFontSize(theme::kFontSmall);
-            torrent_->setGrow(1);
-            torrent_->setHeight(56);
-            torrent_->setMarginLeft(8);
-            torrent_->setText(tr("gamehubnx/detail/torrent_button"));
-            torrent_->registerClickAction([this](brls::View*) {
-                onTorrent();
-                return true;
-            });
-            actions->addView(torrent_);
-        }
 
         // Wishlist toggle: the same star the catalog grid puts on the card,
         // reachable without hunting for the ZR hotkey.
@@ -786,8 +755,6 @@ private:
                 primary_->setProgress(progressForButton(*task));
             }
             primary_->setState(brls::ButtonState::ENABLED);
-            setTextIfChanged(secondary_, tr("gamehubnx/detail/view_download"));
-            secondary_->setState(brls::ButtonState::ENABLED);
             if (installContract_)
                 installContract_->setVisibility(brls::Visibility::GONE);
             if (task->status == DownloadStatus::Error && !task->error.empty())
@@ -796,8 +763,6 @@ private:
             setTextIfChanged(primary_, tr("gamehubnx/common/install"));
             primary_->setProgress(-1.0f);
             primary_->setState(brls::ButtonState::ENABLED);
-            setTextIfChanged(secondary_, tr("gamehubnx/detail/install_options"));
-            secondary_->setState(brls::ButtonState::ENABLED);
             if (installContract_)
                 installContract_->setVisibility(brls::Visibility::VISIBLE);
             if (!operationMessage_.empty())
@@ -820,6 +785,14 @@ private:
         }
     }
 
+    // Las entradas de descarga directa llevan un hash sintetico y no casan por
+    // hash con los metadatos: se buscan por Title ID, como las de torrent.
+    const GameMetadata* metadataFor(const CatalogEntry& entry) const {
+        if (const GameMetadata* byHash = metadata_->findByInfoHash(entry.infoHash))
+            return byHash;
+        return metadata_->findByTitleIdBest(entry.titleId);
+    }
+
     void onPrimary() {
         if (busy_)
             return;
@@ -834,31 +807,11 @@ private:
                     new DetailsActivity(task->id, manager_, deploy_));
             return;
         }
-        // One-tap install: resolve, then queue silently (picker only on Select files).
-        startInstall(false);
-    }
-
-    // Torrent de la tienda (opcion b): la ficha pasa a usar el magnet de la
-    // tienda para esta visita. El infoHash no cambia, asi que la identidad de
-    // la entrada se mantiene; la descarga directa no se toca.
-    void onTorrent() {
-        if (busy_ || entry_.shopMagnet.empty())
-            return;
-        entry_.directUrl.clear();
-        entry_.magnetUri = entry_.shopMagnet;
-        startInstall(false);
-    }
-
-    void onSecondary() {
-        if (busy_)
-            return;
-        const DownloadTask* task = currentTask();
-        if (task) {
-            brls::Application::pushActivity(
-                new DetailsActivity(task->id, manager_, deploy_));
-            return;
-        }
-        // Install options: always open the per-file picker after resolve.
+        // Instalar abre siempre el selector de archivos: no se encola nada sin
+        // que el usuario vea que va a bajar. Una entrada solo-magnet (torrent de
+        // la tienda) usa el magnet de la tienda.
+        if (!entry_.isDirectDownload() && !entry_.shopMagnet.empty())
+            entry_.magnetUri = entry_.shopMagnet;
         startInstall(true);
     }
 
@@ -890,7 +843,6 @@ private:
         operationMessage_.clear();
         cancelled_->store(false);
         primary_->setState(brls::ButtonState::DISABLED);
-        secondary_->setState(brls::ButtonState::DISABLED);
         primary_->setText(tr("gamehubnx/detail/resolving"));
         statusLabel_->setText(tr("gamehubnx/detail/finding_peers") +
                               tr("gamehubnx/detail/cancel_hint"));
@@ -982,24 +934,19 @@ private:
     // este fork ya no existe, y por ahi se pedia vincular una cuenta ajena para
     // bajar un fichero del servidor de casa.
     void startShopInstall(TransferMode mode, bool forcePicker) {
-        auto alive = alive_;
-        askInstallTarget(manager_->rootPath(),
-                         [this, alive, mode,
-                          forcePicker](install::InstallStorageTarget target) {
-            if (!alive->load())
-                return;
-            installTarget_ = target;
-            beginShopInstall(mode, forcePicker);
-        });
+        // El destino es el de los Ajustes, igual que en torrent: sin modal.
+        installTarget_ = settings_
+            ? installTargetFor(settings_->get().installLocation)
+            : manager_->installTarget();
+        beginShopInstall(mode, forcePicker);
     }
 
     void beginShopInstall(TransferMode mode, bool forcePicker) {
         setBusy(true);
         operationMessage_.clear();
         cancelled_->store(false);
-        primary_->setState(brls::ButtonState::DISABLED);
-        secondary_->setState(brls::ButtonState::DISABLED);
-        primary_->setText(tr("gamehubnx/detail/resolving"));
+        // Sin "Resolviendo" ni peers: una entrada directa no busca nada, solo
+        // comprueba el tamano. El boton sigue activo.
         statusLabel_->setText(tr("gamehubnx/detail/shop_preparing"));
 
         auto alive = alive_;
@@ -1079,6 +1026,7 @@ private:
             // Sin callback de abandono: no se creo nada en ningun servidor.
             // Y con rotulo propio: esta pantalla nacio para elegir dentro de un
             // torrent y su cabecera lo decia, cosa que aqui no viene a cuento.
+            refreshButtons();
             brls::Application::pushActivity(new TorrentSelectionActivity(
                 manager_, "", std::move(preview), import.mode,
                 settings_->get().streamSelection, {}, import,
@@ -1213,6 +1161,9 @@ private:
         brls::Application::pushActivity(new TorrentSelectionActivity(
             manager_, path, std::move(preview), preferred,
             selection, std::move(initialPeers)));
+        // Al volver del selector el boton no puede quedarse deshabilitado: un
+        // boton deshabilitado con el foco pierde el mando.
+        refreshButtons();
     }
 
     std::string installedVersionForTitle() const {
@@ -1279,8 +1230,6 @@ private:
     InstallButton* primary_ = nullptr;
     brls::Button* addOns_button_ = nullptr;
     brls::Label* installContract_ = nullptr;
-    brls::Button* secondary_ = nullptr;
-    brls::Button* torrent_ = nullptr;
     brls::Button* favorite_ = nullptr;
     StorageMeter* sizeMeter_ = nullptr;
     brls::Label* statusLabel_ = nullptr;
