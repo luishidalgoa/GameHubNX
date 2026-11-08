@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../src/core/bencode.h"
 #include "../src/core/torrent.c"
@@ -498,7 +499,25 @@ static void test_started_event_only_on_first_announce(void) {
     assert(torrent.tracker_started_event_sent == 1);
 }
 
+static void test_async_announce_roundtrip(void) {
+    /* An announce runs on its own job and reaches the peer queue through
+       announce_collect. No trackers: the job finishes at once, with no peers.
+       Then the job is released, so no announce is left in flight. */
+    torrent_t torrent = {0};
+    torrent.async_ok = 1;
+    announce_start(&torrent, 0, 1);
+    assert(torrent.announce_active == 1);
+    assert(torrent.announce_job != NULL);
+    for (int i = 0; i < 2000 && torrent.announce_active; i++) {
+        announce_collect(&torrent);
+        if (torrent.announce_active) usleep(1000);
+    }
+    assert(torrent.announce_active == 0);
+    assert(torrent.announce_job == NULL);
+}
+
 int main(void) {
+    test_async_announce_roundtrip();
     test_ema_update();
     test_last_piece_age_marks_missing_sample();
     test_adaptive_hedge_follows_median_latency();

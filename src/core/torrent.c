@@ -192,19 +192,15 @@ struct torrent {
        only if the mutex failed to init, in which case announces fall back to
        synchronous. */
     pthread_t       announce_thread;
-    pthread_mutex_t announce_mutex;
     int             async_ok;
     int             announce_active;  /* thread launched, not yet collected */
-    int             announce_done;    /* guarded by announce_mutex */
-    uint32_t        announce_count;   /* guarded by announce_mutex */
-    uint8_t         announce_compact[200*6];
-    int64_t         announce_downloaded;
-    int64_t         announce_left;
+    /* The worker reads and writes only this job, never the torrent: a
+       teardown that gives up on a tracker can free the torrent while the
+       worker is still inside a DNS lookup. The job lives until both sides
+       release it. */
+    struct announce_job *announce_job;
     int             announce_started_event;
     int             tracker_started_event_sent;
-    /* Set by torrent_destroy before it joins the announce thread, read by
-       that thread between trackers and from curl's progress callback. */
-    atomic_int      announce_stop;
     uint32_t startup_verify_index;
     int      startup_verifying;
     /* Sum of piece lengths lying entirely in skipped storage ranges (SKIP
@@ -1258,24 +1254,47 @@ static void announce_push_results(torrent_t *t, const uint8_t *compact,
         queue_push(t, *(uint32_t*)(compact+i*6), *(uint16_t*)(compact+i*6+4));
 }
 
-static int announce_cancelled(void *user) {
-    return atomic_load(&((torrent_t*)user)->announce_stop);
+/* One tracker announce, run on its own thread. Owns the copy of everything the
+   announce reads, so it never touches the torrent once it has started. */
+typedef struct announce_job {
+    metainfo_t      mi;                 /* copy: trackers and info_hash only */
+    uint8_t         peer_id[20];
+    uint16_t        listen_port;
+    int64_t         downloaded;
+    int64_t         left;
+    int             started_event;
+    atomic_int      stop;               /* set by torrent_destroy */
+    atomic_int      refs;               /* torrent + worker */
+    pthread_mutex_t mutex;
+    int             done;               /* guarded by mutex */
+    uint32_t        count;              /* guarded by mutex */
+    uint8_t         compact[200*6];     /* guarded by mutex */
+} announce_job_t;
+
+static int announce_job_cancelled(void *user) {
+    return atomic_load(&((announce_job_t*)user)->stop);
+}
+
+static void announce_job_release(announce_job_t *job) {
+    if (atomic_fetch_sub(&job->refs, 1) == 1) {
+        pthread_mutex_destroy(&job->mutex);
+        free(job);
+    }
 }
 
 static void *announce_worker(void *arg) {
-    torrent_t *t = (torrent_t*)arg;
-    /* mi/peer_id/listen_port are immutable for the torrent's life;
-       downloaded/left were snapshotted before the thread was launched. */
+    announce_job_t *job = (announce_job_t*)arg;
     uint8_t compact[200*6];
     uint32_t n = tracker_announce_with_event(
-        &t->mi, t->peer_id, t->listen_port, t->announce_downloaded,
-        t->announce_left, compact, 200, t->announce_started_event,
-        announce_cancelled, t);
-    pthread_mutex_lock(&t->announce_mutex);
-    memcpy(t->announce_compact, compact, (size_t)n*6);
-    t->announce_count = n;
-    t->announce_done  = 1;
-    pthread_mutex_unlock(&t->announce_mutex);
+        &job->mi, job->peer_id, job->listen_port, job->downloaded,
+        job->left, compact, 200, job->started_event,
+        announce_job_cancelled, job);
+    pthread_mutex_lock(&job->mutex);
+    memcpy(job->compact, compact, (size_t)n*6);
+    job->count = n;
+    job->done  = 1;
+    pthread_mutex_unlock(&job->mutex);
+    announce_job_release(job);
     return NULL;
 }
 
@@ -1284,23 +1303,36 @@ static void *announce_worker(void *arg) {
 static void announce_start(torrent_t *t, int64_t downloaded, int64_t left) {
     if (t->announce_active)
         return;
-    t->announce_downloaded = downloaded;
-    t->announce_left       = left;
     t->announce_started_event = !t->tracker_started_event_sent;
     t->tracker_started_event_sent = 1;
     if (t->async_ok) {
-        t->announce_done  = 0;
-        t->announce_count = 0;
-        if (pthread_create(&t->announce_thread, NULL, announce_worker, t) == 0) {
-            t->announce_active = 1;
-            return;
+        announce_job_t *job = (announce_job_t*)calloc(1, sizeof(*job));
+        if (job) {
+            job->mi = t->mi;
+            memcpy(job->peer_id, t->peer_id, sizeof(job->peer_id));
+            job->listen_port = t->listen_port;
+            job->downloaded  = downloaded;
+            job->left        = left;
+            job->started_event = t->announce_started_event;
+            atomic_store(&job->stop, 0);
+            atomic_store(&job->refs, 2);
+            if (pthread_mutex_init(&job->mutex, NULL) == 0) {
+                if (pthread_create(&t->announce_thread, NULL,
+                                   announce_worker, job) == 0) {
+                    t->announce_job = job;
+                    t->announce_active = 1;
+                    return;
+                }
+                pthread_mutex_destroy(&job->mutex);
+            }
+            free(job);
         }
         log_msg("[torrent] announce thread spawn failed, running inline\n");
     }
     uint8_t compact[200*6];
     uint32_t n = tracker_announce_with_event(
         &t->mi, t->peer_id, t->listen_port, downloaded, left, compact, 200,
-        t->announce_started_event, announce_cancelled, t);
+        t->announce_started_event, NULL, NULL);
     announce_push_results(t, compact, n);
     log_msg("[torrent] announce (sync): %u peers\n", n);
 }
@@ -1309,15 +1341,25 @@ static void announce_start(torrent_t *t, int64_t downloaded, int64_t left) {
 static void announce_collect(torrent_t *t) {
     if (!t->announce_active)
         return;
-    pthread_mutex_lock(&t->announce_mutex);
-    int done = t->announce_done;
-    pthread_mutex_unlock(&t->announce_mutex);
+    announce_job_t *job = t->announce_job;
+    pthread_mutex_lock(&job->mutex);
+    int done = job->done;
+    pthread_mutex_unlock(&job->mutex);
     if (!done)
         return;
-    pthread_join(t->announce_thread, NULL); /* publishes worker's writes */
+    /* done is set as the worker's last write to the job; the join only waits
+       for the thread to return. */
+    pthread_join(t->announce_thread, NULL);
     t->announce_active = 0;
-    announce_push_results(t, t->announce_compact, t->announce_count);
-    log_msg("[torrent] announce (async): %u peers\n", t->announce_count);
+    t->announce_job = NULL;
+    uint8_t compact[200*6];
+    pthread_mutex_lock(&job->mutex);
+    uint32_t count = job->count;
+    memcpy(compact, job->compact, (size_t)count*6);
+    pthread_mutex_unlock(&job->mutex);
+    announce_job_release(job);
+    announce_push_results(t, compact, count);
+    log_msg("[torrent] announce (async): %u peers\n", count);
 }
 
 #ifdef __SWITCH__
@@ -1443,9 +1485,9 @@ torrent_t *torrent_create_ex(const metainfo_t *mi,
     t->utp_fd = INVALID_SOCK;
     utp_setup(t);
 
-    t->async_ok = (pthread_mutex_init(&t->announce_mutex, NULL) == 0);
-    if (!t->async_ok)
-        log_msg("[torrent] announce mutex init failed, announces run inline\n");
+    /* Announces run on their own job thread; if a job cannot be set up,
+       announce_start runs the announce inline. */
+    t->async_ok = 1;
 
 #ifdef __SWITCH__
     /* UPnP port mapping — best-effort, one-shot in the background so it does
@@ -1489,15 +1531,19 @@ void torrent_destroy(torrent_t *t) {
        to give up first: otherwise the join waits out CURLOPT_TIMEOUT for every
        remaining tracker in the list, and a pause on a torrent with dead
        trackers hangs the UI for as long as that takes. */
+    /* Do not wait for an announce in flight. It can be stuck in a DNS lookup
+       or a connect that ignores cancellation, and a pause must not hang on it.
+       The worker finishes on its own and frees its job; the torrent is gone
+       by then, and nothing the worker touches is part of the torrent. */
     if (t->announce_active) {
-        atomic_store(&t->announce_stop, 1);
-        pthread_join(t->announce_thread, NULL);
+        atomic_store(&t->announce_job->stop, 1);
+        pthread_detach(t->announce_thread);
+        announce_job_release(t->announce_job);
+        t->announce_job = NULL;
         t->announce_active = 0;
+        log_msg("[torrent] announce still running, detached\n");
     }
-    if (t->async_ok) {
-        pthread_mutex_destroy(&t->announce_mutex);
-        t->async_ok = 0;
-    }
+    t->async_ok = 0;
 #ifdef __SWITCH__
     /* Join the UPnP worker so upnp_mapped/urls are fully written before use. */
     if (t->upnp_thread_active) {
