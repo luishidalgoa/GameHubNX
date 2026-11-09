@@ -99,6 +99,45 @@ bool pathHasTitleId(const std::string& path, const std::string& titleId) {
     return lowerPath.find(lowerId) != std::string::npos;
 }
 
+// Update packages name their own title id: the base id with 0800 in place of 0000.
+// Only update matching uses this. Base packages keep the exact id, so an 0800 file
+// without an update tag is never taken for the base install. DLC ids use other
+// suffixes and must not match here.
+bool pathHasUpdateTitleId(const std::string& path, const std::string& titleId) {
+    if (pathHasTitleId(path, titleId))
+        return true;
+    if (titleId.size() != 16)
+        return false;
+    std::string lowerPath = path;
+    std::string lowerId = titleId;
+    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(),
+                   [](unsigned char c) {
+                       return static_cast<char>(std::tolower(c));
+                   });
+    std::transform(lowerId.begin(), lowerId.end(), lowerId.begin(),
+                   [](unsigned char c) {
+                       return static_cast<char>(std::tolower(c));
+                   });
+    const std::string prefix = lowerId.substr(0, 12);
+    const auto isHex = [](char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+    };
+    for (size_t i = 0; i + 16 <= lowerPath.size(); ++i) {
+        if (lowerPath.compare(i, 12, prefix) != 0 ||
+            lowerPath.compare(i + 12, 4, "0800") != 0)
+            continue;
+        bool hex = true;
+        for (size_t k = 0; k < 16 && hex; ++k)
+            hex = isHex(lowerPath[i + k]);
+        const bool boundedBefore = i == 0 || !isHex(lowerPath[i - 1]);
+        const bool boundedAfter =
+            i + 16 == lowerPath.size() || !isHex(lowerPath[i + 16]);
+        if (hex && boundedBefore && boundedAfter)
+            return true;
+    }
+    return false;
+}
+
 bool isBasePackageFile(const TorrentPreview::File& file,
                        const std::string& titleId) {
     if (!file.package || !pathHasTitleId(file.path, titleId) ||
@@ -203,7 +242,7 @@ std::vector<size_t> updateVersionMatches(const TorrentPreview& preview,
     for (size_t i = 0; i < preview.files.size(); ++i) {
         uint64_t tag = 0;
         if (preview.files[i].package &&
-            pathHasTitleId(preview.files[i].path, titleId) &&
+            pathHasUpdateTitleId(preview.files[i].path, titleId) &&
             fileVersionTag(preview.files[i].path, tag) && tag == wanted)
             matches.push_back(i);
     }
@@ -232,7 +271,7 @@ std::vector<uint8_t> selectUpdateFiles(const TorrentPreview& preview,
     std::vector<size_t> marked;
     for (size_t i = 0; i < preview.files.size(); ++i) {
         if (preview.files[i].package &&
-            pathHasTitleId(preview.files[i].path, titleId) &&
+            pathHasUpdateTitleId(preview.files[i].path, titleId) &&
             isUpdateFile(preview.files[i].path))
             marked.push_back(i);
     }

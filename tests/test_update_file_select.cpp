@@ -382,7 +382,41 @@ static void testTorrentUpdateVersionsFromNames() {
     assert(gamehubnx::torrentUpdateVersions(paths, "0100BBBB00000000").empty());
 }
 
+// Switch update packages name their own title id: the base id with 0800 in place of
+// 0000. The 103 torrent has exactly this shape; its DLC uses another suffix and must
+// not match, and a different title with a similar prefix must not match either.
+void testUpdatePackageWithItsOwnTitleIdMatches() {
+    TorrentPreview preview;
+    preview.files = {package("103 [0100264012980000][v0] (0.89 GB).nsz"),
+                     package("103 [0100264012980800][v65536] (0.04 GB).nsz"),
+                     package("103 [0100264012980001][v65536] (0.01 GB).nsz")};
+    const std::vector<size_t> matches =
+        gamehubnx::updateVersionMatches(preview, "65536", "0100264012980000");
+    assert(matches.size() == 1 && matches[0] == 1);
+    expectActions(preview, "65536",
+                  {static_cast<uint8_t>(FileAction::Skip),
+                   static_cast<uint8_t>(FileAction::Install),
+                   static_cast<uint8_t>(FileAction::Skip)},
+                  "0100264012980000");
+
+    TorrentPreview other;
+    other.files = {package("Other [0100264012990800][v65536].nsz")};
+    assert(gamehubnx::updateVersionMatches(other, "65536", "0100264012980000").empty());
+}
+
+// An update package's own id must not make it a base package. On a fresh install the
+// 0800 file without an update tag is skipped, and only the base package is installed.
+void testUpdateIdIsNotBasePackage() {
+    TorrentPreview preview;
+    preview.files = {package("Juego [0100264012980000][v0].nsz"),
+                     package("Juego [0100264012980800].nsz")};
+    expectSmartActions(preview, false, "", "", "0100264012980000",
+                       {static_cast<uint8_t>(FileAction::Install),
+                        static_cast<uint8_t>(FileAction::Skip)});
+}
+
 int main() {
+    testUpdateIdIsNotBasePackage();
     testTorrentUpdateVersionsFromNames();
     testExactVersionTagIsTheUpdate();
     testModBundleWithOlderVersionTagIsExcluded();
@@ -409,6 +443,7 @@ int main() {
     testMagnetPrefersCatalogEntry();
     testMagnetFallsBackToRuTrackerMagnetWhenNoCatalogEntry();
     testUtf8TruncateBoundary();
+    testUpdatePackageWithItsOwnTitleIdMatches();
     std::puts("update file selection tests passed");
     return 0;
 }
