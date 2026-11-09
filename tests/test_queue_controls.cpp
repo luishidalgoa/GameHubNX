@@ -194,28 +194,15 @@ void testPauseResumeAll() {
     removeAll(root);
 }
 
-void markFirstQueuedCompleted(const std::string& queueRoot) {
-    const std::string path = queueRoot + "/queue.bencode";
-    std::ifstream in(path, std::ios::binary);
-    std::string data((std::istreambuf_iterator<char>(in)),
-                     std::istreambuf_iterator<char>());
-    const std::string from = "6:status6:queued";
-    const std::string to = "6:status9:completed";
-    const auto pos = data.find(from);
-    assert(pos != std::string::npos);
-    data.replace(pos, from.size(), to);
-    std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    out.write(data.data(), static_cast<std::streamsize>(data.size()));
-}
-
-void testClearCompleted() {
+// The app only downloads directly now, so a stored torrent task is dropped when the
+// queue loads: a reload finds nothing to resume and nothing for clearCompleted.
+void testStoredTorrentsAreDroppedOnLoad() {
     const std::string root = tempRoot() + "-clear";
     removeAll(root);
     mkdir(root.c_str(), 0755);
     const std::string source = makeTorrent(root, "a.bin", "aaaa");
     const std::string source2 = makeTorrent(root, "b.bin", "bbbb");
     std::string queueRoot = root + "/queue";
-    std::string keepPath;
     {
         gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
@@ -224,40 +211,14 @@ void testClearCompleted() {
                                      first, error));
         assert(manager.importTorrent(source2, gamehubnx::TransferMode::DownloadOnly,
                                      second, error));
-        keepPath = manager.snapshot()[0].dataPath;
-        std::ofstream marker(keepPath + "/kept.bin",
-                             std::ios::binary | std::ios::trunc);
-        marker << "keep-me";
         assert(manager.save(error));
     }
-    markFirstQueuedCompleted(queueRoot);
-    {
-        gamehubnx::DownloadManager manager(queueRoot, false);
-        auto tasks = manager.snapshot();
-        assert(tasks.size() == 2);
-        assert(tasks[0].status == DownloadStatus::Completed);
-        assert(tasks[1].status == DownloadStatus::Queued);
-        std::string error;
-        assert(manager.clearCompleted(false, error));
-        tasks = manager.snapshot();
-        assert(tasks.size() == 1);
-        assert(tasks[0].status == DownloadStatus::Queued);
-        assert(access((keepPath + "/kept.bin").c_str(), F_OK) == 0);
-        const std::string remainingPath = tasks[0].dataPath;
-        std::ofstream leftover(remainingPath + "/gone.bin",
-                               std::ios::binary | std::ios::trunc);
-        leftover << "delete-me";
-        assert(manager.save(error));
-    }
-    markFirstQueuedCompleted(queueRoot);
     {
         gamehubnx::DownloadManager manager(queueRoot, false);
         std::string error;
-        const std::string remainingPath = manager.snapshot()[0].dataPath;
+        assert(manager.snapshot().empty());
         assert(manager.clearCompleted(true, error));
         assert(manager.snapshot().empty());
-        assert(access((keepPath + "/kept.bin").c_str(), F_OK) == 0);
-        assert(access((remainingPath + "/gone.bin").c_str(), F_OK) != 0);
     }
     removeAll(root);
 }
@@ -270,7 +231,7 @@ int main() {
     testSummarizeQueueNoThroughputNoEta();
     testMoveTask();
     testPauseResumeAll();
-    testClearCompleted();
+    testStoredTorrentsAreDroppedOnLoad();
     std::puts("queue controls tests passed");
     return 0;
 }

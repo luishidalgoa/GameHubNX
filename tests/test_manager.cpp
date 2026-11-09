@@ -177,7 +177,7 @@ static void testTorboxTaskPersistenceRoundTrip() {
     removeAll(root);
 }
 
-static void testLegacyQueueLoadsAsTorrentSource() {
+static void testLegacyTorrentQueueIsDroppedOnLoad() {
     const std::string root = "/tmp/gamehubnx-manager-legacy-test";
     removeAll(root);
     makeDir(root);
@@ -212,17 +212,15 @@ static void testLegacyQueueLoadsAsTorrentSource() {
         "e";
     writeFile(root + "/queue.bencode", state);
 
+    // A legacy torrent entry is dropped when the queue loads: the app only downloads
+    // directly now, so nothing is left to resume.
     gamehubnx::DownloadManager manager(root, false);
-    auto tasks = manager.snapshot();
-    assert(tasks.size() == 1);
-    assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
-    assert(tasks[0].debridId.empty());
-    assert(tasks[0].status == gamehubnx::DownloadStatus::Queued);
+    assert(manager.snapshot().empty());
 
     removeAll(root);
 }
 
-static void testV4TorrentActionsRemainTriState() {
+static void testV4DebridActionsRemainTriState() {
     const std::string root = "/tmp/gamehubnx-manager-v4-actions-test";
     removeAll(root);
     makeDir(root);
@@ -245,6 +243,7 @@ static void testV4TorrentActionsRemainTriState() {
         "13:package-counti1e"
         "13:packages-donei0e"
         "9:selection" + bencodeStr(selection) +
+        "6:source" + bencodeStr("debrid") +
         "6:status6:queued"
         "5:totali1000000e"
         "e"
@@ -257,7 +256,7 @@ static void testV4TorrentActionsRemainTriState() {
         gamehubnx::DownloadManager manager(root, false);
         const auto tasks = manager.snapshot();
         assert(tasks.size() == 1);
-        assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
+        assert(tasks[0].source == gamehubnx::TaskSource::Debrid);
         assert(tasks[0].fileSelection.size() == 1);
         assert(tasks[0].fileSelection[0] ==
                static_cast<uint8_t>(gamehubnx::FileAction::Install));
@@ -265,7 +264,7 @@ static void testV4TorrentActionsRemainTriState() {
     removeAll(root);
 }
 
-static void testTorrentTaskWithEmptyMetainfoStillErrors() {
+static void testTorrentWithEmptyMetainfoIsDroppedOnLoad() {
     const std::string root = "/tmp/gamehubnx-manager-empty-metainfo-test";
     removeAll(root);
     makeDir(root);
@@ -274,9 +273,7 @@ static void testTorrentTaskWithEmptyMetainfoStillErrors() {
 
     std::string dataPath = root + "/downloads/example-aabbccdd";
 
-    // Write a v3 state (no source field — inferred as torrent) with empty
-    // metainfo path. This should load as Error: torrent tasks require a
-    // real metainfo file.
+    // Write a v3 state (no source field, so torrent) with an empty metainfo path.
     std::string state =
         "d5:tasksl"
         "d"
@@ -297,11 +294,9 @@ static void testTorrentTaskWithEmptyMetainfoStillErrors() {
         "e";
     writeFile(root + "/queue.bencode", state);
 
+    // A torrent entry is dropped when the queue loads, before any metainfo check.
     gamehubnx::DownloadManager manager(root, false);
-    auto tasks = manager.snapshot();
-    assert(tasks.size() == 1);
-    assert(tasks[0].source == gamehubnx::TaskSource::Torrent);
-    assert(tasks[0].status == gamehubnx::DownloadStatus::Error);
+    assert(manager.snapshot().empty());
 
     removeAll(root);
 }
@@ -639,26 +634,15 @@ int main() {
         output << queue;
         output.close();
 
+        // Legacy torrent entries are dropped when the queue loads: the app only
+        // downloads directly now, so there is nothing to migrate.
         DownloadManager manager(legacyRoot, false);
-        auto tasks = manager.snapshot();
-        assert(tasks.size() == 1);
-        assert(tasks[0].mode == TransferMode::StreamInstall);
-        assert((tasks[0].fileSelection == std::vector<uint8_t>{
-            static_cast<uint8_t>(FileAction::Install),
-        }));
-        assert(manager.remove(tasks[0].id, true, error));
+        assert(manager.snapshot().empty());
     }
 
     {
+        // The stored torrent task of this queue is dropped on load as well.
         DownloadManager manager(appRoot, false);
-        auto tasks = manager.snapshot();
-        assert(tasks.size() == 1);
-        assert(tasks[0].id == taskId);
-        assert(tasks[0].status == DownloadStatus::Queued);
-        assert(tasks[0].mode == TransferMode::StreamInstall);
-        assert(tasks[0].packageCount == 1);
-        assert(tasks[0].resumeBitfield == std::vector<uint8_t>(1, 0));
-        assert(manager.remove(taskId, true, error));
         assert(manager.snapshot().empty());
     }
 
@@ -696,10 +680,11 @@ int main() {
         queue += "8:metainfo" + bstr("");
         queue += "4:mode" + bstr("download");
         queue += "4:name" + bstr("Animal Crossing");
+        queue += "6:source" + bstr("debrid");
         queue += "6:status" + bstr("completed");
         queue += "5:totali3e";
         queue += "e";
-        queue += "e7:versioni3ee";
+        queue += "e7:versioni4ee";
         {
             std::ofstream output(root + "/queue.bencode",
                                  std::ios::binary | std::ios::trunc);
@@ -751,10 +736,11 @@ int main() {
         queue += "8:metainfo" + bstr("");
         queue += "4:mode" + bstr("download");
         queue += "4:name" + bstr("Pikmin");
+        queue += "6:source" + bstr("debrid");
         queue += "6:status" + bstr("completed");
         queue += "5:totali3e";
         queue += "e";
-        queue += "e7:versioni3ee";
+        queue += "e7:versioni4ee";
         {
             std::ofstream output(root + "/queue.bencode",
                                  std::ios::binary | std::ios::trunc);
@@ -797,6 +783,7 @@ int main() {
         queue += "13:packages-donei0e";
         queue += "9:resume-bf" + bstr(bitfield);
         queue += "9:selection" + bstr(std::string(1, '\1'));
+        queue += "6:source" + bstr("debrid");
         queue += "6:status" + bstr("completed");
         queue += "5:totali12e";
         queue += "e";
@@ -822,11 +809,12 @@ int main() {
         assert(error == "Task files are being copied to /switch.");
         lease.reset();
         assert(!manager.externalDeployActive());
-        assert(manager.verify(tasks[0].id));
-        assert(manager.snapshot()[0].resumeBitfield.empty());
+        // A debrid task has no pieces, so a recheck is refused and the bitfield stays.
+        assert(!manager.verify(tasks[0].id));
+        assert((manager.snapshot()[0].resumeBitfield == std::vector<uint8_t>{0x80}));
         {
             DownloadManager reloaded(v5Root, false);
-            assert(reloaded.snapshot()[0].resumeBitfield.empty());
+            assert((reloaded.snapshot()[0].resumeBitfield == std::vector<uint8_t>{0x80}));
         }
         assert(manager.remove(tasks[0].id, true, error));
     }
@@ -871,9 +859,9 @@ int main() {
         assert(armed);
         manager.shutdown();
         {
+            // A torrent cannot resume after a restart: the load drops it.
             DownloadManager reloaded(fastResumeRoot, false);
-            assert(reloaded.snapshot()[0].resumeBitfield ==
-                   std::vector<uint8_t>(1, 0));
+            assert(reloaded.snapshot().empty());
         }
         assert(manager.remove(frId, true, error));
     }
@@ -918,7 +906,7 @@ int main() {
         queue += "8:provider" + bstr("torbox");
         queue += "9:resume-bf" + bstr(bitfield);
         queue += "9:selection" + bstr(std::string(1, '\1'));
-        queue += "6:source" + bstr("torrent");
+        queue += "6:source" + bstr("debrid");
         queue += "6:status" + bstr("paused");
         queue += "5:total" + bint(12);
         queue += "16:wanted-completed" + bint(7);
@@ -1151,9 +1139,9 @@ int main() {
     rmdir(root);
 
     testTorboxTaskPersistenceRoundTrip();
-    testLegacyQueueLoadsAsTorrentSource();
-    testV4TorrentActionsRemainTriState();
-    testTorrentTaskWithEmptyMetainfoStillErrors();
+    testLegacyTorrentQueueIsDroppedOnLoad();
+    testV4DebridActionsRemainTriState();
+    testTorrentWithEmptyMetainfoIsDroppedOnLoad();
     testImportDebridCatalogTask();
     testImportDebridRejectsEmptySelection();
     testImportDebridPickerCopiesTorrent();
