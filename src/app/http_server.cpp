@@ -499,6 +499,7 @@ void HttpServer::pumpWrite(Conn& c) {
 }
 
 void HttpServer::loopMain() {
+    gh_diag_set_phase("http:loop");
     uint64_t lastTick = nowMs();
     std::vector<struct pollfd> pfds;
     while (!stopping_.load()) {

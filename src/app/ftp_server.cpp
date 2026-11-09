@@ -195,6 +195,7 @@ void FtpServer::serve(std::shared_ptr<RunState> run) {
 
 void FtpServer::runSession(std::shared_ptr<RunState> run, int control,
                            std::string root, std::string password) {
+    gh_diag_set_phase("ftp:session");
     FtpSession session(root, password);
 
     sendLine(control, "220 GameHubNX", run->stopping);
@@ -460,6 +461,7 @@ void FtpServer::runSession(std::shared_ptr<RunState> run, int control,
     if (dataListener >= 0)
         net_close(dataListener);
     net_close(control);
+    gh_diag_set_phase("ftp:session-end");
     // Lo ultimo que toca esta sesion: stop() espera a que este contador llegue a cero.
     run->active.fetch_sub(1);
 }

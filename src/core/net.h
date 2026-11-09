@@ -71,3 +71,9 @@ void net_close(socket_t fd);
    or -1 on a hard error.  The caller must queue the unsent tail. */
 ssize_t net_send(socket_t fd, const uint8_t *buf, size_t len);
 int net_recv(socket_t fd, uint8_t *buf, size_t len);
+
+/* Crash diagnostics: sockets this module has open, the last phase the app marked
+   (a string literal), and the phase setter. See net.c. */
+int net_live_socket_count(void);
+void gh_diag_set_phase(const char *phase);
+const char *gh_diag_phase(void);

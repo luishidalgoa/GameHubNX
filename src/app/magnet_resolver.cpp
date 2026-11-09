@@ -226,6 +226,7 @@ void runDhtSearch(const uint8_t infoHash[20],
         log_msg("[magnet] dht unavailable, resolving without it\n");
         return;
     }
+    gh_diag_set_phase("dht:search");
     uint64_t deadline = now_ms() + kDhtSearchTimeoutMs;
     while (!cancelled && !stop && now_ms() < deadline &&
            dhtPeerCount(search) < kDhtTargetPeers) {
@@ -240,6 +241,7 @@ void runDhtSearch(const uint8_t infoHash[20],
                 std::chrono::milliseconds(kDhtPollIntervalMs));
         }
     }
+    gh_diag_set_phase("dht:detached");
     dht_detach(session);
 }
 
@@ -900,6 +902,14 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
                                    const std::vector<uint8_t>* presetInfo,
                                    bool allowPublicTrackers)
     const {
+    gh_diag_set_phase("magnet:resolve");
+    log_msg("[magnet] resolve start sockets=%d\n", net_live_socket_count());
+    struct PhaseExit {
+        ~PhaseExit() {
+            gh_diag_set_phase("magnet:returned");
+            log_msg("[magnet] resolve end sockets=%d\n", net_live_socket_count());
+        }
+    } phaseExit;
     if (verifiedPeers)
         verifiedPeers->clear();
     MagnetSpec spec;
@@ -1048,6 +1058,7 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
        so wait for it here. */
     if (sawNotRegistered)
         dhtStop.store(true);
+    gh_diag_set_phase("magnet:dht-wait");
     if (peers.empty() || sawNotRegistered) {
         /* Wait for the DHT search and keep reporting how many peers it has found,
            so the caller sees progress instead of a frozen label. Only a thread
@@ -1200,6 +1211,7 @@ bool MagnetResolver::resolveToFile(const std::string& uri,
             continue;
         }
 
+        gh_diag_set_phase("magnet:workers");
         std::vector<std::thread> workers;
         /* Joins every started worker on any exit from this round, so an exception
            can never destroy a joinable std::thread (that calls std::terminate). */

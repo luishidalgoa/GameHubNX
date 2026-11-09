@@ -55,15 +55,62 @@ int net_set_tcp_receive_buffer(socket_t fd) {
     return 0;
 }
 
+/* Crash diagnostics. The count covers the sockets this module creates and closes,
+   the DHT and uTP ones included (they come from net_udp_socket); only libcurl opens
+   sockets outside it. Phase names are stored as pointers, so only string literals
+   may be passed. */
+static int gLiveSockets = 0;
+static int gAcceptFailures = 0;
+static int gSocketFailures = 0;
+static const char *gPhase = "before main";     /* last phase any thread marked */
+
+static void net_fd_opened(void) {
+    __atomic_add_fetch(&gLiveSockets, 1, __ATOMIC_RELAXED);
+    /* A socket that opened again ends the failure episode, so the next one is logged. */
+    __atomic_store_n(&gSocketFailures, 0, __ATOMIC_RELAXED);
+}
+
+static void net_fd_closed(socket_t fd) {
+    close(fd);
+    __atomic_sub_fetch(&gLiveSockets, 1, __ATOMIC_RELAXED);
+}
+
+int net_live_socket_count(void) {
+    return __atomic_load_n(&gLiveSockets, __ATOMIC_RELAXED);
+}
+
+void gh_diag_set_phase(const char *phase) {
+    __atomic_store_n(&gPhase, phase ? phase : "?", __ATOMIC_RELAXED);
+}
+
+const char *gh_diag_phase(void) {
+    return __atomic_load_n(&gPhase, __ATOMIC_RELAXED);
+}
+
+/* errno is saved and restored: tcpConnect reads it after a failed net_tcp_connect,
+   and the log call must not change what it classifies. */
+static void net_log_socket_failure(const char *what) {
+    int err = errno;
+    int n = __atomic_add_fetch(&gSocketFailures, 1, __ATOMIC_RELAXED);
+    if (n <= 20 || n % 100 == 0)
+        log_msg("[net] %s failed errno=%d live=%d (failure %d)\n", what, err,
+                net_live_socket_count(), n);
+    errno = err;
+}
+
 socket_t net_tcp_connect(const struct sockaddr_in *addr) {
     socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) return INVALID_SOCK;
+    if (fd < 0) {
+        net_log_socket_failure("socket()");
+        return INVALID_SOCK;
+    }
+    net_fd_opened();
     net_set_nonblock(fd);
     int opt = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     int r = connect(fd, (struct sockaddr*)addr, sizeof(*addr));
     if (r < 0 && errno != EINPROGRESS) {
-        close(fd);
+        net_fd_closed(fd);
         return INVALID_SOCK;
     }
     return fd;
@@ -71,7 +118,11 @@ socket_t net_tcp_connect(const struct sockaddr_in *addr) {
 
 socket_t net_udp_socket(uint16_t local_port) {
     socket_t fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0) return INVALID_SOCK;
+    if (fd < 0) {
+        net_log_socket_failure("socket() UDP");
+        return INVALID_SOCK;
+    }
+    net_fd_opened();
     net_set_nonblock(fd);
     int opt = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -83,7 +134,7 @@ socket_t net_udp_socket(uint16_t local_port) {
         addr.sin_addr.s_addr = INADDR_ANY;
         if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
             log_msg("[net] bind UDP port %u: %s\n", local_port, strerror(errno));
-            close(fd);
+            net_fd_closed(fd);
             return INVALID_SOCK;
         }
     }
@@ -92,7 +143,11 @@ socket_t net_udp_socket(uint16_t local_port) {
 
 socket_t net_tcp_listen(uint16_t port, int backlog) {
     socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) return INVALID_SOCK;
+    if (fd < 0) {
+        net_log_socket_failure("socket() TCP listener");
+        return INVALID_SOCK;
+    }
+    net_fd_opened();
     net_set_nonblock(fd);
     int opt = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -103,12 +158,12 @@ socket_t net_tcp_listen(uint16_t port, int backlog) {
     addr.sin_addr.s_addr = INADDR_ANY;
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         log_msg("[net] bind TCP port %u: %s\n", port, strerror(errno));
-        close(fd);
+        net_fd_closed(fd);
         return INVALID_SOCK;
     }
     if (listen(fd, backlog) < 0) {
         log_msg("[net] listen port %u: %s\n", port, strerror(errno));
-        close(fd);
+        net_fd_closed(fd);
         return INVALID_SOCK;
     }
     return fd;
@@ -121,7 +176,23 @@ socket_t net_accept(socket_t listener, struct sockaddr_in *peer) {
     do {
         fd = accept(listener, (struct sockaddr*)&tmp, &len);
     } while (fd < 0 && errno == EINTR);
-    if (fd < 0) return INVALID_SOCK;
+    if (fd < 0) {
+        /* A non-blocking listener reports EAGAIN when idle: normal, not logged.
+           Anything else (EMFILE, ENOBUFS...) is the resource signal we want to see,
+           and failures are rate-limited so a storm cannot flood the log. */
+        int err = errno;
+        if (err != EAGAIN && err != EWOULDBLOCK) {
+            int n = __atomic_add_fetch(&gAcceptFailures, 1, __ATOMIC_RELAXED);
+            if (n <= 20 || n % 100 == 0)
+                log_msg("[net] accept() failed errno=%d live=%d (failure %d)\n",
+                        err, net_live_socket_count(), n);
+        }
+        errno = err;
+        return INVALID_SOCK;
+    }
+    net_fd_opened();
+    /* A successful accept ends the failure episode of this listener. */
+    __atomic_store_n(&gAcceptFailures, 0, __ATOMIC_RELAXED);
     net_set_nonblock(fd);
     /* Accepted sockets serve the web companion's small HTTP/SSE frames;
        Nagle only adds latency there. Best-effort. */
@@ -146,7 +217,7 @@ uint32_t net_local_ipv4(socket_t fd) {
 }
 
 void net_close(socket_t fd) {
-    if (fd >= 0) close(fd);
+    if (fd >= 0) net_fd_closed(fd);
 }
 
 ssize_t net_send(socket_t fd, const uint8_t *buf, size_t len) {

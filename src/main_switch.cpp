@@ -18,6 +18,7 @@
 
 extern "C" {
 #include "core/dht.h"
+#include "core/net.h"
 #include "core/util.h"
 }
 
@@ -33,6 +34,8 @@ extern "C" {
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <cxxabi.h>
+#include <typeinfo>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -365,6 +368,12 @@ int main(int argc, char** argv) {
     openBorealisLog();
 
     std::set_terminate([] {
+        // phase is the last step any thread marked: with threads it can belong to
+        // another thread than the one that called terminate. uncaught > 0 with no
+        // live exception means a terminate from a destructor while another exception
+        // was unwinding (a joinable std::thread).
+        log_msg("[crash] phase=%s sockets=%d uncaught=%d\n", gh_diag_phase(),
+                net_live_socket_count(), std::uncaught_exceptions());
         switch_crashlog_stage("uncaught C++ exception");
         // "std::terminate called" on its own names nothing. Rethrowing the
         // in-flight exception is the only way to get its type and message
@@ -376,7 +385,9 @@ int main(int argc, char** argv) {
                 log_msg("[crash] std::terminate: %s: %s\n",
                         typeid(e).name(), e.what());
             } catch (...) {
-                log_msg("[crash] std::terminate: non-std exception\n");
+                const std::type_info* type = abi::__cxa_current_exception_type();
+                log_msg("[crash] std::terminate: non-std exception %s\n",
+                        type ? type->name() : "?");
             }
         } else {
             log_msg("[crash] std::terminate called with no live exception\n");

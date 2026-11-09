@@ -14,6 +14,10 @@
 
 #include "../../app/gamehub_catalog.hpp"
 #include "app/app_settings.hpp"
+
+extern "C" {
+#include "core/net.h"
+}
 #include "app/catalog_presentation.hpp"
 #include "app/catalog_refresh.hpp"
 #include "app/catalog_service.hpp"
@@ -2048,6 +2052,7 @@ private:
         brls::async([this, alive, catalog, mods, startedMs,
                      fetchCatalog, fetchMetadata, fetchMods, heavy, notify,
                      catalogSourceUrl] {
+            gh_diag_set_phase("catalog:fetch");
             CatalogRefreshBatch batch;
             std::thread modsFetch;
             if (fetchMods) {
@@ -2057,6 +2062,7 @@ private:
                 });
             }
             if (fetchCatalog) {
+                gh_diag_set_phase("catalog:fetch-latest");
                 batch.catalogOk = catalog->fetchLatest(
                     batch.catalogEntries, batch.catalogError, catalogSourceUrl);
             }

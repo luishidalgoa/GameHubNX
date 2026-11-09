@@ -1,6 +1,10 @@
 #include "gamehub_catalog.hpp"
 #include "gamehub_provider.hpp"
 #include "download_manager.hpp"
+
+extern "C" {
+#include "../core/net.h"
+}
 #include "base_title_guard.hpp"
 #include "input_cache.hpp"
 #include "rom_paths.hpp"
@@ -2312,6 +2316,7 @@ void DownloadManager::runTask(RunnerSlot* slot, ClaimedTask claim) {
             task->packageCount = coordinator->packageCount();
     }
 
+    gh_diag_set_phase("download:create");
     torrent_t* torrent = torrent_create_ex(
         &metainfo, static_cast<uint16_t>(kBasePeerPort + slot->slotIndex),
         dataPath.c_str(), &options);

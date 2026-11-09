@@ -18,6 +18,10 @@
 #include "app/torrent_update_source.hpp"
 #include "app/installed_title_service.hpp"
 #include "app/magnet_resolver.hpp"
+
+extern "C" {
+#include "core/net.h"
+}
 #include "ui/catalog/catalog_helpers.hpp"
 #include "ui/common/async_image.hpp"
 #include "ui/common/ui_helpers.hpp"
@@ -620,6 +624,7 @@ private:
                     if (matches.empty()) {
                         importError = tr("gamehubnx/installed/update_no_bundle");
                     } else {
+                        gh_diag_set_phase("updater:import");
                         imported = manager->importTorrentActions(
                             tmp, selectFiles(preview, matches), taskId,
                             importError, peers, "update:" + latest);
